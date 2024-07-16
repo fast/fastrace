@@ -79,4 +79,4 @@
 ## v0.2.0
 
 - All API get redesigned for better egnormic experience.
-- Attribute macro `#[trace]` automactically detects `async fn` and crate `async-trait`, and since that, `#[trace_async]` is removed.
+- Attribute macro `#[trace]` automatically detects `async fn` and crate `async-trait`, and since that, `#[trace_async]` is removed.
