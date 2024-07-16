@@ -325,10 +325,10 @@ impl Config {
     /// # Examples
     ///
     /// ```
-    /// use minitrace::collector::Config;
+    /// use fastrace::collector::Config;
     ///
     /// let config = Config::default().report_interval(std::time::Duration::from_millis(100));
-    /// minitrace::set_reporter(minitrace::collector::ConsoleReporter, config);
+    /// fastrace::set_reporter(fastrace::collector::ConsoleReporter, config);
     /// ```
     pub fn report_interval(self, report_interval: Duration) -> Self {
         Self {
