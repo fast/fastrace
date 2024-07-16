@@ -207,7 +207,6 @@ pub(crate) struct GlobalCollector {
 }
 
 impl GlobalCollector {
-    #[allow(unreachable_code)]
     fn start(reporter: impl Reporter, config: Config) {
         let global_collector = GlobalCollector {
             config,

@@ -1,16 +1,17 @@
 [package]
-name = "fastrace-macro"
-version = { workspace = true }
-authors = { workspace = true }
-license = { workspace = true }
-edition = { workspace = true }
-homepage = { workspace = true }
-repository = { workspace = true }
+categories = ["development-tools::debugging"]
 description = "Attribute procedural macro for fastrace"
 documentation = "https://docs.rs/fastrace-macro"
-readme = "README.md"
-categories = ["development-tools::debugging"]
 keywords = ["tracing", "span", "datadog", "jaeger", "opentelemetry"]
+name = "fastrace-macro"
+readme = "README.md"
+
+authors = { workspace = true }
+edition = { workspace = true }
+homepage = { workspace = true }
+license = { workspace = true }
+repository = { workspace = true }
+version = { workspace = true }
 
 [lib]
 proc-macro = true
@@ -20,7 +21,13 @@ proc-macro = true
 proc-macro-error = "1"
 proc-macro2 = "1"
 quote = "1"
-syn = { version = "1.0.84", features = ["full", "parsing", "extra-traits", "proc-macro", "visit-mut"] }
+syn = { version = "1.0.84", features = [
+  "full",
+  "parsing",
+  "extra-traits",
+  "proc-macro",
+  "visit-mut",
+] }
 
 [dev-dependencies]
 fastrace = { workspace = true }

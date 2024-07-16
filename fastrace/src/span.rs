@@ -517,11 +517,9 @@ impl Drop for LocalParentGuard {
             let (spans, token) = inner.collector.collect_spans_and_token();
             debug_assert!(token.is_some());
             if let Some(token) = token {
-                if !spans.spans.is_empty() {
-                    inner
-                        .collect
-                        .submit_spans(SpanSet::LocalSpansInner(spans), token);
-                }
+                inner
+                    .collect
+                    .submit_spans(SpanSet::LocalSpansInner(spans), token);
             }
         }
     }
@@ -911,7 +909,7 @@ parent5 []
             .in_sequence(&mut seq)
             .return_const(42_usize);
         mock.expect_submit_spans()
-            .times(4)
+            .times(5)
             .in_sequence(&mut seq)
             .withf(|_, collect_token| collect_token.len() == 1 && collect_token[0].collect_id == 42)
             .returning({

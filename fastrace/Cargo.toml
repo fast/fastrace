@@ -1,16 +1,17 @@
 [package]
-name = "fastrace"
-version = { workspace = true }
-authors = { workspace = true }
-license = { workspace = true }
-edition = { workspace = true }
-homepage = { workspace = true }
-repository = { workspace = true }
+categories = ["development-tools::debugging"]
 description = "A high-performance timeline tracing library for Rust"
 documentation = "https://docs.rs/fastrace"
-readme = "../README.md"
-categories = ["development-tools::debugging"]
 keywords = ["tracing", "span", "datadog", "jaeger", "opentelemetry"]
+name = "fastrace"
+readme = "../README.md"
+
+authors = { workspace = true }
+edition = { workspace = true }
+homepage = { workspace = true }
+license = { workspace = true }
+repository = { workspace = true }
+version = { workspace = true }
 
 [features]
 enable = []
@@ -48,24 +49,29 @@ rand = "0.8"
 rustracing = "0.6"
 serial_test = "3"
 test-harness = "0.2"
-tokio = { version = "1", features = ["rt", "time", "macros", "rt-multi-thread"] }
+tokio = { version = "1", features = [
+  "rt",
+  "time",
+  "macros",
+  "rt-multi-thread",
+] }
 tracing = "0.1"
 tracing-core = "0.1"
 tracing-opentelemetry = "0.24"
 tracing-subscriber = "0.3"
 
 [[bench]]
+harness = false
 name = "trace"
-harness = false
 
 [[bench]]
+harness = false
 name = "compare"
-harness = false
 
 [[bench]]
+harness = false
 name = "spsc"
-harness = false
 
 [[bench]]
-name = "object_pool"
 harness = false
+name = "object_pool"

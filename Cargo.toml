@@ -1,22 +1,22 @@
 [workspace]
-resolver = "2"
 members = [
-    "fastrace",
-    "fastrace-macro",
-    "fastrace-jaeger",
-    "fastrace-datadog",
-    "fastrace-opentelemetry",
-    "fastrace-futures",
-    "test-statically-disable",
+  "fastrace",
+  "fastrace-macro",
+  "fastrace-jaeger",
+  "fastrace-datadog",
+  "fastrace-opentelemetry",
+  "fastrace-futures",
+  "test-statically-disable",
 ]
+resolver = "2"
 
 [workspace.package]
 authors = ["fastrace authors"]
 edition = "2021"
-version = "0.6.8"
 homepage = "https://github.com/fastracelabs/fastrace"
-repository = "https://github.com/fastracelabs/fastrace"
 license = "Apache-2.0"
+repository = "https://github.com/fastracelabs/fastrace"
+version = "0.6.8"
 
 [workspace.dependencies]
 fastrace = { version = "0.6.8", path = "fastrace" }
@@ -27,5 +27,5 @@ fastrace-macro = { version = "0.6.8", path = "fastrace-macro" }
 fastrace-opentelemetry = { version = "0.6.8", path = "fastrace-opentelemetry" }
 
 [profile.bench]
-opt-level = 3
 lto = true
+opt-level = 3

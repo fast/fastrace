@@ -321,6 +321,15 @@ impl Config {
     /// consider reducing the report interval, potentially down to zero, to prevent losing spans.
     ///
     /// The default value is 10 milliseconds.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use minitrace::collector::Config;
+    ///
+    /// let config = Config::default().report_interval(std::time::Duration::from_millis(100));
+    /// minitrace::set_reporter(minitrace::collector::ConsoleReporter, config);
+    /// ```
     pub fn report_interval(self, report_interval: Duration) -> Self {
         Self {
             report_interval,
