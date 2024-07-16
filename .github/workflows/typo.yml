@@ -22,4 +22,4 @@ jobs:
       FORCE_COLOR: 1
     steps:
       - uses: actions/checkout@v4
-      - uses: crate-ci/typos@v1
+      - uses: crate-ci/typos@v1.23.2
