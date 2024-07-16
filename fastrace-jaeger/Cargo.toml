@@ -1,0 +1,21 @@
+[package]
+name = "fastrace-jaeger"
+version = { workspace = true }
+authors = { workspace = true }
+license = { workspace = true }
+edition = { workspace = true }
+homepage = { workspace = true }
+repository = { workspace = true }
+description = "Jaeger reporter for fastrace"
+documentation = "https://docs.rs/fastrace-jaeger"
+readme = "README.md"
+categories = ["development-tools::debugging"]
+keywords = ["tracing", "span", "datadog", "jaeger", "opentelemetry"]
+
+[dependencies]
+fastrace = { workspace = true }
+log = "0.4"
+thrift_codec = "0.3"
+
+[dev-dependencies]
+futures = "0.3"

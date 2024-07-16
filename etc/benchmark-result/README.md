@@ -19,7 +19,7 @@ sudo apt install build-essential libssl-dev pkg-config -y
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 source $HOME/.cargo/env
 cargo install --version=1.0.0-alpha3 cargo-criterion
-git clone https://github.com/tikv/minitrace-rust.git
-cd minitrace-rust
+git clone https://github.com/fastracelabs/fastrace.git
+cd fastrace
 cargo criterion compare --message-format=json | grep "benchmark-complete" > compare-xxx.txt
 ```

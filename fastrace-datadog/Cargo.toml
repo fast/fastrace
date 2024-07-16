@@ -1,0 +1,23 @@
+[package]
+name = "fastrace-datadog"
+version = { workspace = true }
+authors = { workspace = true }
+license = { workspace = true }
+edition = { workspace = true }
+homepage = { workspace = true }
+repository = { workspace = true }
+description = "Datadog reporter for fastrace"
+documentation = "https://docs.rs/fastrace-datadog"
+readme = "README.md"
+categories = ["development-tools::debugging"]
+keywords = ["tracing", "span", "datadog", "jaeger", "opentelemetry"]
+
+[dependencies]
+fastrace = { workspace = true }
+log = "0.4"
+reqwest = { version = "0.11", features = ["blocking"] }
+rmp-serde = "1"
+serde = { version = "1", features = ["derive"] }
+
+[dev-dependencies]
+futures = "0.3"

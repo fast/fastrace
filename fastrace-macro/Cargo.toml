@@ -1,0 +1,32 @@
+[package]
+name = "fastrace-macro"
+version = { workspace = true }
+authors = { workspace = true }
+license = { workspace = true }
+edition = { workspace = true }
+homepage = { workspace = true }
+repository = { workspace = true }
+description = "Attribute procedural macro for fastrace"
+documentation = "https://docs.rs/fastrace-macro"
+readme = "README.md"
+categories = ["development-tools::debugging"]
+keywords = ["tracing", "span", "datadog", "jaeger", "opentelemetry"]
+
+[lib]
+proc-macro = true
+
+[dependencies]
+# The macro `quote_spanned!` is added to syn in 1.0.84
+proc-macro-error = "1"
+proc-macro2 = "1"
+quote = "1"
+syn = { version = "1.0.84", features = ["full", "parsing", "extra-traits", "proc-macro", "visit-mut"] }
+
+[dev-dependencies]
+fastrace = { workspace = true }
+logcall = "0.1.4"
+tokio = { version = "1", features = ["full"] }
+trybuild = "1"
+# The procedural macro `trace` only supports async-trait higher than 0.1.52
+async-trait = "0.1.52"
+log = "0.4"

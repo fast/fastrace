@@ -1,23 +1,21 @@
-// Copyright 2023 TiKV Project Authors. Licensed under Apache-2.0.
-
 // The libraries may have tracing instrument embedded in the code for tracing purposes. However,
-// if the executable does not enable minitrace, it will be statically disabled. This results in
+// if the executable does not enable fastrace, it will be statically disabled. This results in
 // zero overhead to the libraries, achieved through conditional compilation with the "enable"
 // feature.
 //
-// The following test is designed to confirm that minitrace compiles when it's statically disabled
+// The following test is designed to confirm that fastrace compiles when it's statically disabled
 // in the executable.
 
 use std::time::Duration;
 
-use minitrace::collector::Config;
-use minitrace::collector::ConsoleReporter;
+use fastrace::collector::Config;
+use fastrace::collector::ConsoleReporter;
 
 fn main() {
-    use minitrace::local::LocalCollector;
-    use minitrace::prelude::*;
+    use fastrace::local::LocalCollector;
+    use fastrace::prelude::*;
 
-    minitrace::set_reporter(
+    fastrace::set_reporter(
         ConsoleReporter,
         Config::default()
             .max_spans_per_trace(Some(100))
@@ -63,5 +61,5 @@ fn main() {
 
     root.cancel();
 
-    minitrace::flush();
+    fastrace::flush();
 }

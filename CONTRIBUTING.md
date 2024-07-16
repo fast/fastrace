@@ -19,4 +19,4 @@ Useful tips:
 
 ## For features/questions/discussions
 
-Please open [new issues](https://github.com/tikv/minitrace-rust/issues/new/choose).
+Please open [new issues](https://github.com/fastracelabs/fastrace/issues/new/choose).

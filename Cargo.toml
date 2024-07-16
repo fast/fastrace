@@ -1,14 +1,30 @@
 [workspace]
 resolver = "2"
 members = [
-    "minitrace",
-    "minitrace-macro",
-    "minitrace-jaeger",
-    "minitrace-datadog",
-    "minitrace-opentelemetry",
-    "minitrace-futures",
+    "fastrace",
+    "fastrace-macro",
+    "fastrace-jaeger",
+    "fastrace-datadog",
+    "fastrace-opentelemetry",
+    "fastrace-futures",
     "test-statically-disable",
 ]
+
+[workspace.package]
+authors = ["fastrace authors"]
+edition = "2021"
+version = "0.6.8"
+homepage = "https://github.com/fastracelabs/fastrace"
+repository = "https://github.com/fastracelabs/fastrace"
+license = "Apache-2.0"
+
+[workspace.dependencies]
+fastrace = { version = "0.6.8", path = "fastrace" }
+fastrace-datadog = { version = "0.6.8", path = "fastrace-datadog" }
+fastrace-futures = { version = "0.6.8", path = "fastrace-futures" }
+fastrace-jaeger = { version = "0.6.8", path = "fastrace-jaeger" }
+fastrace-macro = { version = "0.6.8", path = "fastrace-macro" }
+fastrace-opentelemetry = { version = "0.6.8", path = "fastrace-opentelemetry" }
 
 [profile.bench]
 opt-level = 3

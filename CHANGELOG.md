@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## v0.6.8
+
+- Project rename to `fastrace`.
+
 ## v0.6.7
 
 - Add `Config::report_interval`: The background collector working interval.
@@ -20,13 +24,13 @@
 
 - Add `LocalSpan::add_property` and `LocalSpan::add_properties`.
 - Add `Config::report_before_root_finish`.
-- Add new crate `minitrace-futures`.
+- Add new crate `fastrace-futures`.
 
 ## v0.6.3
 
 - Add `LocalSpans::to_span_records()`.
 - Add `#[trace(properties = { "k1": "v1", "k2": "v2" })]`.
-- Add  `func_name!()`, `full_name!()`, and `file_location!()` to `minitrace::prelude`.
+- Add  `func_name!()`, `full_name!()`, and `file_location!()` to `fastrace::prelude`.
 
 ## v0.6.2
 
@@ -50,7 +54,7 @@
 ## v0.5.0
 
 - Add `Event` type to represent single points in time during the span's lifetime.
-- Add `minitrace-opentelementry` reporter that reports spans to OpenTelemetry collector.
+- Add `fastrace-opentelementry` reporter that reports spans to OpenTelemetry collector.
 - Removed `Collector` and raplaced it with `Reporter`.
 - The macro arguments must be named if any, e.g. `#[trace(name="name")]`.
 - Allow to statically opt-out of tracing by not setting `enable` feature.
@@ -64,7 +68,7 @@
 
 ## v0.3.1
 
-- Add an async variant of jaeger reporting function `minitrace::report()`.
+- Add an async variant of jaeger reporting function `fastrace::report()`.
 - `LocalSpan::with_property` now no longer takes `self` but `&mut self` instead.
 
 ## v0.3.0
