@@ -86,8 +86,9 @@ pub fn flush() {
     {
         #[cfg(target_family = "wasm")]
         {
-            let mut global_collector = GLOBAL_COLLECTOR.lock();
-            global_collector.handle_commands(true);
+            if let Some(global_collector) = GLOBAL_COLLECTOR.lock().as_mut() {
+                global_collector.handle_commands();
+            }
         }
 
         #[cfg(not(target_family = "wasm"))]
