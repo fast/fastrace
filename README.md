@@ -174,3 +174,11 @@ Note that we always prioritize performance over features, so that not all tracin
 [OpenTelemetry]: https://opentelemetry.io/
 [Jaeger]: https://crates.io/crates/fastrace-jaeger
 [Datadog]: https://crates.io/crates/fastrace-datadog
+
+## License
+
+This project is licensed under the [Apache-2.0](LICENSE) license.
+
+Originally, this project is a fork of [minitrace](https://github.com/tikv/minitrace-rust/). See this thread for more information:
+
+* [Running minitrace as a standalone project?](https://github.com/tikv/minitrace-rust/issues/229)

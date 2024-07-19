@@ -1,0 +1,5 @@
+# This file contains license header template config for files origianlly copied from the Minitrace project.
+
+inlineHeader = "Copyright 2020 TiKV Project Authors. Licensed under Apache-2.0."
+
+includes = ['**/*.rs']
