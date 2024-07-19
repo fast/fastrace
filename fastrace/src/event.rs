@@ -1,3 +1,5 @@
+// Copyright 2020 TiKV Project Authors. Licensed under Apache-2.0.
+
 use std::borrow::Cow;
 
 use crate::local::local_span_stack::LOCAL_SPAN_STACK;

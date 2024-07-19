@@ -1,3 +1,5 @@
+// Copyright 2020 TiKV Project Authors. Licensed under Apache-2.0.
+
 //! Collector and the collected spans.
 
 #![cfg_attr(test, allow(dead_code))]

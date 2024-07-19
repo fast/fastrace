@@ -1,3 +1,5 @@
+// Copyright 2020 TiKV Project Authors. Licensed under Apache-2.0.
+
 //! `fastrace` is a high-performance, ergonomic, library-level timeline tracing library for Rust.
 //!
 //! Unlike most tracing libraries which are primarily designed for instrumenting executables,

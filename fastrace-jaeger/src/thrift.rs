@@ -1,3 +1,5 @@
+// Copyright 2020 TiKV Project Authors. Licensed under Apache-2.0.
+
 //! Thrift components defined in [jaeger.thrift].
 //!
 //! [jaeger.thrift]: https://github.com/uber/jaeger-idl/blob/main/thrift/jaeger.thrift

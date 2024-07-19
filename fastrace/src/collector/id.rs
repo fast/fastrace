@@ -1,3 +1,5 @@
+// Copyright 2020 TiKV Project Authors. Licensed under Apache-2.0.
+
 use std::cell::Cell;
 
 /// An identifier for a trace, which groups a set of related spans together.
