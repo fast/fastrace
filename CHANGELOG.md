@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Upgrade dependencies including opentelemtry and more.
+
 ## v0.6.8
 
 - Project rename to `fastrace`.

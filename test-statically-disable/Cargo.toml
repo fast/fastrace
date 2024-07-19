@@ -1,7 +1,6 @@
 [package]
 name = "test-statically-disable"
 publish = false
-readme = "README.md"
 version = "0.0.1"
 
 authors = { workspace = true }
