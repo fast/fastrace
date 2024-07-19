@@ -21,7 +21,7 @@ proc-macro = true
 proc-macro-error = "1.0"
 proc-macro2 = "1.0"
 quote = "1.0"
-syn = { version = ">=1.0.84", features = [
+syn = { version = "1.0.84", features = [
   "full",
   "parsing",
   "extra-traits",
@@ -35,5 +35,5 @@ logcall = "0.1"
 tokio = { version = "1.38", features = ["full"] }
 trybuild = "1.0"
 # The procedural macro `trace` only supports async-trait higher than or equal to 0.1.52
-async-trait = ">=0.1.52"
+async-trait = "0.1.52"
 log = "0.4"
