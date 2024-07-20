@@ -18,16 +18,16 @@ enable = []
 
 [dependencies]
 fastrace-macro = { workspace = true }
-minstant = "0.1.7"
+minstant = "0.1"
 parking_lot = "0.12"
-pin-project = "1"
+pin-project = "1.1"
 # TODO: Remove once_cell once #![feature(once_cell)] is stabilized
-once_cell = "1"
+once_cell = "1.19"
 rand = "0.8"
-rtrb = "0.2"
+rtrb = "0.3"
 
 [dev-dependencies]
-async-trait = "0.1.52"
+async-trait = "0.1"
 criterion = { version = "0.5", features = ["html_reports"] }
 crossbeam = "0.8"
 env_logger = "0.11"
@@ -35,21 +35,21 @@ fastrace = { workspace = true, features = ["enable"] }
 fastrace-datadog = { workspace = true }
 fastrace-jaeger = { workspace = true }
 fastrace-opentelemetry = { workspace = true }
-flume = "0.11.0"
+flume = "0.11"
 futures = "0.3"
 futures-timer = "3"
 log = "0.4"
-logcall = "0.1.4"
+logcall = "0.1"
 mockall = "0.12"
-once_cell = "1"
-opentelemetry = { version = "0.23", features = ["trace"] }
-opentelemetry-otlp = { version = "0.16", features = ["trace"] }
-opentelemetry_sdk = { version = "0.23", features = ["trace"] }
+once_cell = "1.19"
+opentelemetry = { version = "0.24", features = ["trace"] }
+opentelemetry-otlp = { version = "0.17", features = ["trace"] }
+opentelemetry_sdk = { version = "0.24", features = ["trace"] }
 rand = "0.8"
 rustracing = "0.6"
-serial_test = "3"
-test-harness = "0.2"
-tokio = { version = "1", features = [
+serial_test = "3.1"
+test-harness = "0.3"
+tokio = { version = "1.38", features = [
   "rt",
   "time",
   "macros",
