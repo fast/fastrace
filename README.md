@@ -119,7 +119,6 @@ Detailed results are available in [etc/benchmark-result](etc/benchmark-result).
 
 Feel free to open a PR and add your projects here:
 
-- [fastracelabs](https://github.com/fastracelabs/fastracelabs): A distributed transactional key-value database
 - [Conductor](https://github.com/the-guild-org/conductor): Open-source GraphQL Gateway
 - [Apache OpenDAL](https://github.com/apache/opendal): A data access layer for various storage
 - [Databend](https://github.com/datafuselabs/databend): Cost-Effective alternative to Snowflake
