@@ -1,3 +1,5 @@
+// Copyright 2020 TiKV Project Authors. Licensed under Apache-2.0.
+
 /// Get the name of the function where the macro is invoked. Returns a `&'static str`.
 ///
 /// # Example
@@ -29,11 +31,11 @@ macro_rules! func_name {
 ///
 /// # Example
 ///
-/// ```
+/// ```rust
 /// use fastrace::full_name;
 ///
 /// fn foo() {
-///    assert_eq!(full_name!(), "rust_out::main::_doctest_main_fastrace_src_macros_rs_32_0::foo");
+///    assert_eq!(full_name!(), "rust_out::main::_doctest_main_fastrace_src_macros_rs_34_0::foo");
 /// }
 /// # foo()
 #[macro_export]

@@ -1,3 +1,5 @@
+// Copyright 2020 TiKV Project Authors. Licensed under Apache-2.0.
+
 //! This module provides tools to trace a `Future`.
 //!
 //! The [`FutureExt`] trait extends `Future` with two methods: [`in_span()`] and

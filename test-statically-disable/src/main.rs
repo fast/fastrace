@@ -1,3 +1,5 @@
+// Copyright 2020 TiKV Project Authors. Licensed under Apache-2.0.
+
 // The libraries may have tracing instrument embedded in the code for tracing purposes. However,
 // if the executable does not enable fastrace, it will be statically disabled. This results in
 // zero overhead to the libraries, achieved through conditional compilation with the "enable"

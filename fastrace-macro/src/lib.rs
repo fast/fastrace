@@ -1,3 +1,5 @@
+// Copyright 2020 TiKV Project Authors. Licensed under Apache-2.0.
+
 //! An attribute macro designed to eliminate boilerplate code for [`fastrace`](https://crates.io/crates/fastrace).
 
 #![recursion_limit = "256"]
