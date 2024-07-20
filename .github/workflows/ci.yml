@@ -19,28 +19,33 @@ jobs:
     env:
       RUST_BACKTRACE: 1
     steps:
-    - uses: actions/checkout@v2
-    - name: Set up toolchains
-      uses: actions-rs/toolchain@v1
+    - uses: actions/checkout@v4
+    - uses: Swatinem/rust-cache@v2
+    - uses: dtolnay/rust-toolchain@master
       with:
         toolchain: ${{ matrix.rust }}
-        override: true
         components: rustfmt, clippy
+    
     - name: Check format
-      if: matrix.rust == 'nightly'
+      if: ${{ matrix.rust == 'nightly' }}
       run: cargo fmt --all -- --check
-    - name: Lints
-      if: matrix.rust == 'nightly'
+    
+    - name: Check clippy
+      if: ${{ matrix.rust == 'nightly' }}
       run: cargo clippy --all-targets --all-features -- --deny warnings
+    
     - name: Build
       run: cargo build --workspace --all-targets
+    
     - name: Run tests
       run: |
         cargo test --workspace --all-targets -- --nocapture
         cargo test --doc
+    
     # Github Action sometimes run out of resources to run benches
     # - name: Run benches
     #   run: cargo bench --workspace --bench compare --bench trace
+    
     - name: Run examples
       run: |
         cargo run --example asynchronous
