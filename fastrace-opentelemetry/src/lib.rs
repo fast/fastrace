@@ -31,23 +31,22 @@ use opentelemetry_sdk::Resource;
 /// `OpenTelemetryReporter` exports trace records to remote agents that OpenTelemetry
 /// supports, which includes Jaeger, Datadog, Zipkin, and OpenTelemetry Collector.
 pub struct OpenTelemetryReporter {
-    opentelemetry_exporter: Box<dyn SpanExporter>,
+    exporter: Box<dyn SpanExporter>,
     span_kind: SpanKind,
-    resource: Cow<'static, Resource>,
     instrumentation_lib: InstrumentationLibrary,
 }
 
 impl OpenTelemetryReporter {
     pub fn new(
-        opentelemetry_exporter: impl SpanExporter + 'static,
+        mut exporter: impl SpanExporter + 'static,
         span_kind: SpanKind,
         resource: Cow<'static, Resource>,
         instrumentation_lib: InstrumentationLibrary,
     ) -> Self {
+        exporter.set_resource(&resource);
         OpenTelemetryReporter {
-            opentelemetry_exporter: Box::new(opentelemetry_exporter),
+            exporter: Box::new(exporter),
             span_kind,
-            resource,
             instrumentation_lib,
         }
     }
@@ -74,7 +73,6 @@ impl OpenTelemetryReporter {
                 links: SpanLinks::default(),
                 status: Status::default(),
                 span_kind: self.span_kind.clone(),
-                resource: self.resource.clone(),
                 instrumentation_lib: self.instrumentation_lib.clone(),
             })
             .collect()
@@ -112,7 +110,7 @@ impl OpenTelemetryReporter {
 
     fn try_report(&mut self, spans: &[SpanRecord]) -> Result<(), Box<dyn std::error::Error>> {
         let opentelemetry_spans = self.convert(spans);
-        futures::executor::block_on(self.opentelemetry_exporter.export(opentelemetry_spans))?;
+        futures::executor::block_on(self.exporter.export(opentelemetry_spans))?;
         Ok(())
     }
 }
