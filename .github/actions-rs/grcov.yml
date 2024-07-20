@@ -1,3 +1,0 @@
-ignore:
-  - "*/.cargo/registry/*"
-llvm: true
