@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Upgrade dependencies including opentelemtry and more.
+- Remove deprecated methods `Config::batch_report_interval` and `Config::batch_report_max_spans`.
 
 ## v0.6.8
 
