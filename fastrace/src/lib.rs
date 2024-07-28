@@ -319,7 +319,7 @@
 //!
 //! fastrace::set_reporter(
 //!     ConsoleReporter,
-//!     Config::default().batch_report_interval(Duration::from_secs(1)),
+//!     Config::default().report_interval(Duration::from_secs(1)),
 //! );
 //!
 //! fastrace::flush();

@@ -296,24 +296,6 @@ impl Config {
         }
     }
 
-    /// Sets the time duration between two batch reports.
-    #[deprecated(
-        since = "0.6.7",
-        note = "Please use `report_interval` instead. This method is now a no-op."
-    )]
-    pub fn batch_report_interval(self, _batch_report_interval: Duration) -> Self {
-        self
-    }
-
-    /// Sets the soft limit for the maximum number of spans in a batch report.
-    #[deprecated(
-        since = "0.6.7",
-        note = "Please use `report_interval` instead. This method is now a no-op."
-    )]
-    pub fn batch_report_max_spans(self, _batch_report_max_spans: Option<usize>) -> Self {
-        self
-    }
-
     /// Sets the time duration between two reports. The reporter will be invoked when the specified
     /// duration elapses, even if no spans have been collected. This allows for batching in the
     /// reporter.
