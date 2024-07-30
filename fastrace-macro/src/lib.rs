@@ -292,7 +292,7 @@ fn gen_name(span: proc_macro2::Span, func_name: &str, args: &Args) -> proc_macro
         }
         None => {
             quote_spanned!(span=>
-                fastrace::full_name!()
+                fastrace::func_path!()
             )
         }
     }

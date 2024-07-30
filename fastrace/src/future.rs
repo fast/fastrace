@@ -64,7 +64,6 @@ pub trait FutureExt: std::future::Future + Sized {
     /// ```
     ///
     /// [`Future`]:(std::future::Future)
-    /// [`Span::set_local_parent`](Span::set_local_parent)
     #[inline]
     fn in_span(self, span: Span) -> InSpan<Self> {
         InSpan {
