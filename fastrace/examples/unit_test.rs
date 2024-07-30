@@ -58,8 +58,8 @@ mod test_util {
     }
 
     pub fn closure_name<F: std::any::Any>() -> &'static str {
-        let full_name = std::any::type_name::<F>();
-        full_name
+        let func_path = std::any::type_name::<F>();
+        func_path
             .rsplit("::")
             .find(|name| *name != "{{closure}}")
             .unwrap()

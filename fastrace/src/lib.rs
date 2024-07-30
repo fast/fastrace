@@ -38,7 +38,7 @@
 //! [`Span::root()`] to start a new trace and [`Span::set_local_parent()`] to set up a
 //! local context for the current thread.
 //!
-//! The [`full_name!()`] macro can detect the function's full name, which is used as
+//! The [`func_path!()`] macro can detect the function's full name, which is used as
 //! the name of the root span.
 //!
 //! ```
@@ -47,7 +47,7 @@
 //! # struct Error;
 //!
 //! pub fn send_request(req: HttpRequest) -> Result<(), Error> {
-//!     let root = Span::root(full_name!(), SpanContext::random());
+//!     let root = Span::root(func_path!(), SpanContext::random());
 //!     let _guard = root.set_local_parent();
 //!
 //!     // ...
@@ -403,10 +403,13 @@ pub mod prelude {
     pub use crate::event::Event;
     #[doc(no_inline)]
     pub use crate::file_location;
+    #[allow(deprecated)]
     #[doc(no_inline)]
     pub use crate::full_name;
     #[doc(no_inline)]
     pub use crate::func_name;
+    #[doc(no_inline)]
+    pub use crate::func_path;
     #[doc(no_inline)]
     pub use crate::future::FutureExt as _;
     #[doc(no_inline)]
