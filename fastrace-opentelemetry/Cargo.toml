@@ -1,22 +1,22 @@
 [package]
+name = "fastrace-opentelemetry"
+version = "0.7.0"
+
 categories = ["development-tools::debugging"]
 description = "Opentelemetry reporter for fastrace"
-documentation = "https://docs.rs/fastrace-jaeger"
+documentation = "https://docs.rs/fastrace-opentelemetry"
 keywords = ["tracing", "span", "datadog", "jaeger", "opentelemetry"]
-name = "fastrace-opentelemetry"
 readme = "README.md"
 
-authors = { workspace = true }
-edition = { workspace = true }
-homepage = { workspace = true }
-license = { workspace = true }
-repository = { workspace = true }
-version = { workspace = true }
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
 
 [dependencies]
 fastrace = { workspace = true }
-futures = { version = "0.3", features = ["executor"] }
-log = "0.4"
+futures = { workspace = true, features = ["executor"] }
+log = { workspace = true }
 opentelemetry = { version = "0.24", features = ["trace"] }
 opentelemetry_sdk = { version = "0.24", features = ["trace"] }
 

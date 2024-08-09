@@ -32,7 +32,7 @@ Libraries should include `fastrace` as a dependency without enabling any extra f
 
 ```toml
 [dependencies]
-fastrace = "0.6"
+fastrace = "0.7"
 ```
 
 Add a `trace` attribute to the function you want to trace. In this example, a `SpanRecord` will be collected every time the function is called, if a tracing context is set up by the caller.
@@ -65,7 +65,7 @@ Applications should include `fastrace` as a dependency with the `enable` feature
 
 ```toml
 [dependencies]
-fastrace = { version = "0.6", features = ["enable"] }
+fastrace = { version = "0.7", features = ["enable"] }
 ```
 
 Applications should initialize a `Reporter` implementation early in the program's runtime. Span records generated before the reporter is initialized will be ignored. Before terminating, `flush()` should be called to ensure all collected span records are reported.
@@ -97,10 +97,10 @@ fn main() {
 
 ![Benchmark result by architecture](etc/img/benchmark-arch.svg)
 
-|                      | x86-64 (Intel Broadwell) | x86-64 (Intel Skylake) | x86-64 (AMD Zen) | ARM (AWS Graviton2) |
-|----------------------|--------------------------|------------------------|------------------|---------------------|
-| tokio-tracing        | 124x slower              | 33x slower             | 36x slower       | 29x slower          |
-| rustracing           | 45x slower               | 10x slower             | 11x slower       | 9x slower           |
+|                     | x86-64 (Intel Broadwell) | x86-64 (Intel Skylake) | x86-64 (AMD Zen) | ARM (AWS Graviton2) |
+|---------------------|--------------------------|------------------------|------------------|---------------------|
+| tokio-tracing       | 124x slower              | 33x slower             | 36x slower       | 29x slower          |
+| rustracing          | 45x slower               | 10x slower             | 11x slower       | 9x slower           |
 | fastrace (baseline) | 1x (3.4us)               | 1x (3.2us)             | 1x (3.8us)       | 1x (4.2us)          |
 
 **By creating different number of spans:**
@@ -149,10 +149,10 @@ For example, fastrace doesn't introduce new logging macros, e.g. `info!()` or `e
 
 ### Will fastrace incorporate 'level' for spans?
 
-The concept of 'level' may not be an optimal feature for tracing systems. While `tokio-tracing` incorporates this feature, the underlying motivation for having levels in a span primarily revolves around performance. More specifically, it relates to the performance implications of tracing elements that are not of interest. However, tracing differs from logging in two key aspects: 
+The concept of 'level' may not be an optimal feature for tracing systems. While `tokio-tracing` incorporates this feature, the underlying motivation for having levels in a span primarily revolves around performance. More specifically, it relates to the performance implications of tracing elements that are not of interest. However, tracing differs from logging in two key aspects:
 
-1. Disregarding a low-level span might inadvertently discard a high-level child span. 
-2. The process of filtering, or 'level' as it's often called, in a tracing system should be applied to a trace as a whole rather than individual spans within a trace. 
+1. Disregarding a low-level span might inadvertently discard a high-level child span.
+2. The process of filtering, or 'level' as it's often called, in a tracing system should be applied to a trace as a whole rather than individual spans within a trace.
 
 In this context, fastrace offers a more efficient solution by filtering out entire traces that are not of interest through its unique tail-sampling design. Therefore, the concept of 'level', borrowed directly from logging systems, may not be suitable for fastrace.
 
@@ -160,13 +160,13 @@ In this context, fastrace offers a more efficient solution by filtering out enti
 
 fastrace is focused on high performance tracing only. You can open an issue for the missing tracing features you want to have.
 
-Note that we always prioritize performance over features, so that not all tracing feature requests may be accepted. 
+Note that we always prioritize performance over features, so that not all tracing feature requests may be accepted.
 
 ### What's the status of this library?
 
-**API Unstable**: The API is not stabilized yet, may be changed in the future. 
+**API Unstable**: The API is not stabilized yet, may be changed in the future.
 
-**Code base Tested**: fastrace has been tested with high coverage. However, applications utilizing fastrace have not been widely deployed, so that fastrace is currently **NOT** regarded as battle-tested. 
+**Code base Tested**: fastrace has been tested with high coverage. However, applications utilizing fastrace have not been widely deployed, so that fastrace is currently **NOT** regarded as battle-tested.
 
 [Docs]: https://docs.rs/fastrace/
 [Examples]: fastrace/examples
