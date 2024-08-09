@@ -1,17 +1,17 @@
 [package]
+name = "fastrace-macro"
+version = "0.7.0"
+
 categories = ["development-tools::debugging"]
 description = "Attribute procedural macro for fastrace"
 documentation = "https://docs.rs/fastrace-macro"
 keywords = ["tracing", "span", "datadog", "jaeger", "opentelemetry"]
-name = "fastrace-macro"
 readme = "README.md"
 
-authors = { workspace = true }
-edition = { workspace = true }
-homepage = { workspace = true }
-license = { workspace = true }
-repository = { workspace = true }
-version = { workspace = true }
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
 
 [lib]
 proc-macro = true
@@ -31,9 +31,10 @@ syn = { version = "1.0.84", features = [
 
 [dev-dependencies]
 fastrace = { workspace = true }
+log = { workspace = true }
 logcall = "0.1"
 tokio = { version = "1.38", features = ["full"] }
 trybuild = "1.0"
 # The procedural macro `trace` only supports async-trait higher than or equal to 0.1.52
 async-trait = "0.1.52"
-log = "0.4"
+

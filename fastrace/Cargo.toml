@@ -1,17 +1,17 @@
 [package]
+name = "fastrace"
+version = "0.7.0"
+
 categories = ["development-tools::debugging"]
 description = "A high-performance timeline tracing library for Rust"
 documentation = "https://docs.rs/fastrace"
 keywords = ["tracing", "span", "datadog", "jaeger", "opentelemetry"]
-name = "fastrace"
 readme = "../README.md"
 
-authors = { workspace = true }
-edition = { workspace = true }
-homepage = { workspace = true }
-license = { workspace = true }
-repository = { workspace = true }
-version = { workspace = true }
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
 
 [features]
 enable = []
@@ -36,9 +36,9 @@ fastrace-datadog = { workspace = true }
 fastrace-jaeger = { workspace = true }
 fastrace-opentelemetry = { workspace = true }
 flume = "0.11"
-futures = "0.3"
+futures = { workspace = true }
 futures-timer = "3"
-log = "0.4"
+log = { workspace = true }
 logcall = "0.1"
 mockall = "0.12"
 once_cell = "1.19"
