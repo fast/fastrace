@@ -1,6 +1,6 @@
 # Contribution Guide
 
-## Get Started
+## Getting started
 
 This is a Rust project, so [rustup](https://rustup.rs/) is the best place to start.
 
@@ -17,6 +17,6 @@ Useful tips:
 - Check/Build/Test/Clippy all code: `cargo <cmd> --all-targets --workspace`
 - Test specific function: `cargo test multiple_local_parent`
 
-## For features/questions/discussions
+## For features, questions, or discussions
 
-Please open [new issues](https://github.com/fastracelabs/fastrace/issues/new/choose).
+Please open [a new issue](https://github.com/fast/fastrace/issues/new/choose).

@@ -2,7 +2,7 @@
 
 [![Documentation](https://docs.rs/fastrace-jaeger/badge.svg)](https://docs.rs/fastrace-jaeger/)
 [![Crates.io](https://img.shields.io/crates/v/fastrace-jaeger.svg)](https://crates.io/crates/fastrace-jaeger)
-[![LICENSE](https://img.shields.io/github/license/fastracelabs/fastrace.svg)](https://github.com/fastracelabs/fastrace/blob/main/LICENSE)
+[![LICENSE](https://img.shields.io/github/license/fast/fastrace.svg)](https://github.com/fast/fastrace/blob/main/LICENSE)
 
 [Jaeger](https://www.jaegertracing.io/) reporter for [`fastrace`](https://crates.io/crates/fastrace).
 
@@ -10,8 +10,8 @@
 
 ```toml
 [dependencies]
-fastrace = "0.6"
-fastrace-jaeger = "0.6"
+fastrace = "0.7"
+fastrace-jaeger = "0.7"
 ```
 
 ## Setup Jaeger Agent

@@ -3,13 +3,13 @@
 [![Crates.io](https://img.shields.io/crates/v/fastrace.svg?style=flat-square&logo=rust)](https://crates.io/crates/fastrace)
 [![Documentation](https://img.shields.io/docsrs/fastrace?style=flat-square&logo=rust)](https://docs.rs/fastrace/)
 [![MSRV 1.80.1](https://img.shields.io/badge/MSRV-1.80.1-green?style=flat-square&logo=rust)](https://www.whatrustisit.com)
-[![CI Status](https://img.shields.io/github/actions/workflow/status/fastracelabs/fastrace/ci.yml?style=flat-square&logo=github)](https://github.com/fastracelabs/fastrace/actions)
-[![Coverage](https://img.shields.io/coveralls/github/fastracelabs/fastrace?style=flat-square)](https://coveralls.io/github/fastracelabs/fastrace?branch=main)
-[![License](https://img.shields.io/crates/l/fastrace?style=flat-square)](https://github.com/fastracelabs/fastrace/blob/main/LICENSE)
+[![CI Status](https://img.shields.io/github/actions/workflow/status/fast/fastrace/ci.yml?style=flat-square&logo=github)](https://github.com/fast/fastrace/actions)
+[![Coverage](https://img.shields.io/coveralls/github/fast/fastrace?style=flat-square)](https://coveralls.io/github/fast/fastrace?branch=main)
+[![License](https://img.shields.io/crates/l/fastrace?style=flat-square)](https://github.com/fast/fastrace/blob/main/LICENSE)
 
 fastrace is a tracing library [10~100x faster](#benchmarks) than others:
 
-![benchmark](https://raw.githubusercontent.com/fastracelabs/fastrace/main/etc/img/head-benchmark.svg)
+![benchmark](https://raw.githubusercontent.com/fast/fastrace/main/etc/img/head-benchmark.svg)
 
 Features:
 

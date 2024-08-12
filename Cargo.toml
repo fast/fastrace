@@ -11,10 +11,10 @@ members = [
 resolver = "2"
 
 [workspace.package]
-authors = ["Fastrace Authors"]
+authors = ["FastLabs Developers"]
 edition = "2021"
 license = "Apache-2.0"
-repository = "https://github.com/fastracelabs/fastrace"
+repository = "https://github.com/fast/fastrace"
 rust-version = "1.80.1"
 
 [workspace.dependencies]
