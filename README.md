@@ -4,7 +4,6 @@
 [![Documentation](https://img.shields.io/docsrs/fastrace?style=flat-square&logo=rust)](https://docs.rs/fastrace/)
 [![MSRV 1.80.1](https://img.shields.io/badge/MSRV-1.80.1-green?style=flat-square&logo=rust)](https://www.whatrustisit.com)
 [![CI Status](https://img.shields.io/github/actions/workflow/status/fast/fastrace/ci.yml?style=flat-square&logo=github)](https://github.com/fast/fastrace/actions)
-[![Coverage](https://img.shields.io/coveralls/github/fast/fastrace?style=flat-square)](https://coveralls.io/github/fast/fastrace?branch=main)
 [![License](https://img.shields.io/crates/l/fastrace?style=flat-square)](https://github.com/fast/fastrace/blob/main/LICENSE)
 
 fastrace is a tracing library [10~100x faster](#benchmarks) than others:
@@ -14,7 +13,7 @@ fastrace is a tracing library [10~100x faster](#benchmarks) than others:
 Features:
 
 - [Extremely fast](#benchmarks)
-- [Rich features for logging](https://raw.githubusercontent.com/fast/fastrace/main/fastrace/examples/logging.rs)
+- [Rich features for logging](https://github.com/fast/fastrace/blob/main/fastrace/examples/logging.rs)
 - Compatible with [Jaeger], [Datadog], and [OpenTelemetry]
 
 ## Resources
