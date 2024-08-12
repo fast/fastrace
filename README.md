@@ -12,10 +12,8 @@ fastrace is a tracing library [10~100x faster](#benchmarks) than others:
 
 Features:
 
-- Easy to use
 - [Extremely fast](#benchmarks)
-- [Library-level tracing](#what-is-library-level-tracing)
-- [Compatible with the log crate and its macros](fastrace/examples/log.rs)
+- [Rich features for logging](fastrace/examples/logging.rs)
 - Compatible with [Jaeger], [Datadog], and [OpenTelemetry]
 
 ## Resources

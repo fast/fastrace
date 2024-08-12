@@ -7,7 +7,8 @@ use fastrace::collector::ConsoleReporter;
 use fastrace::prelude::*;
 use log::info;
 
-#[logcall::logcall("debug")]
+/// An example of automatically logging function arguments and return values.
+#[logcall::logcall("debug", input = "a = {a:?}, b = {b:?}")]
 #[trace]
 fn plus(a: u64, b: u64) -> Result<u64, std::io::Error> {
     Ok(a + b)
@@ -15,15 +16,30 @@ fn plus(a: u64, b: u64) -> Result<u64, std::io::Error> {
 
 fn main() {
     fastrace::set_reporter(ConsoleReporter, Config::default());
+
+    // Setup a custom logger. `env_logger` is a commonly used logger in Rust and it's easy to
+    // integrate with `fastrace`.
+    //
+    // For more fine-grained logging, We recommand using [`logforth`](https://github.com/cratesland/logforth).
     env_logger::Builder::from_default_env()
         .format(|buf, record| {
-            // Add a event to the current local span representing the log record
+            // Convert every log to an event in the current local parent span
             Event::add_to_local_parent(record.level().as_str(), || {
                 [("message".into(), record.args().to_string().into())]
             });
 
-            // Output the log to stdout as usual
-            writeln!(buf, "[{}] {}", record.level(), record.args())
+            // Attach the current trace id to the log message
+            if let Some(current) = SpanContext::current_local_parent() {
+                writeln!(
+                    buf,
+                    "[{}] {} {}",
+                    record.level(),
+                    current.trace_id.0,
+                    record.args()
+                )
+            } else {
+                writeln!(buf, "[{}] {}", record.level(), record.args())
+            }
         })
         .filter_level(log::LevelFilter::Debug)
         .init();
