@@ -5,6 +5,7 @@
 - Upgrade dependencies including opentelemtry and more.
 - Remove deprecated methods `Config::batch_report_interval` and `Config::batch_report_max_spans`.
 - Deprecate `full_name!()` and rename it to `full_path!()`.
+- Pass `Vec<SpanRecord>` to `Reporter::report()` instead of `&[SpanRecord]`.
 
 ## v0.6.8
 

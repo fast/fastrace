@@ -116,7 +116,7 @@ pub fn flush() {
 /// further processing and analysis.
 pub trait Reporter: Send + 'static {
     /// Reports a batch of spans to a remote service.
-    fn report(&mut self, spans: &[SpanRecord]);
+    fn report(&mut self, spans: Vec<SpanRecord>);
 }
 
 #[derive(Default, Clone)]
@@ -206,7 +206,6 @@ pub(crate) struct GlobalCollector {
     drop_collects: Vec<DropCollect>,
     commit_collects: Vec<CommitCollect>,
     submit_spans: Vec<SubmitSpans>,
-    committed_records: Vec<SpanRecord>,
 }
 
 impl GlobalCollector {
@@ -216,7 +215,6 @@ impl GlobalCollector {
             reporter: Some(Box::new(reporter)),
 
             active_collectors: HashMap::new(),
-            committed_records: Vec::new(),
 
             start_collects: Vec::new(),
             drop_collects: Vec::new(),
@@ -252,13 +250,11 @@ impl GlobalCollector {
         debug_assert!(self.drop_collects.is_empty());
         debug_assert!(self.commit_collects.is_empty());
         debug_assert!(self.submit_spans.is_empty());
-        debug_assert!(self.committed_records.is_empty());
 
         let start_collects = &mut self.start_collects;
         let drop_collects = &mut self.drop_collects;
         let commit_collects = &mut self.commit_collects;
         let submit_spans = &mut self.submit_spans;
-        let committed_records = &mut self.committed_records;
 
         {
             SPSC_RXS.lock().retain_mut(|rx| {
@@ -350,13 +346,14 @@ impl GlobalCollector {
         }
 
         let anchor = Anchor::new();
+        let mut committed_records = Vec::new();
 
         for CommitCollect { collect_id } in commit_collects.drain(..) {
             if let Some(mut active_collector) = self.active_collectors.remove(&collect_id) {
                 postprocess_span_collection(
                     active_collector.span_collections,
                     &anchor,
-                    committed_records,
+                    &mut committed_records,
                     &mut active_collector.dangling_events,
                 );
             }
@@ -367,14 +364,13 @@ impl GlobalCollector {
                 postprocess_span_collection(
                     active_collector.span_collections.drain(..),
                     &anchor,
-                    committed_records,
+                    &mut committed_records,
                     &mut active_collector.dangling_events,
                 );
             }
         }
 
         self.reporter.as_mut().unwrap().report(committed_records);
-        committed_records.clear();
     }
 }
 

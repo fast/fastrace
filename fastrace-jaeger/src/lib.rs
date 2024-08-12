@@ -133,12 +133,12 @@ impl JaegerReporter {
 }
 
 impl Reporter for JaegerReporter {
-    fn report(&mut self, spans: &[SpanRecord]) {
+    fn report(&mut self, spans: Vec<SpanRecord>) {
         if spans.is_empty() {
             return;
         }
 
-        if let Err(err) = self.try_report(spans) {
+        if let Err(err) = self.try_report(&spans) {
             log::error!("report to jaeger failed: {}", err);
         }
     }
