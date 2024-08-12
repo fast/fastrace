@@ -7,7 +7,7 @@ use crate::collector::SpanRecord;
 pub struct ConsoleReporter;
 
 impl Reporter for ConsoleReporter {
-    fn report(&mut self, spans: &[SpanRecord]) {
+    fn report(&mut self, spans: Vec<SpanRecord>) {
         for span in spans {
             eprintln!("{:#?}", span);
         }

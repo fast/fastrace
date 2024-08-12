@@ -51,9 +51,9 @@ impl OpenTelemetryReporter {
         }
     }
 
-    fn convert(&self, spans: &[SpanRecord]) -> Vec<SpanData> {
+    fn convert(&self, spans: Vec<SpanRecord>) -> Vec<SpanData> {
         spans
-            .iter()
+            .into_iter()
             .map(move |span| SpanData {
                 span_context: SpanContext::new(
                     span.trace_id.0.into(),
@@ -64,12 +64,12 @@ impl OpenTelemetryReporter {
                 ),
                 dropped_attributes_count: 0,
                 parent_span_id: span.parent_id.0.into(),
-                name: span.name.clone(),
+                name: span.name,
                 start_time: UNIX_EPOCH + Duration::from_nanos(span.begin_time_unix_ns),
                 end_time: UNIX_EPOCH
                     + Duration::from_nanos(span.begin_time_unix_ns + span.duration_ns),
-                attributes: Self::convert_properties(&span.properties),
-                events: Self::convert_events(&span.events),
+                attributes: Self::convert_properties(span.properties),
+                events: Self::convert_events(span.events),
                 links: SpanLinks::default(),
                 status: Status::default(),
                 span_kind: self.span_kind.clone(),
@@ -78,29 +78,26 @@ impl OpenTelemetryReporter {
             .collect()
     }
 
-    fn convert_properties(properties: &[(Cow<'static, str>, Cow<'static, str>)]) -> Vec<KeyValue> {
+    fn convert_properties(
+        properties: Vec<(Cow<'static, str>, Cow<'static, str>)>,
+    ) -> Vec<KeyValue> {
         let mut map = Vec::new();
         for (k, v) in properties {
-            map.push(KeyValue::new(
-                cow_to_otel_key(k.clone()),
-                cow_to_otel_value(v.clone()),
-            ));
+            map.push(KeyValue::new(cow_to_otel_key(k), cow_to_otel_value(v)));
         }
         map
     }
 
-    fn convert_events(events: &[EventRecord]) -> SpanEvents {
+    fn convert_events(events: Vec<EventRecord>) -> SpanEvents {
         let mut queue = SpanEvents::default();
-        queue.events.extend(events.iter().map(|event| {
+        queue.events.extend(events.into_iter().map(|event| {
             Event::new(
-                event.name.clone(),
+                event.name,
                 UNIX_EPOCH + Duration::from_nanos(event.timestamp_unix_ns),
                 event
                     .properties
-                    .iter()
-                    .map(|(k, v)| {
-                        KeyValue::new(cow_to_otel_key(k.clone()), cow_to_otel_value(v.clone()))
-                    })
+                    .into_iter()
+                    .map(|(k, v)| KeyValue::new(cow_to_otel_key(k), cow_to_otel_value(v)))
                     .collect(),
                 0,
             )
@@ -108,7 +105,7 @@ impl OpenTelemetryReporter {
         queue
     }
 
-    fn try_report(&mut self, spans: &[SpanRecord]) -> Result<(), Box<dyn std::error::Error>> {
+    fn try_report(&mut self, spans: Vec<SpanRecord>) -> Result<(), Box<dyn std::error::Error>> {
         let opentelemetry_spans = self.convert(spans);
         futures::executor::block_on(self.exporter.export(opentelemetry_spans))?;
         Ok(())
@@ -116,7 +113,7 @@ impl OpenTelemetryReporter {
 }
 
 impl Reporter for OpenTelemetryReporter {
-    fn report(&mut self, spans: &[SpanRecord]) {
+    fn report(&mut self, spans: Vec<SpanRecord>) {
         if spans.is_empty() {
             return;
         }

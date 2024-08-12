@@ -84,9 +84,9 @@ impl ReportAll {
 }
 
 impl Reporter for ReportAll {
-    fn report(&mut self, spans: &[SpanRecord]) {
-        self.jaeger.report(spans);
-        self.datadog.report(spans);
+    fn report(&mut self, spans: Vec<SpanRecord>) {
+        self.jaeger.report(spans.clone());
+        self.datadog.report(spans.clone());
         self.opentelemetry.report(spans);
     }
 }

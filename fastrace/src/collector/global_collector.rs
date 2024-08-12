@@ -116,7 +116,7 @@ pub fn flush() {
 /// further processing and analysis.
 pub trait Reporter: Send + 'static {
     /// Reports a batch of spans to a remote service.
-    fn report(&mut self, spans: &[SpanRecord]);
+    fn report(&mut self, spans: Vec<SpanRecord>);
 }
 
 #[derive(Default, Clone)]
@@ -373,8 +373,10 @@ impl GlobalCollector {
             }
         }
 
-        self.reporter.as_mut().unwrap().report(committed_records);
-        committed_records.clear();
+        self.reporter
+            .as_mut()
+            .unwrap()
+            .report(std::mem::take(committed_records));
     }
 }
 

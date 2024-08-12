@@ -24,7 +24,7 @@ impl TestReporter {
 }
 
 impl Reporter for TestReporter {
-    fn report(&mut self, spans: &[SpanRecord]) {
-        self.spans.lock().extend_from_slice(spans);
+    fn report(&mut self, mut spans: Vec<SpanRecord>) {
+        self.spans.lock().append(&mut spans);
     }
 }

@@ -67,8 +67,8 @@ impl DatadogReporter {
         Ok(buf)
     }
 
-    fn try_report(&self, spans: &[SpanRecord]) -> Result<(), Box<dyn std::error::Error>> {
-        let datadog_spans = self.convert(spans);
+    fn try_report(&self, spans: Vec<SpanRecord>) -> Result<(), Box<dyn std::error::Error>> {
+        let datadog_spans = self.convert(&spans);
         let bytes = self.serialize(datadog_spans)?;
         let client = reqwest::blocking::Client::new();
         let _rep = client
@@ -82,7 +82,7 @@ impl DatadogReporter {
 }
 
 impl Reporter for DatadogReporter {
-    fn report(&mut self, spans: &[SpanRecord]) {
+    fn report(&mut self, spans: Vec<SpanRecord>) {
         if spans.is_empty() {
             return;
         }
