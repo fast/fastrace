@@ -1,4 +1,4 @@
-error: expected identifier
+error: expected identifier, found keyword `true`
  --> tests/ui/err/has-expr-argument.rs:5:9
   |
 5 | #[trace(true)]
