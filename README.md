@@ -13,7 +13,7 @@ fastrace is a tracing library [10~100x faster](#benchmarks) than others:
 Features:
 
 - [Extremely fast](#benchmarks)
-- [Rich features for logging](fastrace/examples/logging.rs)
+- [Rich features for logging](https://raw.githubusercontent.com/fastracelabs/fastrace/main/fastrace/examples/logging.rs)
 - Compatible with [Jaeger], [Datadog], and [OpenTelemetry]
 
 ## Resources
