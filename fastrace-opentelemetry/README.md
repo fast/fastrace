@@ -2,7 +2,7 @@
 
 [![Documentation](https://docs.rs/fastrace-opentelemetry/badge.svg)](https://docs.rs/fastrace-opentelemetry/)
 [![Crates.io](https://img.shields.io/crates/v/fastrace-opentelemetry.svg)](https://crates.io/crates/fastrace-opentelemetry)
-[![LICENSE](https://img.shields.io/github/license/fastracelabs/fastrace.svg)](https://github.com/fastracelabs/fastrace/blob/main/LICENSE)
+[![LICENSE](https://img.shields.io/github/license/fast/fastrace.svg)](https://github.com/fast/fastrace/blob/main/LICENSE)
 
 [OpenTelemetry](https://github.com/open-telemetry/opentelemetry-rust) reporter for [`fastrace`](https://crates.io/crates/fastrace).
 
@@ -10,8 +10,8 @@
 
 ```toml
 [dependencies]
-fastrace = "0.6"
-fastrace-opentelemetry = "0.6"
+fastrace = "0.7"
+fastrace-opentelemetry = "0.7"
 ```
 
 ## Setup OpenTelemetry Collector
@@ -29,7 +29,7 @@ Zipkin UI is available on [http://127.0.0.1:9411/](http://127.0.0.1:9411/)
 
 ## Report to OpenTelemetry Collector
 
-```rust, no_run
+```rust
 use std::borrow::Cow;
 use std::time::Duration;
 use fastrace::collector::Config;

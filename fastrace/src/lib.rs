@@ -16,7 +16,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! fastrace = "0.6"
+//! fastrace = "0.7"
 //! ```
 //!
 //! Add a [`trace`] attribute to the function you want to trace. In this example, a
