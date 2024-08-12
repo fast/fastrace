@@ -2,6 +2,7 @@
 
 [![Crates.io](https://img.shields.io/crates/v/fastrace.svg?style=flat-square&logo=rust)](https://crates.io/crates/fastrace)
 [![Documentation](https://img.shields.io/docsrs/fastrace?style=flat-square&logo=rust)](https://docs.rs/fastrace/)
+[![MSRV 1.80.1](https://img.shields.io/badge/MSRV-1.80.1-green?style=flat-square&logo=rust)](https://www.whatrustisit.com)
 [![CI Status](https://img.shields.io/github/actions/workflow/status/fastracelabs/fastrace/ci.yml?style=flat-square&logo=github)](https://github.com/fastracelabs/fastrace/actions)
 [![Coverage](https://img.shields.io/coveralls/github/fastracelabs/fastrace?style=flat-square)](https://coveralls.io/github/fastracelabs/fastrace?branch=main)
 [![License](https://img.shields.io/crates/l/fastrace?style=flat-square)](https://github.com/fastracelabs/fastrace/blob/main/LICENSE)
@@ -107,13 +108,17 @@ fn main() {
 
 ![Benchmark result by number of spans](etc/img/benchmark-spans.svg)
 
-|                      | 1 span      | 10 spans   | 100 spans   | 1000 spans  |
-|----------------------|-------------|------------|-------------|-------------|
-| tokio-tracing        | 19x slower  | 61x slower | 124x slower | 151x slower |
-| rustracing           | 13x slower  | 26x slower | 45x slower  | 55x slower  |
-| fastrace (baseline) | 1x (0.4us)  | 1x (0.8us) | 1x (3.4us)  | 1x (27.8us) |
+|                     | 1 span     | 10 spans   | 100 spans   | 1000 spans  |
+|---------------------|------------|------------|-------------|-------------|
+| tokio-tracing       | 19x slower | 61x slower | 124x slower | 151x slower |
+| rustracing          | 13x slower | 26x slower | 45x slower  | 55x slower  |
+| fastrace (baseline) | 1x (0.4us) | 1x (0.8us) | 1x (3.4us)  | 1x (27.8us) |
 
 Detailed results are available in [etc/benchmark-result](etc/benchmark-result).
+
+## Supported Rust Versions (MSRV 1.71)
+
+Fastrace is built against the latest stable release. The minimum supported version is 1.80.1. The current Fastrace version is not guaranteed to build on Rust versions earlier than the minimum supported version.
 
 ## Projects using fastrace
 
