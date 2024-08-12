@@ -37,4 +37,3 @@ tokio = { version = "1.38", features = ["full"] }
 trybuild = "1.0"
 # The procedural macro `trace` only supports async-trait higher than or equal to 0.1.52
 async-trait = "0.1.52"
-
