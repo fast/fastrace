@@ -18,11 +18,10 @@ rust-version.workspace = true
 proc-macro = true
 
 [dependencies]
-# The macro `quote_spanned!` is added to syn in 1.0.84
 proc-macro-error = "1.0"
 proc-macro2 = "1.0"
 quote = "1.0"
-syn = { version = "1.0.84", features = [
+syn = { version = "2.0", features = [
   "full",
   "parsing",
   "extra-traits",

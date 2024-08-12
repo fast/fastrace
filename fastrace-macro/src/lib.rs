@@ -7,8 +7,6 @@
 // `async fn` into a normal fn which returns `Box<impl Future>`, and this stops the macro from
 // distinguishing `async fn` from `fn`. The following code reused the `async_trait` probes from [tokio-tracing](https://github.com/tokio-rs/tracing/blob/6a61897a5e834988ad9ac709e28c93c4dbf29116/tracing-attributes/src/expand.rs).
 
-extern crate proc_macro;
-
 #[macro_use]
 extern crate proc_macro_error;
 
@@ -57,7 +55,7 @@ impl Parse for Args {
         while !input.is_empty() {
             let ident: Ident = input.parse()?;
             if seen.contains_key(&ident.to_string()) {
-                return Err(syn::Error::new(ident.span(), "duplicate argument"));
+                return Err(Error::new(ident.span(), "duplicate argument"));
             }
             seen.insert(ident.to_string(), ());
             input.parse::<Token![=]>()?;
@@ -76,20 +74,16 @@ impl Parse for Args {
                 }
                 "properties" => {
                     let content;
-                    let _brace_token = syn::braced!(content in input);
-                    let property_list: Punctuated<Property, Token![,]> =
-                        content.parse_terminated(Property::parse)?;
+                    let _brace_token = braced!(content in input);
+                    let property_list = content.parse_terminated(Property::parse, Token![,])?;
                     for property in property_list {
                         if properties.iter().any(|(k, _)| k == &property.key) {
-                            return Err(syn::Error::new(
-                                Span::call_site(),
-                                "duplicate property key",
-                            ));
+                            return Err(Error::new(Span::call_site(), "duplicate property key"));
                         }
                         properties.push((property.key, property.value));
                     }
                 }
-                _ => return Err(syn::Error::new(Span::call_site(), "unexpected identifier")),
+                _ => return Err(Error::new(Span::call_site(), "unexpected identifier")),
             }
             if !input.is_empty() {
                 let _ = input.parse::<Token![,]>();
@@ -202,7 +196,7 @@ pub fn trace(
     item: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
     let args = parse_macro_input!(args as Args);
-    let input = syn::parse_macro_input!(item as ItemFn);
+    let input = parse_macro_input!(item as ItemFn);
 
     let func_name = input.sig.ident.to_string();
     // check for async_trait-like patterns in the block, and instrument
@@ -272,7 +266,7 @@ pub fn trace(
     .into()
 }
 
-fn gen_name(span: proc_macro2::Span, func_name: &str, args: &Args) -> proc_macro2::TokenStream {
+fn gen_name(span: Span, func_name: &str, args: &Args) -> proc_macro2::TokenStream {
     match &args.name {
         Some(name) if name.is_empty() => {
             abort_call_site!("`name` can not be empty")
@@ -298,7 +292,7 @@ fn gen_name(span: proc_macro2::Span, func_name: &str, args: &Args) -> proc_macro
     }
 }
 
-fn gen_properties(span: proc_macro2::Span, args: &Args) -> proc_macro2::TokenStream {
+fn gen_properties(span: Span, args: &Args) -> proc_macro2::TokenStream {
     if args.properties.is_empty() {
         return quote::quote!();
     }
@@ -424,7 +418,7 @@ struct AsyncTraitInfo<'a> {
 // (this follows the approach suggested in
 // https://github.com/dtolnay/async-trait/issues/45#issuecomment-571245673)
 fn get_async_trait_info(block: &Block, block_is_async: bool) -> Option<AsyncTraitInfo<'_>> {
-    // are we in an async context? If yes, this isn't a async_trait-like pattern
+    // are we in an async context? If yes, this isn't an async_trait-like pattern
     if block_is_async {
         return None;
     }
@@ -445,7 +439,7 @@ fn get_async_trait_info(block: &Block, block_is_async: bool) -> Option<AsyncTrai
     // `trait` or `impl` declaration is annotated by async_trait,
     // this is quite likely the point where the future is pinned)
     let (last_expr_stmt, last_expr) = block.stmts.iter().rev().find_map(|stmt| {
-        if let Stmt::Expr(expr) = stmt {
+        if let Stmt::Expr(expr, None) = stmt {
             Some((stmt, expr))
         } else {
             None
@@ -468,8 +462,8 @@ fn get_async_trait_info(block: &Block, block_is_async: bool) -> Option<AsyncTrai
     }
 
     // Does the call take an argument? If it doesn't,
-    // it's not gonna compile anyway, but that's no reason
-    // to (try to) perform an out of bounds access
+    // it's not going to compile anyway, but that's no reason
+    // to (try to) perform an out-of-bounds access
     if outside_args.is_empty() {
         return None;
     }
@@ -498,7 +492,7 @@ fn get_async_trait_info(block: &Block, block_is_async: bool) -> Option<AsyncTrai
         _ => return None,
     };
 
-    // Was that function defined inside of the current block?
+    // Was that function defined inside the current block?
     // If so, retrieve the statement where it was declared and the function itself
     let (stmt_func_declaration, _) = inside_funs
         .into_iter()
