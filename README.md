@@ -116,7 +116,7 @@ fn main() {
 
 Detailed results are available in [etc/benchmark-result](etc/benchmark-result).
 
-## Supported Rust Versions (MSRV 1.71)
+## Supported Rust Versions (MSRV 1.80.1)
 
 Fastrace is built against the latest stable release. The minimum supported version is 1.80.1. The current Fastrace version is not guaranteed to build on Rust versions earlier than the minimum supported version.
 
