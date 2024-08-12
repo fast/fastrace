@@ -10,7 +10,7 @@ impl MyTrait for MyStruct {
     // #[logcall::logcall("info")]
     #[fastrace::trace]
     async fn work(&self) -> usize {
-        todo!()
+        unimplemented!()
     }
 }
 
