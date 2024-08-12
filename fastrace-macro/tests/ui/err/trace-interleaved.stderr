@@ -1,4 +1,4 @@
-error: expected identifier
+error: expected identifier, found keyword `struct`
  --> tests/ui/err/trace-interleaved.rs:6:9
   |
 6 | #[trace(struct)]
