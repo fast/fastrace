@@ -2,7 +2,7 @@
 
 [![Documentation](https://docs.rs/fastrace-datadog/badge.svg)](https://docs.rs/fastrace-datadog/)
 [![Crates.io](https://img.shields.io/crates/v/fastrace-datadog.svg)](https://crates.io/crates/fastrace-datadog)
-[![LICENSE](https://img.shields.io/github/license/fastracelabs/fastrace.svg)](https://github.com/fastracelabs/fastrace/blob/main/LICENSE)
+[![LICENSE](https://img.shields.io/github/license/fast/fastrace.svg)](https://github.com/fast/fastrace/blob/main/LICENSE)
 
 [Datadog](https://docs.datadoghq.com/tracing/) reporter for [`fastrace`](https://crates.io/crates/fastrace).
 
@@ -10,8 +10,8 @@
 
 ```toml
 [dependencies]
-fastrace = "0.6"
-fastrace-datadog = "0.6"
+fastrace = "0.7"
+fastrace-datadog = "0.7"
 ```
 
 ## Setup Datadog Agent
