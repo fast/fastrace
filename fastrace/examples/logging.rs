@@ -20,7 +20,7 @@ fn main() {
     // Setup a custom logger. `env_logger` is a commonly used logger in Rust and it's easy to
     // integrate with `fastrace`.
     //
-    // For more fine-grained logging, We recommand using [`logforth`](https://github.com/cratesland/logforth).
+    // For more fine-grained logging, We recommend using [`logforth`](https://github.com/cratesland/logforth).
     env_logger::Builder::from_default_env()
         .format(|buf, record| {
             // Convert every log to an event in the current local parent span
