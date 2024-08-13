@@ -37,7 +37,7 @@ impl LocalSpan {
     /// let root = Span::root("root", SpanContext::random());
     /// let _g = root.set_local_parent();
     ///
-    /// let child = Span::enter_with_local_parent("child");
+    /// let child = LocalSpan::enter_with_local_parent("child");
     /// ```
     #[inline]
     pub fn enter_with_local_parent(name: impl Into<Cow<'static, str>>) -> Self {
