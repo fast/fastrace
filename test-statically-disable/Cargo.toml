@@ -3,7 +3,6 @@ name = "test-statically-disable"
 publish = false
 version = "0.0.1"
 
-authors.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
