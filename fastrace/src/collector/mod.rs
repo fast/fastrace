@@ -70,6 +70,7 @@ pub struct CollectTokenItem {
     pub parent_id: SpanId,
     pub collect_id: usize,
     pub is_root: bool,
+    pub is_sampled: bool,
 }
 
 /// A struct representing the context of a span, including its [`TraceId`] and [`SpanId`].
@@ -80,6 +81,7 @@ pub struct CollectTokenItem {
 pub struct SpanContext {
     pub trace_id: TraceId,
     pub span_id: SpanId,
+    pub sampled: bool,
 }
 
 impl SpanContext {
@@ -96,7 +98,11 @@ impl SpanContext {
     /// [`TraceId`]: crate::collector::TraceId
     /// [`SpanId`]: crate::collector::SpanId
     pub fn new(trace_id: TraceId, span_id: SpanId) -> Self {
-        Self { trace_id, span_id }
+        Self {
+            trace_id,
+            span_id,
+            sampled: true,
+        }
     }
 
     /// Create a new `SpanContext` with a random trace id.
@@ -112,6 +118,7 @@ impl SpanContext {
         Self {
             trace_id: TraceId(rand::random()),
             span_id: SpanId::default(),
+            sampled: true,
         }
     }
 
@@ -142,6 +149,7 @@ impl SpanContext {
             Some(Self {
                 trace_id: collect_token.trace_id,
                 span_id: collect_token.parent_id,
+                sampled: collect_token.is_sampled,
             })
         }
     }
@@ -175,8 +183,28 @@ impl SpanContext {
             Some(Self {
                 trace_id: collect_token.trace_id,
                 span_id: collect_token.parent_id,
+                sampled: collect_token.is_sampled,
             })
         }
+    }
+
+    /// Sets the `sampled` flag of the `SpanContext`.
+    ///
+    /// The `sampled` flag will be propagated to the spans of the trace. But it will not
+    /// affect the behavior of `fastrace`. User may manually check the `sampled` flag
+    /// and call [`Span::cancel`] to cancel the trace.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use fastrace::prelude::*;
+    ///
+    /// let span_context = SpanContext::new(TraceId(12), SpanId(34)).sampled(false);
+    /// ```
+    /// [`Span::cancel`]: crate::Span::cancel
+    pub fn sampled(mut self, sampled: bool) -> Self {
+        self.sampled = sampled;
+        self
     }
 
     /// Decodes the `SpanContext` from a [W3C Trace Context](https://www.w3.org/TR/trace-context/)
@@ -208,10 +236,11 @@ impl SpanContext {
             parts.next(),
             parts.next(),
         ) {
-            (Some("00"), Some(trace_id), Some(span_id), Some(_), None) => {
+            (Some("00"), Some(trace_id), Some(span_id), Some(sampled), None) => {
                 let trace_id = u128::from_str_radix(trace_id, 16).ok()?;
                 let span_id = u64::from_str_radix(span_id, 16).ok()?;
-                Some(Self::new(TraceId(trace_id), SpanId(span_id)))
+                let sampled = u8::from_str_radix(sampled, 16).ok()? != 0;
+                Some(Self::new(TraceId(trace_id), SpanId(span_id)).sampled(sampled))
             }
             _ => None,
         }
@@ -234,29 +263,9 @@ impl SpanContext {
     /// );
     /// ```
     pub fn encode_w3c_traceparent(&self) -> String {
-        Self::encode_w3c_traceparent_with_sampled(self, true)
-    }
-
-    /// Encodes the `SpanContext` as a [W3C Trace Context](https://www.w3.org/TR/trace-context/)
-    /// `traceparent` header string with a sampled flag.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use fastrace::prelude::*;
-    ///
-    /// let span_context = SpanContext::new(TraceId(12), SpanId(34));
-    /// let traceparent = span_context.encode_w3c_traceparent_with_sampled(false);
-    ///
-    /// assert_eq!(
-    ///     traceparent,
-    ///     "00-0000000000000000000000000000000c-0000000000000022-00"
-    /// );
-    /// ```
-    pub fn encode_w3c_traceparent_with_sampled(&self, sampled: bool) -> String {
         format!(
             "00-{:032x}-{:016x}-{:02x}",
-            self.trace_id.0, self.span_id.0, sampled as u8,
+            self.trace_id.0, self.span_id.0, self.sampled as u8,
         )
     }
 }
@@ -376,7 +385,7 @@ mod tests {
             "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01"
         );
         assert_eq!(
-            span_context.encode_w3c_traceparent_with_sampled(false),
+            span_context.sampled(false).encode_w3c_traceparent(),
             "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-00"
         );
     }

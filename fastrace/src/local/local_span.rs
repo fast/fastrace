@@ -209,6 +209,7 @@ mod tests {
             parent_id: SpanId::default(),
             collect_id: 42,
             is_root: false,
+            is_sampled: true,
         };
         let collector = LocalCollector::new(Some(token.into()), stack.clone());
 
@@ -246,6 +247,7 @@ span1 []
             parent_id: SpanId::default(),
             collect_id: 42,
             is_root: false,
+            is_sampled: true,
         };
         let collector = LocalCollector::new(Some(token.into()), stack.clone());
 
