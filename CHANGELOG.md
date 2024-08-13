@@ -7,7 +7,7 @@
 - Deprecate `full_name!()` and rename it to `full_path!()`.
 - Pass `Vec<SpanRecord>` to `Reporter::report()` instead of `&[SpanRecord]`.
 - Removed `SpanContext::encode_w3c_traceparent_with_sampled()`.
-- Added `SpanContext.sampled`, which be propagated to the child span.
+- Added `SpanContext.sampled`, which will be propagated through the child spans.
 
 ## v0.6.8
 
