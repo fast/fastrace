@@ -150,7 +150,7 @@ impl SpanContext {
     /// use fastrace::prelude::*;
     ///
     /// let span = Span::root("root", SpanContext::random());
-    /// let context = SpanContext::from_span(&span);
+    /// let span_context = SpanContext::from_span(&span);
     /// ```
     ///
     /// [`Span`]: crate::Span
@@ -184,7 +184,7 @@ impl SpanContext {
     /// let span = Span::root("root", SpanContext::random());
     /// let _guard = span.set_local_parent();
     ///
-    /// let context = SpanContext::current_local_parent();
+    /// let span_context = SpanContext::current_local_parent();
     /// ```
     pub fn current_local_parent() -> Option<Self> {
         #[cfg(not(feature = "enable"))]
