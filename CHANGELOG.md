@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## v0.7.1
+
+- Lower MSRV to 1.75.
+
 ## v0.7.0
 
 - Upgrade dependencies including opentelemtry and more.
