@@ -1,6 +1,6 @@
 [package]
 name = "fastrace-datadog"
-version = "0.7.0"
+version = "0.7.1"
 
 categories = ["development-tools::debugging"]
 description = "Datadog reporter for fastrace"
