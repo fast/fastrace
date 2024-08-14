@@ -62,7 +62,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! fastrace = { version = "0.6", features = ["enable"] }
+//! fastrace = { version ="0.7", features = ["enable"] }
 //! ```
 //!
 //! Applications should initialize a [`Reporter`] implementation early in the program's runtime.

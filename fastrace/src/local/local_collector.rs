@@ -257,6 +257,7 @@ mod tests {
                 parent_id: SpanId::default(),
                 collect_id: 42,
                 is_root: false,
+                is_sampled: true,
             };
             let collector2 = LocalCollector::new(Some(token2.into()), stack.clone());
             let span2 = stack.borrow_mut().enter_span("span2").unwrap();
@@ -296,6 +297,7 @@ span1 []
                 parent_id: SpanId::default(),
                 collect_id: 42,
                 is_root: false,
+                is_sampled: true,
             };
             let collector2 = LocalCollector::new(Some(token2.into()), stack.clone());
             let span2 = stack.borrow_mut().enter_span("span2").unwrap();

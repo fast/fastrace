@@ -88,8 +88,12 @@ impl Span {
                 parent_id: parent.span_id,
                 collect_id,
                 is_root: true,
+                is_sampled: parent.sampled,
             }
             .into();
+            if !parent.sampled {
+                collect.drop_collect(collect_id);
+            }
             Self::new(token, name, Some(collect_id))
         }
     }
@@ -456,6 +460,7 @@ impl SpanInner {
                 parent_id: self.raw_span.id,
                 collect_id: collect_item.collect_id,
                 is_root: false,
+                is_sampled: collect_item.is_sampled,
             })
     }
 
@@ -594,6 +599,7 @@ mod tests {
                         parent_id: SpanId::default(),
                         collect_id: 42,
                         is_root: true,
+                        is_sampled: true,
                     }
                     .into(),
                 ),
