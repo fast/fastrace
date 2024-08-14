@@ -24,6 +24,9 @@ pin-project = "1.1"
 rand = "0.8"
 rtrb = "0.3"
 
+# TODO: remove once_cell once MSRV is above 1.80
+once_cell = "1.19"
+
 [dev-dependencies]
 async-trait = "0.1"
 criterion = { version = "0.5", features = ["html_reports"] }
