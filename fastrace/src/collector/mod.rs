@@ -396,29 +396,26 @@ mod tests {
             "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-00"
         );
 
-        assert_eq!(
-            SpanContext::decode_w3c_traceparent(
+        assert!(
+            !SpanContext::decode_w3c_traceparent(
                 "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-00",
             )
             .unwrap()
-            .sampled,
-            false
+            .sampled
         );
-        assert_eq!(
+        assert!(
             SpanContext::decode_w3c_traceparent(
                 "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
             )
             .unwrap()
-            .sampled,
-            true
+            .sampled
         );
-        assert_eq!(
-            SpanContext::decode_w3c_traceparent(
+        assert!(
+            !SpanContext::decode_w3c_traceparent(
                 "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-10",
             )
             .unwrap()
-            .sampled,
-            false
+            .sampled
         );
     }
 }
