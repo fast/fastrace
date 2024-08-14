@@ -760,3 +760,34 @@ root []
         expected_graph
     );
 }
+
+#[test]
+#[serial]
+fn test_not_sampled() {
+    let (reporter, collected_spans) = TestReporter::new();
+    fastrace::set_reporter(reporter, Config::default());
+    {
+        let root = Span::root("root", SpanContext::random().sampled(true));
+        let _g = root.set_local_parent();
+        let _span = LocalSpan::enter_with_local_parent("span");
+    }
+    fastrace::flush();
+    let expected_graph = r#"
+root []
+    span []
+"#;
+    assert_eq!(
+        tree_str_from_span_records(collected_spans.lock().clone()),
+        expected_graph
+    );
+
+    let (reporter, collected_spans) = TestReporter::new();
+    fastrace::set_reporter(reporter, Config::default());
+    {
+        let root = Span::root("root", SpanContext::random().sampled(false));
+        let _g = root.set_local_parent();
+        let _span = LocalSpan::enter_with_local_parent("span");
+    }
+    fastrace::flush();
+    assert!(collected_spans.lock().is_empty());
+}

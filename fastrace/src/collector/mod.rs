@@ -92,7 +92,7 @@ impl SpanContext {
     /// ```
     /// use fastrace::prelude::*;
     ///
-    /// let context = SpanContext::new(TraceId(12), SpanId::default());
+    /// let span_context = SpanContext::new(TraceId(12), SpanId::default());
     /// ```
     ///
     /// [`TraceId`]: crate::collector::TraceId
@@ -120,6 +120,25 @@ impl SpanContext {
             span_id: SpanId::default(),
             sampled: true,
         }
+    }
+
+    /// Sets the `sampled` flag of the `SpanContext`.
+    ///
+    /// When the `sampled` flag is `false`, the spans will not be collected, but the parent-child
+    /// relationship will still be maintained and the `SpanContext` can still be propagated.
+    ///
+    /// The default value is `true`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use fastrace::prelude::*;
+    ///
+    /// let span_context = SpanContext::new(TraceId(12), SpanId(34)).sampled(false);
+    /// ```
+    pub fn sampled(mut self, sampled: bool) -> Self {
+        self.sampled = sampled;
+        self
     }
 
     /// Creates a `SpanContext` from the given [`Span`]. If the `Span` is a noop span,
@@ -188,25 +207,6 @@ impl SpanContext {
         }
     }
 
-    /// Sets the `sampled` flag of the `SpanContext`.
-    ///
-    /// The `sampled` flag will be propagated to the spans of the trace. But it will not
-    /// affect the behavior of `fastrace`. User may manually check the `sampled` flag
-    /// and call [`Span::cancel`] to cancel the trace.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use fastrace::prelude::*;
-    ///
-    /// let span_context = SpanContext::new(TraceId(12), SpanId(34)).sampled(false);
-    /// ```
-    /// [`Span::cancel`]: crate::Span::cancel
-    pub fn sampled(mut self, sampled: bool) -> Self {
-        self.sampled = sampled;
-        self
-    }
-
     /// Decodes the `SpanContext` from a [W3C Trace Context](https://www.w3.org/TR/trace-context/)
     /// `traceparent` header string.
     ///
@@ -267,6 +267,13 @@ impl SpanContext {
             "00-{:032x}-{:016x}-{:02x}",
             self.trace_id.0, self.span_id.0, self.sampled as u8,
         )
+    }
+
+    /// Encodes the `SpanContext` as a [W3C Trace Context](https://www.w3.org/TR/trace-context/)
+    /// `traceparent` header string with a sampled flag.
+    #[deprecated(since = "0.7.0", note = "Please use `SpanContext::sampled()` instead")]
+    pub fn encode_w3c_traceparent_with_sampled(&self, sampled: bool) -> String {
+        self.sampled(sampled).encode_w3c_traceparent()
     }
 }
 

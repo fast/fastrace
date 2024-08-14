@@ -91,6 +91,9 @@ impl Span {
                 is_sampled: parent.sampled,
             }
             .into();
+            if !parent.sampled {
+                collect.drop_collect(collect_id);
+            }
             Self::new(token, name, Some(collect_id))
         }
     }

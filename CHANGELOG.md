@@ -5,8 +5,8 @@
 - Upgrade dependencies including opentelemtry and more.
 - Remove deprecated methods `Config::batch_report_interval` and `Config::batch_report_max_spans`.
 - Deprecate `full_name!()` and rename it to `full_path!()`.
+- Deprecate `SpanContext::encode_w3c_traceparent_with_sampled()`.
 - Pass `Vec<SpanRecord>` to `Reporter::report()` instead of `&[SpanRecord]`.
-- Removed `SpanContext::encode_w3c_traceparent_with_sampled()`.
 - Added `SpanContext.sampled`, which will be propagated through the child spans.
 
 ## v0.6.8
