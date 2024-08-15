@@ -109,11 +109,14 @@ impl LocalSpanStack {
         if let Some(span_line) = self.current_span_line() {
             span_line.add_properties(properties);
         }
-    }    
-    
+    }
+
     #[inline]
-    pub fn with_properties<K, V, I, F>(&mut self, local_span_handle: &LocalSpanHandle, properties: F)
-    where
+    pub fn with_properties<K, V, I, F>(
+        &mut self,
+        local_span_handle: &LocalSpanHandle,
+        properties: F,
+    ) where
         K: Into<Cow<'static, str>>,
         V: Into<Cow<'static, str>>,
         I: IntoIterator<Item = (K, V)>,

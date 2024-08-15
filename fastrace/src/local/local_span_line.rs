@@ -224,7 +224,7 @@ span []
         span_line2.with_properties(&span, || [("k1", "v1")]);
         span_line1.finish_span(span);
 
-        let raw_spans: Vec<crate::local::raw_span::RawSpan> = span_line1.collect(1).unwrap().0.into_inner();
+        let raw_spans = span_line1.collect(1).unwrap().0.into_inner();
         assert_eq!(raw_spans.len(), 1);
         assert_eq!(raw_spans[0].properties.len(), 0);
 
