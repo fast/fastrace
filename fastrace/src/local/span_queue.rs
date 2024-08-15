@@ -133,17 +133,6 @@ impl SpanQueue {
         self.next_parent_id
     }
 
-    #[inline]
-    pub fn current_parent_handle(&self) -> Option<SpanHandle> {
-        self.next_parent_id.and_then(|id: SpanId| {
-            let index = self.span_queue.iter().position(|span| span.id == id);
-
-            debug_assert!(index.is_some());
-
-            Some(SpanHandle { index: index? })
-        })
-    }
-
     #[cfg(test)]
     pub fn get_raw_span(&self, handle: &SpanHandle) -> &RawSpan {
         &self.span_queue[handle.index]

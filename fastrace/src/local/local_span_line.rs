@@ -101,16 +101,6 @@ impl SpanLine {
     }
 
     #[inline]
-    pub fn current_local_span_handle(&self) -> Option<LocalSpanHandle> {
-        let span_handle = self.span_queue.current_parent_handle()?;
-        let span_line_epoch = self.epoch;
-        Some(LocalSpanHandle {
-            span_handle,
-            span_line_epoch,
-        })
-    }
-
-    #[inline]
     pub fn collect(self, span_line_epoch: usize) -> Option<(RawSpans, Option<CollectToken>)> {
         (self.epoch == span_line_epoch)
             .then(move || (self.span_queue.take_queue(), self.collect_token))

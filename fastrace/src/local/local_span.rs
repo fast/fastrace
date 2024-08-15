@@ -103,8 +103,7 @@ impl LocalSpan {
             LOCAL_SPAN_STACK
                 .try_with(|s| {
                     let span_stack = &mut *s.borrow_mut();
-                    let span_line = span_stack.current_span_line()?;
-                    span_line.add_properties(properties);
+                    span_stack.add_properties(properties);
                     Some(())
                 })
                 .ok();
