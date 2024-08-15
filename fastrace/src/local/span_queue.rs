@@ -4,6 +4,7 @@ use std::borrow::Cow;
 
 use minstant::Instant;
 
+use super::raw_span::RawKind;
 use crate::collector::SpanId;
 use crate::local::raw_span::RawSpan;
 use crate::util::RawSpans;
@@ -38,7 +39,7 @@ impl SpanQueue {
             self.next_parent_id.unwrap_or_default(),
             Instant::now(),
             name,
-            false,
+            RawKind::Span,
         );
         self.next_parent_id = Some(span.id);
 
@@ -77,7 +78,7 @@ impl SpanQueue {
             self.next_parent_id.unwrap_or_default(),
             Instant::now(),
             name,
-            true,
+            RawKind::Event,
         );
         span.properties.extend(properties());
 
@@ -85,7 +86,31 @@ impl SpanQueue {
     }
 
     #[inline]
-    pub fn add_properties<K, V, I>(&mut self, span_handle: &SpanHandle, properties: I)
+    pub fn add_properties<K, V, I>(&mut self, properties: I)
+    where
+        K: Into<Cow<'static, str>>,
+        V: Into<Cow<'static, str>>,
+        I: IntoIterator<Item = (K, V)>,
+    {
+        if self.span_queue.len() >= self.capacity {
+            return;
+        }
+
+        let mut span = RawSpan::begin_with(
+            SpanId::next_id(),
+            self.next_parent_id.unwrap_or_default(),
+            Instant::ZERO,
+            Cow::Borrowed(""),
+            RawKind::Properties,
+        );
+        span.properties
+            .extend(properties.into_iter().map(|(k, v)| (k.into(), v.into())));
+
+        self.span_queue.push(span);
+    }
+
+    #[inline]
+    pub fn with_properties<K, V, I>(&mut self, span_handle: &SpanHandle, properties: I)
     where
         K: Into<Cow<'static, str>>,
         V: Into<Cow<'static, str>>,
@@ -110,7 +135,7 @@ impl SpanQueue {
 
     #[inline]
     pub fn current_parent_handle(&self) -> Option<SpanHandle> {
-        self.next_parent_id.and_then(|id| {
+        self.next_parent_id.and_then(|id: SpanId| {
             let index = self.span_queue.iter().position(|span| span.id == id);
 
             debug_assert!(index.is_some());
@@ -160,10 +185,10 @@ span1 []
         let mut queue = SpanQueue::with_capacity(16);
         {
             let span1 = queue.start_span("span1").unwrap();
-            queue.add_properties(&span1, [("k1", "v1"), ("k2", "v2")]);
+            queue.with_properties(&span1, [("k1", "v1"), ("k2", "v2")]);
             {
                 let span2 = queue.start_span("span2").unwrap();
-                queue.add_properties(&span2, [("k1", "v1")]);
+                queue.with_properties(&span2, [("k1", "v1")]);
                 queue.finish_span(span2);
             }
             queue.finish_span(span1);

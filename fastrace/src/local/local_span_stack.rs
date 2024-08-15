@@ -98,7 +98,21 @@ impl LocalSpanStack {
     }
 
     #[inline]
-    pub fn add_properties<K, V, I, F>(&mut self, local_span_handle: &LocalSpanHandle, properties: F)
+    pub fn add_properties<K, V, I, F>(&mut self, properties: F)
+    where
+        K: Into<Cow<'static, str>>,
+        V: Into<Cow<'static, str>>,
+        I: IntoIterator<Item = (K, V)>,
+        F: FnOnce() -> I,
+    {
+        debug_assert!(self.current_span_line().is_some());
+        if let Some(span_line) = self.current_span_line() {
+            span_line.add_properties(properties);
+        }
+    }    
+    
+    #[inline]
+    pub fn with_properties<K, V, I, F>(&mut self, local_span_handle: &LocalSpanHandle, properties: F)
     where
         K: Into<Cow<'static, str>>,
         V: Into<Cow<'static, str>>,
@@ -111,7 +125,7 @@ impl LocalSpanStack {
                 span_line.span_line_epoch(),
                 local_span_handle.span_line_epoch
             );
-            span_line.add_properties(local_span_handle, properties);
+            span_line.with_properties(local_span_handle, properties);
         }
     }
 
@@ -367,7 +381,7 @@ span1 []
                     .into(),
                 ))
                 .unwrap();
-            span_stack.add_properties(&span1, || [("k1", "v1")]);
+            span_stack.with_properties(&span1, || [("k1", "v1")]);
             let _ = span_stack.unregister_and_collect(span_line2).unwrap();
         }
         span_stack.exit_span(span1);

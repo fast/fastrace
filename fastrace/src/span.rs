@@ -17,6 +17,7 @@ use crate::collector::SpanSet;
 use crate::local::local_collector::LocalSpansInner;
 use crate::local::local_span_stack::LocalSpanStack;
 use crate::local::local_span_stack::LOCAL_SPAN_STACK;
+use crate::local::raw_span::RawKind;
 use crate::local::raw_span::RawSpan;
 use crate::local::LocalCollector;
 use crate::local::LocalSpans;
@@ -382,7 +383,13 @@ impl Span {
     ) -> Self {
         let span_id = SpanId::next_id();
         let begin_instant = Instant::now();
-        let raw_span = RawSpan::begin_with(span_id, SpanId::default(), begin_instant, name, false);
+        let raw_span = RawSpan::begin_with(
+            span_id,
+            SpanId::default(),
+            begin_instant,
+            name,
+            RawKind::Span,
+        );
         let collect = current_collect();
 
         Self {

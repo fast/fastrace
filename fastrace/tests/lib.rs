@@ -676,18 +676,18 @@ fn test_add_property() {
     {
         let root = Span::root("root", SpanContext::random());
         let _g = root.set_local_parent();
-        LocalSpan::add_property(|| ("noop", "noop"));
-        LocalSpan::add_properties(|| [("noop", "noop")]);
-        let _span = LocalSpan::enter_with_local_parent("span");
         LocalSpan::add_property(|| ("k1", "v1"));
-        LocalSpan::add_properties(|| [("k2", "v2"), ("k3", "v3")]);
+        LocalSpan::add_properties(|| [("k2", "v2")]);
+        let _span = LocalSpan::enter_with_local_parent("span");
+        LocalSpan::add_property(|| ("k3", "v3"));
+        LocalSpan::add_properties(|| [("k4", "v4"), ("k5", "v5")]);
     }
 
     fastrace::flush();
 
     let expected_graph = r#"
-root []
-    span [("k1", "v1"), ("k2", "v2"), ("k3", "v3")]
+root [("k1", "v1"), ("k2", "v2")]
+    span [("k3", "v3"), ("k4", "v4"), ("k5", "v5")]
 "#;
     assert_eq!(
         tree_str_from_span_records(collected_spans.lock().clone()),

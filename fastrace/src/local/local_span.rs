@@ -55,7 +55,7 @@ impl LocalSpan {
     }
 
     /// Add a single property to the current local parent. If the local parent is a [`Span`],
-    /// the property will not be added to the `Span`.
+    /// the property will be added to the `Span`.
     ///
     /// A property is an arbitrary key-value pair associated with a span.
     ///
@@ -79,7 +79,7 @@ impl LocalSpan {
     }
 
     /// Add multiple properties to the current local parent. If the local parent is a [`Span`],
-    /// the properties will not be added to the `Span`.
+    /// the properties will be added to the `Span`.
     ///
     /// # Examples
     ///
@@ -104,8 +104,7 @@ impl LocalSpan {
                 .try_with(|s| {
                     let span_stack = &mut *s.borrow_mut();
                     let span_line = span_stack.current_span_line()?;
-                    let parent_handle = span_line.current_parent_handle()?;
-                    span_line.add_properties(&parent_handle, properties);
+                    span_line.add_properties(properties);
                     Some(())
                 })
                 .ok();
@@ -155,7 +154,7 @@ impl LocalSpan {
         #[cfg(feature = "enable")]
         if let Some(LocalSpanInner { stack, span_handle }) = &self.inner {
             let span_stack = &mut *stack.borrow_mut();
-            span_stack.add_properties(span_handle, properties);
+            span_stack.with_properties(span_handle, properties);
         }
 
         self
