@@ -18,8 +18,8 @@ rust-version = "1.75"
 
 [workspace.dependencies]
 # workspace dependencies
-fastrace = { version = "0.7.1", path = "fastrace" }
-fastrace-macro = { version = "0.7.1", path = "fastrace-macro" }
+fastrace = { version = "0.7.2", path = "fastrace" }
+fastrace-macro = { version = "0.7.2", path = "fastrace-macro" }
 
 # workspace leaves
 fastrace-datadog = { path = "fastrace-datadog" }

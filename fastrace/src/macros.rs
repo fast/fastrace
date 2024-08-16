@@ -52,7 +52,7 @@ macro_rules! func_path {
 }
 
 /// Get the full path of the function where the macro is invoked. Returns a `&'static str`.
-#[deprecated(since = "0.7.1", note = "Please use `fastrace::func_path!()` instead")]
+#[deprecated(since = "0.7.0", note = "Please use `fastrace::func_path!()` instead")]
 #[macro_export]
 macro_rules! full_name {
     () => {{
