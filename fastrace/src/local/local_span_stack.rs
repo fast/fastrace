@@ -105,7 +105,6 @@ impl LocalSpanStack {
         I: IntoIterator<Item = (K, V)>,
         F: FnOnce() -> I,
     {
-        debug_assert!(self.current_span_line().is_some());
         if let Some(span_line) = self.current_span_line() {
             span_line.add_properties(properties);
         }
