@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Allow to `LocalSpan::add_property()` when the local parent is a `Span`.
+
 ## v0.7.1
 
 - Lower MSRV to 1.75.

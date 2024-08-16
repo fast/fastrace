@@ -1,5 +1,6 @@
 // Copyright 2020 TiKV Project Authors. Licensed under Apache-2.0.
 
+use std::borrow::Cow;
 use std::cell::UnsafeCell;
 use std::collections::HashMap;
 use std::sync::atomic::AtomicBool;
@@ -24,6 +25,7 @@ use crate::collector::SpanRecord;
 use crate::collector::SpanSet;
 use crate::collector::TraceId;
 use crate::local::local_collector::LocalSpansInner;
+use crate::local::raw_span::RawKind;
 use crate::local::raw_span::RawSpan;
 use crate::util::object_pool;
 use crate::util::spsc::Receiver;
@@ -191,7 +193,7 @@ enum SpanCollection {
 struct ActiveCollector {
     span_collections: Vec<SpanCollection>,
     span_count: usize,
-    dangling_events: HashMap<SpanId, Vec<EventRecord>>,
+    danglings: HashMap<SpanId, Vec<DanglingItem>>,
 }
 
 pub(crate) struct GlobalCollector {
@@ -354,7 +356,7 @@ impl GlobalCollector {
                     active_collector.span_collections,
                     &anchor,
                     &mut committed_records,
-                    &mut active_collector.dangling_events,
+                    &mut active_collector.danglings,
                 );
             }
         }
@@ -365,7 +367,7 @@ impl GlobalCollector {
                     active_collector.span_collections.drain(..),
                     &anchor,
                     &mut committed_records,
-                    &mut active_collector.dangling_events,
+                    &mut active_collector.danglings,
                 );
             }
         }
@@ -377,26 +379,31 @@ impl GlobalCollector {
 impl LocalSpansInner {
     pub fn to_span_records(&self, parent: SpanContext) -> Vec<SpanRecord> {
         let anchor: Anchor = Anchor::new();
-        let mut dangling_events = HashMap::new();
+        let mut danglings = HashMap::new();
         let mut records = Vec::new();
         amend_local_span(
             self,
             parent.trace_id,
             parent.span_id,
             &mut records,
-            &mut dangling_events,
+            &mut danglings,
             &anchor,
         );
-        mount_events(&mut records, &mut dangling_events);
+        mount_danglings(&mut records, &mut danglings);
         records
     }
+}
+
+enum DanglingItem {
+    Event(EventRecord),
+    Properties(Vec<(Cow<'static, str>, Cow<'static, str>)>),
 }
 
 fn postprocess_span_collection(
     span_collections: impl IntoIterator<Item = SpanCollection>,
     anchor: &Anchor,
     committed_records: &mut Vec<SpanRecord>,
-    dangling_events: &mut HashMap<SpanId, Vec<EventRecord>>,
+    danglings: &mut HashMap<SpanId, Vec<DanglingItem>>,
 ) {
     let committed_len = committed_records.len();
 
@@ -412,7 +419,7 @@ fn postprocess_span_collection(
                     trace_id,
                     parent_id,
                     committed_records,
-                    dangling_events,
+                    danglings,
                     anchor,
                 ),
                 SpanSet::LocalSpansInner(local_spans) => amend_local_span(
@@ -420,7 +427,7 @@ fn postprocess_span_collection(
                     trace_id,
                     parent_id,
                     committed_records,
-                    dangling_events,
+                    danglings,
                     anchor,
                 ),
                 SpanSet::SharedLocalSpans(local_spans) => amend_local_span(
@@ -428,7 +435,7 @@ fn postprocess_span_collection(
                     trace_id,
                     parent_id,
                     committed_records,
-                    dangling_events,
+                    danglings,
                     anchor,
                 ),
             },
@@ -442,7 +449,7 @@ fn postprocess_span_collection(
                     trace_id,
                     parent_id,
                     committed_records,
-                    dangling_events,
+                    danglings,
                     anchor,
                 ),
                 SpanSet::LocalSpansInner(local_spans) => amend_local_span(
@@ -450,7 +457,7 @@ fn postprocess_span_collection(
                     trace_id,
                     parent_id,
                     committed_records,
-                    dangling_events,
+                    danglings,
                     anchor,
                 ),
                 SpanSet::SharedLocalSpans(local_spans) => amend_local_span(
@@ -458,14 +465,14 @@ fn postprocess_span_collection(
                     trace_id,
                     parent_id,
                     committed_records,
-                    dangling_events,
+                    danglings,
                     anchor,
                 ),
             },
         }
     }
 
-    mount_events(&mut committed_records[committed_len..], dangling_events);
+    mount_danglings(&mut committed_records[committed_len..], danglings);
 }
 
 fn amend_local_span(
@@ -473,92 +480,117 @@ fn amend_local_span(
     trace_id: TraceId,
     parent_id: SpanId,
     spans: &mut Vec<SpanRecord>,
-    events: &mut HashMap<SpanId, Vec<EventRecord>>,
+    dangling: &mut HashMap<SpanId, Vec<DanglingItem>>,
     anchor: &Anchor,
 ) {
     for span in local_spans.spans.iter() {
-        let begin_time_unix_ns = span.begin_instant.as_unix_nanos(anchor);
         let parent_id = if span.parent_id == SpanId::default() {
             parent_id
         } else {
             span.parent_id
         };
 
-        if span.is_event {
+        match span.raw_kind {
+            RawKind::Span => {
+                let begin_time_unix_ns = span.begin_instant.as_unix_nanos(anchor);
+                let end_time_unix_ns = if span.end_instant == Instant::ZERO {
+                    local_spans.end_time.as_unix_nanos(anchor)
+                } else {
+                    span.end_instant.as_unix_nanos(anchor)
+                };
+                spans.push(SpanRecord {
+                    trace_id,
+                    span_id: span.id,
+                    parent_id,
+                    begin_time_unix_ns,
+                    duration_ns: end_time_unix_ns.saturating_sub(begin_time_unix_ns),
+                    name: span.name.clone(),
+                    properties: span.properties.clone(),
+                    events: vec![],
+                });
+            }
+            RawKind::Event => {
+                let begin_time_unix_ns = span.begin_instant.as_unix_nanos(anchor);
+                let event = EventRecord {
+                    name: span.name.clone(),
+                    timestamp_unix_ns: begin_time_unix_ns,
+                    properties: span.properties.clone(),
+                };
+                dangling
+                    .entry(parent_id)
+                    .or_default()
+                    .push(DanglingItem::Event(event));
+            }
+            RawKind::Properties => {
+                dangling
+                    .entry(parent_id)
+                    .or_default()
+                    .push(DanglingItem::Properties(span.properties.clone()));
+            }
+        }
+    }
+}
+
+fn amend_span(
+    span: &RawSpan,
+    trace_id: TraceId,
+    parent_id: SpanId,
+    spans: &mut Vec<SpanRecord>,
+    dangling: &mut HashMap<SpanId, Vec<DanglingItem>>,
+    anchor: &Anchor,
+) {
+    match span.raw_kind {
+        RawKind::Span => {
+            let begin_time_unix_ns = span.begin_instant.as_unix_nanos(anchor);
+            let end_time_unix_ns = span.end_instant.as_unix_nanos(anchor);
+            spans.push(SpanRecord {
+                trace_id,
+                span_id: span.id,
+                parent_id,
+                begin_time_unix_ns,
+                duration_ns: end_time_unix_ns.saturating_sub(begin_time_unix_ns),
+                name: span.name.clone(),
+                properties: span.properties.clone(),
+                events: vec![],
+            });
+        }
+        RawKind::Event => {
+            let begin_time_unix_ns = span.begin_instant.as_unix_nanos(anchor);
             let event = EventRecord {
                 name: span.name.clone(),
                 timestamp_unix_ns: begin_time_unix_ns,
                 properties: span.properties.clone(),
             };
-            events.entry(parent_id).or_default().push(event);
-            continue;
+            dangling
+                .entry(parent_id)
+                .or_default()
+                .push(DanglingItem::Event(event));
         }
-
-        let end_time_unix_ns = if span.end_instant == Instant::ZERO {
-            local_spans.end_time.as_unix_nanos(anchor)
-        } else {
-            span.end_instant.as_unix_nanos(anchor)
-        };
-        spans.push(SpanRecord {
-            trace_id,
-            span_id: span.id,
-            parent_id,
-            begin_time_unix_ns,
-            duration_ns: end_time_unix_ns.saturating_sub(begin_time_unix_ns),
-            name: span.name.clone(),
-            properties: span.properties.clone(),
-            events: vec![],
-        });
+        RawKind::Properties => {
+            dangling
+                .entry(parent_id)
+                .or_default()
+                .push(DanglingItem::Properties(span.properties.clone()));
+        }
     }
 }
 
-fn amend_span(
-    raw_span: &RawSpan,
-    trace_id: TraceId,
-    parent_id: SpanId,
-    spans: &mut Vec<SpanRecord>,
-    events: &mut HashMap<SpanId, Vec<EventRecord>>,
-    anchor: &Anchor,
-) {
-    let begin_time_unix_ns = raw_span.begin_instant.as_unix_nanos(anchor);
-
-    if raw_span.is_event {
-        let event = EventRecord {
-            name: raw_span.name.clone(),
-            timestamp_unix_ns: begin_time_unix_ns,
-            properties: raw_span.properties.clone(),
-        };
-        events.entry(parent_id).or_default().push(event);
-        return;
-    }
-
-    let end_time_unix_ns = raw_span.end_instant.as_unix_nanos(anchor);
-    spans.push(SpanRecord {
-        trace_id,
-        span_id: raw_span.id,
-        parent_id,
-        begin_time_unix_ns,
-        duration_ns: end_time_unix_ns.saturating_sub(begin_time_unix_ns),
-        name: raw_span.name.clone(),
-        properties: raw_span.properties.clone(),
-        events: vec![],
-    });
-}
-
-fn mount_events(
-    records: &mut [SpanRecord],
-    dangling_events: &mut HashMap<SpanId, Vec<EventRecord>>,
-) {
+fn mount_danglings(records: &mut [SpanRecord], danglings: &mut HashMap<SpanId, Vec<DanglingItem>>) {
     for record in records.iter_mut() {
-        if dangling_events.is_empty() {
+        if danglings.is_empty() {
             return;
         }
 
-        if let Some(event) = dangling_events.remove(&record.span_id) {
-            if record.events.is_empty() {
-                record.events = event;
-            } else {
-                record.events.extend(event);
+        if let Some(danglings) = danglings.remove(&record.span_id) {
+            for dangling in danglings {
+                match dangling {
+                    DanglingItem::Event(event) => {
+                        record.events.push(event);
+                    }
+                    DanglingItem::Properties(properties) => {
+                        record.properties.extend(properties);
+                    }
+                }
             }
         }
     }

@@ -57,7 +57,18 @@ impl SpanLine {
     }
 
     #[inline]
-    pub fn add_properties<K, V, I, F>(&mut self, handle: &LocalSpanHandle, properties: F)
+    pub fn add_properties<K, V, I, F>(&mut self, properties: F)
+    where
+        K: Into<Cow<'static, str>>,
+        V: Into<Cow<'static, str>>,
+        I: IntoIterator<Item = (K, V)>,
+        F: FnOnce() -> I,
+    {
+        self.span_queue.add_properties(properties());
+    }
+
+    #[inline]
+    pub fn with_properties<K, V, I, F>(&mut self, handle: &LocalSpanHandle, properties: F)
     where
         K: Into<Cow<'static, str>>,
         V: Into<Cow<'static, str>>,
@@ -66,7 +77,7 @@ impl SpanLine {
     {
         if self.epoch == handle.span_line_epoch {
             self.span_queue
-                .add_properties(&handle.span_handle, properties());
+                .with_properties(&handle.span_handle, properties());
         }
     }
 
@@ -86,16 +97,6 @@ impl SpanLine {
                     is_sampled: true,
                 })
                 .collect()
-        })
-    }
-
-    #[inline]
-    pub fn current_parent_handle(&self) -> Option<LocalSpanHandle> {
-        let span_handle = self.span_queue.current_parent_handle()?;
-        let span_line_epoch = self.epoch;
-        Some(LocalSpanHandle {
-            span_handle,
-            span_line_epoch,
         })
     }
 
@@ -127,7 +128,7 @@ mod tests {
                 let span2 = span_line.start_span("span2").unwrap();
                 {
                     let span3 = span_line.start_span("span3").unwrap();
-                    span_line.add_properties(&span3, || [("k1", "v1")]);
+                    span_line.with_properties(&span3, || [("k1", "v1")]);
                     span_line.finish_span(span3);
                 }
                 span_line.finish_span(span2);
@@ -210,7 +211,7 @@ span []
         assert_eq!(span_line2.span_line_epoch(), 2);
 
         let span = span_line1.start_span("span").unwrap();
-        span_line2.add_properties(&span, || [("k1", "v1")]);
+        span_line2.with_properties(&span, || [("k1", "v1")]);
         span_line1.finish_span(span);
 
         let raw_spans = span_line1.collect(1).unwrap().0.into_inner();

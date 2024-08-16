@@ -7,6 +7,13 @@ use minstant::Instant;
 use crate::collector::SpanId;
 use crate::util::Properties;
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum RawKind {
+    Span,
+    Event,
+    Properties,
+}
+
 #[derive(Debug)]
 pub struct RawSpan {
     pub id: SpanId,
@@ -14,7 +21,7 @@ pub struct RawSpan {
     pub begin_instant: Instant,
     pub name: Cow<'static, str>,
     pub properties: Properties,
-    pub is_event: bool,
+    pub raw_kind: RawKind,
 
     // Will write this field at post processing
     pub end_instant: Instant,
@@ -27,7 +34,7 @@ impl RawSpan {
         parent_id: SpanId,
         begin_instant: Instant,
         name: impl Into<Cow<'static, str>>,
-        is_event: bool,
+        raw_kind: RawKind,
     ) -> Self {
         RawSpan {
             id,
@@ -35,7 +42,7 @@ impl RawSpan {
             begin_instant,
             name: name.into(),
             properties: Properties::default(),
-            is_event,
+            raw_kind,
             end_instant: Instant::ZERO,
         }
     }
@@ -57,7 +64,7 @@ impl Clone for RawSpan {
             begin_instant: self.begin_instant,
             name: self.name.clone(),
             properties,
-            is_event: self.is_event,
+            raw_kind: self.raw_kind,
             end_instant: self.end_instant,
         }
     }

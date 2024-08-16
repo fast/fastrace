@@ -3,6 +3,7 @@
 use std::borrow::Cow;
 
 use crate::local::local_span_stack::LOCAL_SPAN_STACK;
+use crate::local::raw_span::RawKind;
 use crate::Span;
 
 /// An event that represents a single point in time during the execution of a span.
@@ -29,7 +30,7 @@ impl Event {
         {
             let mut span = Span::enter_with_parent(name, parent).with_properties(properties);
             if let Some(mut inner) = span.inner.take() {
-                inner.raw_span.is_event = true;
+                inner.raw_span.raw_kind = RawKind::Event;
                 inner.submit_spans();
             }
         }
