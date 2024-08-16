@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## v0.7.2
+
 - Allow to `LocalSpan::add_property()` when the local parent is a `Span`.
 
 ## v0.7.1
