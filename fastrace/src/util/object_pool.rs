@@ -14,6 +14,12 @@ where T: 'static
     storage: Mutex<Vec<Vec<T>>>,
 }
 
+impl<T> Default for GlobalVecPool<T> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<T> GlobalVecPool<T> {
     pub const fn new() -> Self {
         Self {
