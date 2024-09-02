@@ -1,16 +1,15 @@
 // Copyright 2022 TiKV Project Authors. Licensed under Apache-2.0.
 
-use std::{
-    fmt,
-    mem::{self, ManuallyDrop},
-    ops, slice,
-    sync::Mutex,
-};
+use std::fmt;
+use std::mem::ManuallyDrop;
+use std::mem::{self};
+use std::ops;
+use std::slice;
+use std::sync::Mutex;
 
 #[must_use]
 pub struct GlobalVecPool<T>
-where
-    T: 'static,
+where T: 'static
 {
     storage: Mutex<Vec<Vec<T>>>,
 }
@@ -147,8 +146,7 @@ pub struct ReusableVec<T: 'static> {
 }
 
 impl<T> PartialEq for ReusableVec<T>
-where
-    T: PartialEq,
+where T: PartialEq
 {
     fn eq(&self, other: &Self) -> bool {
         self.data.eq(&other.data)
@@ -156,8 +154,7 @@ where
 }
 
 impl<T> fmt::Debug for ReusableVec<T>
-where
-    T: fmt::Debug,
+where T: fmt::Debug
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.data.fmt(f)

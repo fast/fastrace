@@ -229,14 +229,16 @@ impl GlobalCollector {
         {
             std::thread::Builder::new()
                 .name("fastrace-global-collector".to_string())
-                .spawn(move || loop {
-                    let begin_instant = Instant::now();
-                    GLOBAL_COLLECTOR.lock().as_mut().unwrap().handle_commands();
-                    std::thread::sleep(
-                        config
-                            .report_interval
-                            .saturating_sub(begin_instant.elapsed()),
-                    );
+                .spawn(move || {
+                    loop {
+                        let begin_instant = Instant::now();
+                        GLOBAL_COLLECTOR.lock().as_mut().unwrap().handle_commands();
+                        std::thread::sleep(
+                            config
+                                .report_interval
+                                .saturating_sub(begin_instant.elapsed()),
+                        );
+                    }
                 })
                 .unwrap();
         }
