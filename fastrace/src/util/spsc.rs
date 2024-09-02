@@ -57,6 +57,14 @@ impl<T> Sender<T> {
     }
 }
 
+impl<T> Drop for Sender<T> {
+    fn drop(&mut self) {
+        for command in self.pending_messages.drain(..) {
+            drop(self.tx.push(command));
+        }
+    }
+}
+
 impl<T> Receiver<T> {
     pub fn try_recv(&mut self) -> Result<Option<T>, ChannelClosed> {
         match self.rx.pop() {
