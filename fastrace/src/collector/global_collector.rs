@@ -27,7 +27,6 @@ use crate::collector::TraceId;
 use crate::local::local_collector::LocalSpansInner;
 use crate::local::raw_span::RawKind;
 use crate::local::raw_span::RawSpan;
-use crate::util::object_pool;
 use crate::util::spsc::Receiver;
 use crate::util::spsc::Sender;
 use crate::util::spsc::{self};
@@ -230,24 +229,20 @@ impl GlobalCollector {
         {
             std::thread::Builder::new()
                 .name("fastrace-global-collector".to_string())
-                .spawn(move || {
-                    loop {
-                        let begin_instant = Instant::now();
-                        GLOBAL_COLLECTOR.lock().as_mut().unwrap().handle_commands();
-                        std::thread::sleep(
-                            config
-                                .report_interval
-                                .saturating_sub(begin_instant.elapsed()),
-                        );
-                    }
+                .spawn(move || loop {
+                    let begin_instant = Instant::now();
+                    GLOBAL_COLLECTOR.lock().as_mut().unwrap().handle_commands();
+                    std::thread::sleep(
+                        config
+                            .report_interval
+                            .saturating_sub(begin_instant.elapsed()),
+                    );
                 })
                 .unwrap();
         }
     }
 
     fn handle_commands(&mut self) {
-        object_pool::enable_reuse_in_current_thread();
-
         debug_assert!(self.start_collects.is_empty());
         debug_assert!(self.drop_collects.is_empty());
         debug_assert!(self.commit_collects.is_empty());

@@ -9,52 +9,48 @@ pub mod tree;
 use std::borrow::Cow;
 use std::cell::RefCell;
 
-use once_cell::sync::Lazy;
-
 use crate::collector::CollectTokenItem;
 use crate::local::raw_span::RawSpan;
-use crate::util::object_pool::Pool;
-use crate::util::object_pool::Puller;
-use crate::util::object_pool::Reusable;
+use crate::util::object_pool::GlobalVecPool;
+use crate::util::object_pool::LocalVecPool;
+use crate::util::object_pool::ReusableVec;
 
-static RAW_SPANS_POOL: Lazy<Pool<Vec<RawSpan>>> = Lazy::new(|| Pool::new(Vec::new, Vec::clear));
-static COLLECT_TOKEN_ITEMS_POOL: Lazy<Pool<Vec<CollectTokenItem>>> =
-    Lazy::new(|| Pool::new(Vec::new, Vec::clear));
-#[allow(clippy::type_complexity)]
-static PROPERTIES_POOL: Lazy<Pool<Vec<(Cow<'static, str>, Cow<'static, str>)>>> =
-    Lazy::new(|| Pool::new(Vec::new, Vec::clear));
+static RAW_SPANS_POOL: GlobalVecPool<RawSpan> = GlobalVecPool::new();
+static COLLECT_TOKEN_ITEMS_POOL: GlobalVecPool<CollectTokenItem> = GlobalVecPool::new();
+static PROPERTIES_POOL: GlobalVecPool<(Cow<'static, str>, Cow<'static, str>)> =
+    GlobalVecPool::new();
 
 thread_local! {
-    static RAW_SPANS_PULLER: RefCell<Puller<'static, Vec<RawSpan>>> = RefCell::new(RAW_SPANS_POOL.puller(512));
-    static COLLECT_TOKEN_ITEMS_PULLER: RefCell<Puller<'static, Vec<CollectTokenItem>>>  = RefCell::new(COLLECT_TOKEN_ITEMS_POOL.puller(512));
+    static RAW_SPANS_PULLER: RefCell<LocalVecPool<RawSpan>> = RefCell::new(RAW_SPANS_POOL.new_local(512));
+    static COLLECT_TOKEN_ITEMS_PULLER: RefCell<LocalVecPool<CollectTokenItem>>  = RefCell::new(COLLECT_TOKEN_ITEMS_POOL.new_local(512));
     #[allow(clippy::type_complexity)]
-    static PROPERTIES_PULLER: RefCell<Puller<'static, Vec<(Cow<'static, str>, Cow<'static, str>)>>>  = RefCell::new(PROPERTIES_POOL.puller(512));
+    static PROPERTIES_PULLER: RefCell<LocalVecPool<(Cow<'static, str>, Cow<'static, str>)>>  = RefCell::new(PROPERTIES_POOL.new_local(512));
 }
 
-pub type RawSpans = Reusable<'static, Vec<RawSpan>>;
-pub type CollectToken = Reusable<'static, Vec<CollectTokenItem>>;
-pub type Properties = Reusable<'static, Vec<(Cow<'static, str>, Cow<'static, str>)>>;
+pub type RawSpans = ReusableVec<RawSpan>;
+pub type CollectToken = ReusableVec<CollectTokenItem>;
+pub type Properties = ReusableVec<(Cow<'static, str>, Cow<'static, str>)>;
 
 impl Default for RawSpans {
     fn default() -> Self {
         RAW_SPANS_PULLER
-            .try_with(|puller| puller.borrow_mut().pull())
-            .unwrap_or_else(|_| Reusable::new(&*RAW_SPANS_POOL, vec![]))
+            .try_with(|puller| puller.borrow_mut().take())
+            .unwrap_or_else(|_| Self::new(&RAW_SPANS_POOL, Vec::new()))
     }
 }
 
 impl Default for Properties {
     fn default() -> Self {
         PROPERTIES_PULLER
-            .try_with(|puller| puller.borrow_mut().pull())
-            .unwrap_or_else(|_| Reusable::new(&*PROPERTIES_POOL, vec![]))
+            .try_with(|puller| puller.borrow_mut().take())
+            .unwrap_or_else(|_| Self::new(&PROPERTIES_POOL, Vec::new()))
     }
 }
 
 fn new_collect_token(items: impl IntoIterator<Item = CollectTokenItem>) -> CollectToken {
     let mut token = COLLECT_TOKEN_ITEMS_PULLER
-        .try_with(|puller| puller.borrow_mut().pull())
-        .unwrap_or_else(|_| Reusable::new(&*COLLECT_TOKEN_ITEMS_POOL, vec![]));
+        .try_with(|puller| puller.borrow_mut().take())
+        .unwrap_or_else(|_| CollectToken::new(&COLLECT_TOKEN_ITEMS_POOL, Vec::new()));
     token.extend(items);
     token
 }

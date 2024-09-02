@@ -1,153 +1,236 @@
-// Copyright 2020 TiKV Project Authors. Licensed under Apache-2.0.
+// Copyright 2022 TiKV Project Authors. Licensed under Apache-2.0.
 
-use std::cell::Cell;
-use std::mem::ManuallyDrop;
-use std::ops::Deref;
-use std::ops::DerefMut;
+use std::{
+    fmt,
+    mem::{self, ManuallyDrop},
+    ops, slice,
+    sync::Mutex,
+};
 
-use parking_lot::Mutex;
-
-thread_local! {
-    static REUSABLE: Cell<bool> = const { Cell::new(false) };
+#[must_use]
+pub struct GlobalVecPool<T>
+where
+    T: 'static,
+{
+    storage: Mutex<Vec<Vec<T>>>,
 }
 
-pub fn enable_reuse_in_current_thread() {
-    REUSABLE.with(|r| r.set(true));
-}
-
-fn is_reusable() -> bool {
-    REUSABLE.with(|r| r.get())
-}
-
-pub struct Pool<T> {
-    // The objects in the pool ready to be reused.
-    // The mutex should only be visited in the global collector, which is guaranteed by
-    // `is_reusable`, so it should not have synchronization overhead.
-    objects: Mutex<Vec<T>>,
-    init: fn() -> T,
-    reset: fn(&mut T),
-}
-
-impl<T> Pool<T> {
-    #[inline]
-    pub fn new(init: fn() -> T, reset: fn(&mut T)) -> Pool<T> {
-        Pool {
-            objects: Mutex::new(Vec::new()),
-            init,
-            reset,
-        }
-    }
-
-    #[inline]
-    fn batch_pull<'a>(&'a self, n: usize, buffer: &mut Vec<Reusable<'a, T>>) {
-        let mut objects = self.objects.lock();
-        let len = objects.len();
-        buffer.extend(
-            objects
-                .drain(len.saturating_sub(n)..)
-                .map(|obj| Reusable::new(self, obj)),
-        );
-        drop(objects);
-        buffer.resize_with(n, || Reusable::new(self, (self.init)()));
-    }
-
-    pub fn puller(&self, buffer_size: usize) -> Puller<T> {
-        assert!(buffer_size > 0);
-        Puller {
-            pool: self,
-            buffer: Vec::with_capacity(buffer_size),
-            buffer_size,
-        }
-    }
-
-    #[inline]
-    pub fn recycle(&self, mut obj: T) {
-        if is_reusable() {
-            (self.reset)(&mut obj);
-            self.objects.lock().push(obj)
-        }
-    }
-}
-
-pub struct Puller<'a, T> {
-    pool: &'a Pool<T>,
-    buffer: Vec<Reusable<'a, T>>,
-    buffer_size: usize,
-}
-
-impl<'a, T> Puller<'a, T> {
-    #[inline]
-    pub fn pull(&mut self) -> Reusable<'a, T> {
-        self.buffer.pop().unwrap_or_else(|| {
-            self.pool.batch_pull(self.buffer_size, &mut self.buffer);
-            self.buffer.pop().unwrap()
-        })
-    }
-}
-
-pub struct Reusable<'a, T> {
-    pool: &'a Pool<T>,
-    obj: ManuallyDrop<T>,
-}
-
-impl<'a, T> Reusable<'a, T> {
-    #[inline]
-    pub fn new(pool: &'a Pool<T>, obj: T) -> Self {
+impl<T> GlobalVecPool<T> {
+    pub const fn new() -> Self {
         Self {
-            pool,
-            obj: ManuallyDrop::new(obj),
+            storage: Mutex::new(Vec::new()),
+        }
+    }
+
+    pub const fn new_local(&'static self, capacity: usize) -> LocalVecPool<T> {
+        debug_assert!(capacity > 0, "storage capacity cannot be zero");
+
+        LocalVecPool {
+            global_pool: self,
+            storage: Vec::new(),
+            // lazy allocation - only if thread uses pool
+            capacity,
+        }
+    }
+
+    fn fill_empty_local(&'static self, local_storage: &mut Vec<Vec<T>>) {
+        debug_assert!(local_storage.is_empty(), "local storage must be empty");
+        debug_assert!(
+            local_storage.capacity() != 0,
+            "local storage must have capacity"
+        );
+
+        let needs = local_storage.capacity();
+
+        let mut storage = self.storage.lock().expect("not poisoned");
+
+        let available = storage.len();
+
+        // try to take `1..needs` from storage. All with non-zero capacity.
+        if available != 0 {
+            let range = available.saturating_sub(needs)..;
+
+            let vecs = storage.drain(range);
+
+            local_storage.extend(vecs);
+
+            return;
+        }
+
+        drop(storage);
+
+        // init with zero-capacity vectors
+        local_storage.resize_with(needs, || Vec::new());
+    }
+
+    fn consume_local(&'static self, local_storage: &mut Vec<Vec<T>>) {
+        let Some(first) = local_storage.first() else {
+            return;
+        };
+
+        // local storage contains vectors from global pool with non-zero
+        // capacity or zero-capacity vectors (see fill_empty_local).
+
+        if first.capacity() == 0 {
+            // all elements with zero capacity
+            return;
+        }
+
+        self.storage
+            .lock()
+            .expect("not poisoned")
+            .extend(local_storage.drain(..));
+    }
+
+    fn recycle(&'static self, mut data: Vec<T>) {
+        debug_assert!(data.capacity() != 0, "vec must have capacity");
+
+        data.clear();
+
+        self.storage.lock().expect("not poisoned").push(data);
+    }
+
+    pub fn take(&'static self) -> ReusableVec<T> {
+        let mut storage = self.storage.lock().expect("not poisoned");
+
+        if let Some(data) = storage.pop() {
+            return ReusableVec::new(self, data);
+        }
+
+        drop(storage);
+
+        ReusableVec::new(self, Vec::new())
+    }
+
+    /// Create a new `ReusableVec` as a stub.
+    ///
+    /// Capacity must be 0 when object is ready to be dropped, otherwise it
+    /// will be recycled what may cause memory leaks.
+    pub const fn stub(&'static self) -> ReusableVec<T> {
+        ReusableVec::stub(self)
+    }
+}
+
+#[must_use]
+pub struct LocalVecPool<T: 'static> {
+    global_pool: &'static GlobalVecPool<T>,
+    storage: Vec<Vec<T>>,
+    capacity: usize,
+}
+
+impl<T> LocalVecPool<T> {
+    pub fn take(&mut self) -> ReusableVec<T> {
+        if self.storage.is_empty() {
+            if self.storage.capacity() == 0 {
+                self.storage.reserve_exact(self.capacity);
+            }
+
+            self.global_pool.fill_empty_local(&mut self.storage);
+        }
+
+        ReusableVec::new(self.global_pool, self.storage.pop().expect("not empty"))
+    }
+}
+
+impl<T> Drop for LocalVecPool<T> {
+    fn drop(&mut self) {
+        self.global_pool.consume_local(&mut self.storage);
+    }
+}
+
+#[must_use]
+pub struct ReusableVec<T: 'static> {
+    global_pool: &'static GlobalVecPool<T>,
+    data: ManuallyDrop<Vec<T>>,
+    #[cfg(debug_assertions)]
+    is_stub: bool,
+}
+
+impl<T> PartialEq for ReusableVec<T>
+where
+    T: PartialEq,
+{
+    fn eq(&self, other: &Self) -> bool {
+        self.data.eq(&other.data)
+    }
+}
+
+impl<T> fmt::Debug for ReusableVec<T>
+where
+    T: fmt::Debug,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.data.fmt(f)
+    }
+}
+
+impl<T> ReusableVec<T> {
+    pub fn new(global_pool: &'static GlobalVecPool<T>, data: Vec<T>) -> Self {
+        debug_assert!(data.is_empty(), "vec must be empty");
+
+        Self {
+            global_pool,
+            data: ManuallyDrop::new(data),
+            #[cfg(debug_assertions)]
+            is_stub: false,
+        }
+    }
+
+    const fn stub(global_pool: &'static GlobalVecPool<T>) -> Self {
+        Self {
+            global_pool,
+            data: ManuallyDrop::new(Vec::new()),
+            #[cfg(debug_assertions)]
+            is_stub: true,
         }
     }
 
     #[inline]
-    pub fn into_inner(mut self) -> T {
+    pub fn into_inner(mut self) -> Vec<T> {
         unsafe {
-            let obj = ManuallyDrop::take(&mut self.obj);
-            std::mem::forget(self);
+            let obj = ManuallyDrop::take(&mut self.data);
+
+            mem::forget(self);
+
             obj
         }
     }
 }
 
-impl<'a, T> std::fmt::Debug for Reusable<'a, T>
-where T: std::fmt::Debug
-{
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.obj.fmt(f)
-    }
-}
-
-impl<'a, T> std::cmp::PartialEq for Reusable<'a, T>
-where T: std::cmp::PartialEq
-{
-    fn eq(&self, other: &Self) -> bool {
-        T::eq(self, other)
-    }
-}
-
-impl<'a, T> std::cmp::Eq for Reusable<'a, T> where T: std::cmp::Eq {}
-
-impl<'a, T> Deref for Reusable<'a, T> {
-    type Target = T;
-
-    #[inline]
-    fn deref(&self) -> &Self::Target {
-        &self.obj
-    }
-}
-
-impl<'a, T> DerefMut for Reusable<'a, T> {
-    #[inline]
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.obj
-    }
-}
-
-impl<'a, T> Drop for Reusable<'a, T> {
-    #[inline]
+impl<T> Drop for ReusableVec<T> {
     fn drop(&mut self) {
-        unsafe {
-            self.pool.recycle(ManuallyDrop::take(&mut self.obj));
+        // SAFETY: first call
+        let data = unsafe { ManuallyDrop::take(&mut self.data) };
+
+        if data.capacity() != 0 {
+            #[cfg(debug_assertions)]
+            debug_assert!(!self.is_stub, "stubs cannot recycles");
+
+            self.global_pool.recycle(data);
         }
+    }
+}
+
+impl<'a, T> IntoIterator for &'a ReusableVec<T> {
+    type IntoIter = slice::Iter<'a, T>;
+    type Item = &'a T;
+
+    #[inline]
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
+
+impl<T> ops::Deref for ReusableVec<T> {
+    type Target = Vec<T>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.data
+    }
+}
+
+impl<T> ops::DerefMut for ReusableVec<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.data
     }
 }

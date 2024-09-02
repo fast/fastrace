@@ -4,20 +4,19 @@ use criterion::criterion_group;
 use criterion::criterion_main;
 use criterion::BatchSize;
 use criterion::Criterion;
-use fastrace::util::object_pool::Pool;
+use fastrace::util::object_pool::GlobalVecPool;
 
 fn bench_alloc_vec(c: &mut Criterion) {
     let mut bgroup = c.benchmark_group("Vec::with_capacity");
 
     for cap in &[1, 10, 100, 1000, 10000, 100000] {
-        let vec_pool: Pool<Vec<usize>> = Pool::new(Vec::new, Vec::clear);
-        let mut puller = vec_pool.puller(512);
-        fastrace::util::object_pool::enable_reuse_in_current_thread();
+        static VEC_POOL: GlobalVecPool<usize> = GlobalVecPool::new();
+        let mut puller = VEC_POOL.new_local(512);
         bgroup.bench_function(format!("object-pool/{}", cap), |b| {
             b.iter_batched(
                 || (),
                 |_| {
-                    let mut vec = puller.pull();
+                    let mut vec = puller.take();
                     if vec.capacity() < *cap {
                         vec.reserve(*cap);
                     }
