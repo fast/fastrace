@@ -125,6 +125,7 @@ Feel free to open a PR and add your projects here:
 - [Apache OpenDAL](https://github.com/apache/opendal): A data access layer for various storage
 - [Databend](https://github.com/datafuselabs/databend): Cost-Effective alternative to Snowflake
 - [foyer](https://github.com/mrcroxx/foyer): Hybrid in-memory and disk cache in Rust
+- [Sail](https://github.com/lakehq/sail): Unifying stream, batch, and AI workloads with Apache Spark compatibility
 
 ## FAQ
 
