@@ -8,7 +8,7 @@
 // distinguishing `async fn` from `fn`. The following code reused the `async_trait` probes from [tokio-tracing](https://github.com/tokio-rs/tracing/blob/6a61897a5e834988ad9ac709e28c93c4dbf29116/tracing-attributes/src/expand.rs).
 
 #[macro_use]
-extern crate proc_macro_error;
+extern crate proc_macro_error2;
 
 use std::collections::HashMap;
 
