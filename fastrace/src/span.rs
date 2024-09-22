@@ -725,9 +725,10 @@ root []
             let parent4 = Span::root("parent4", parent_ctx);
             let parent5 = Span::root("parent5", parent_ctx);
             let child1 = Span::enter_with_parent("child1", &parent5);
-            let child2 = Span::enter_with_parents("child2", [
-                &parent1, &parent2, &parent3, &parent4, &parent5, &child1,
-            ])
+            let child2 = Span::enter_with_parents(
+                "child2",
+                [&parent1, &parent2, &parent3, &parent4, &parent5, &child1],
+            )
             .with_property(|| ("k1", "v1"));
 
             crossbeam::scope(move |scope| {

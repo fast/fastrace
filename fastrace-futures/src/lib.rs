@@ -104,7 +104,8 @@ pin_project! {
 }
 
 impl<T> Stream for InSpan<T>
-where T: Stream
+where
+    T: Stream,
 {
     type Item = T::Item;
 
@@ -127,7 +128,8 @@ where T: Stream
 }
 
 impl<T, I> Sink<I> for InSpan<T>
-where T: Sink<I>
+where
+    T: Sink<I>,
 {
     type Error = T::Error;
 
