@@ -4,8 +4,8 @@ use std::sync::Arc;
 
 use parking_lot::Mutex;
 
-use crate::collector::global_collector::Reporter;
 use crate::collector::SpanRecord;
+use crate::collector::global_collector::Reporter;
 
 pub struct TestReporter {
     pub spans: Arc<Mutex<Vec<SpanRecord>>>,
