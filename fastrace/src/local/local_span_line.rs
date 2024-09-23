@@ -172,25 +172,22 @@ span1 []
         let span = span_line.start_span("span").unwrap();
         let current_token = span_line.current_collect_token().unwrap();
         assert_eq!(current_token.len(), 2);
-        assert_eq!(
-            current_token.as_slice(),
-            &[
-                CollectTokenItem {
-                    trace_id: TraceId(1234),
-                    parent_id: span_line.span_queue.current_parent_id().unwrap(),
-                    collect_id: 42,
-                    is_root: false,
-                    is_sampled: true,
-                },
-                CollectTokenItem {
-                    trace_id: TraceId(1235),
-                    parent_id: span_line.span_queue.current_parent_id().unwrap(),
-                    collect_id: 43,
-                    is_root: false,
-                    is_sampled: true,
-                }
-            ]
-        );
+        assert_eq!(current_token.as_slice(), &[
+            CollectTokenItem {
+                trace_id: TraceId(1234),
+                parent_id: span_line.span_queue.current_parent_id().unwrap(),
+                collect_id: 42,
+                is_root: false,
+                is_sampled: true,
+            },
+            CollectTokenItem {
+                trace_id: TraceId(1235),
+                parent_id: span_line.span_queue.current_parent_id().unwrap(),
+                collect_id: 43,
+                is_root: false,
+                is_sampled: true,
+            }
+        ]);
         span_line.finish_span(span);
 
         let current_token = span_line.current_collect_token().unwrap();
