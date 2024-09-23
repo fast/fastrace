@@ -9,22 +9,22 @@ use std::time::UNIX_EPOCH;
 use fastrace::collector::EventRecord;
 use fastrace::collector::Reporter;
 use fastrace::prelude::*;
+use opentelemetry::InstrumentationLibrary;
+use opentelemetry::Key;
+use opentelemetry::KeyValue;
+use opentelemetry::StringValue;
+use opentelemetry::Value;
 use opentelemetry::trace::Event;
 use opentelemetry::trace::SpanContext;
 use opentelemetry::trace::SpanKind;
 use opentelemetry::trace::Status;
 use opentelemetry::trace::TraceFlags;
 use opentelemetry::trace::TraceState;
-use opentelemetry::InstrumentationLibrary;
-use opentelemetry::Key;
-use opentelemetry::KeyValue;
-use opentelemetry::StringValue;
-use opentelemetry::Value;
+use opentelemetry_sdk::Resource;
 use opentelemetry_sdk::export::trace::SpanData;
 use opentelemetry_sdk::export::trace::SpanExporter;
 use opentelemetry_sdk::trace::SpanEvents;
 use opentelemetry_sdk::trace::SpanLinks;
-use opentelemetry_sdk::Resource;
 
 /// [OpenTelemetry](https://github.com/open-telemetry/opentelemetry-rust) reporter for `fastrace`.
 ///
