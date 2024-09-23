@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## v0.7.3
+
+- Upgrade opentelemtry to 0.25.0.
+
 ## v0.7.2
 
 - Allow to `LocalSpan::add_property()` when the local parent is a `Span`.
