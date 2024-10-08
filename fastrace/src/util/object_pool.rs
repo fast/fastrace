@@ -109,25 +109,27 @@ impl<'a, T> Reusable<'a, T> {
     }
 }
 
-impl<'a, T> std::fmt::Debug for Reusable<'a, T>
-where T: std::fmt::Debug
+impl<T> std::fmt::Debug for Reusable<'_, T>
+where
+    T: std::fmt::Debug,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.obj.fmt(f)
     }
 }
 
-impl<'a, T> std::cmp::PartialEq for Reusable<'a, T>
-where T: std::cmp::PartialEq
+impl<T> std::cmp::PartialEq for Reusable<'_, T>
+where
+    T: std::cmp::PartialEq,
 {
     fn eq(&self, other: &Self) -> bool {
         T::eq(self, other)
     }
 }
 
-impl<'a, T> std::cmp::Eq for Reusable<'a, T> where T: std::cmp::Eq {}
+impl<T> std::cmp::Eq for Reusable<'_, T> where T: std::cmp::Eq {}
 
-impl<'a, T> Deref for Reusable<'a, T> {
+impl<T> Deref for Reusable<'_, T> {
     type Target = T;
 
     #[inline]
@@ -136,14 +138,14 @@ impl<'a, T> Deref for Reusable<'a, T> {
     }
 }
 
-impl<'a, T> DerefMut for Reusable<'a, T> {
+impl<T> DerefMut for Reusable<'_, T> {
     #[inline]
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.obj
     }
 }
 
-impl<'a, T> Drop for Reusable<'a, T> {
+impl<T> Drop for Reusable<'_, T> {
     #[inline]
     fn drop(&mut self) {
         unsafe {
