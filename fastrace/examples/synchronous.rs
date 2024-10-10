@@ -21,8 +21,6 @@ fn func2(i: u64) {
     std::thread::sleep(Duration::from_millis(i));
 }
 
-// FIXME: Remove `expect` after the issue is fixed. https://github.com/rust-lang/rust-clippy/issues/13458
-#[rustversion::attr(nightly, expect(clippy::needless_return))]
 #[tokio::main]
 async fn main() {
     fastrace::set_reporter(ReportAll::new(), Config::default());

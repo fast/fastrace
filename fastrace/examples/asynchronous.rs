@@ -36,8 +36,6 @@ async fn other_job() {
     }
 }
 
-// FIXME: Remove `expect` after the issue is fixed. https://github.com/rust-lang/rust-clippy/issues/13458
-#[rustversion::attr(nightly, expect(clippy::needless_return))]
 #[tokio::main]
 async fn main() {
     fastrace::set_reporter(ReportAll::new(), Config::default());
