@@ -75,3 +75,7 @@ name = "spsc"
 [[bench]]
 harness = false
 name = "object_pool"
+
+[lints.clippy]
+# https://github.com/rust-lang/rust-clippy/issues/13458
+needless_return = "allow"
