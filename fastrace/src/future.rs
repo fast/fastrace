@@ -30,6 +30,7 @@
 //! [`in_span()`]:(FutureExt::in_span)
 //! [`enter_on_poll()`]:(FutureExt::enter_on_poll)
 
+use std::borrow::Borrow;
 use std::borrow::Cow;
 use std::task::Poll;
 
@@ -65,7 +66,7 @@ pub trait FutureExt: std::future::Future + Sized {
     ///
     /// [`Future`]:(std::future::Future)
     #[inline]
-    fn in_span(self, span: Span) -> InSpan<Self> {
+    fn in_span<U: Borrow<Span>>(self, span: U) -> InSpan<Self, U> {
         InSpan {
             inner: self,
             span: Some(span),
@@ -108,19 +109,23 @@ pub trait FutureExt: std::future::Future + Sized {
 
 /// Adapter for [`FutureExt::in_span()`](FutureExt::in_span).
 #[pin_project::pin_project]
-pub struct InSpan<T> {
+pub struct InSpan<T, U> {
     #[pin]
     inner: T,
-    span: Option<Span>,
+    span: Option<U>,
 }
 
-impl<T: std::future::Future> std::future::Future for InSpan<T> {
+impl<T, U> std::future::Future for InSpan<T, U>
+where
+    T: std::future::Future,
+    U: Borrow<Span>,
+{
     type Output = T::Output;
 
     fn poll(self: std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> Poll<Self::Output> {
         let this = self.project();
 
-        let _guard = this.span.as_ref().map(|s| s.set_local_parent());
+        let _guard = this.span.as_ref().map(|s| s.borrow().set_local_parent());
         let res = this.inner.poll(cx);
 
         match res {

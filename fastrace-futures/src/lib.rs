@@ -2,6 +2,7 @@
 
 #![doc = include_str!("../README.md")]
 
+use std::borrow::Borrow;
 use std::pin::Pin;
 use std::task::Context;
 use std::task::Poll;
@@ -46,7 +47,7 @@ pub trait StreamExt: futures::Stream + Sized {
     /// // span ends here.
     /// # }
     /// ```
-    fn in_span(self, span: Span) -> InSpan<Self> {
+    fn in_span<U: Borrow<Span>>(self, span: U) -> InSpan<Self, U> {
         InSpan {
             inner: self,
             span: Some(span),
@@ -84,7 +85,7 @@ pub trait SinkExt<Item>: futures::Sink<Item> + Sized {
     /// // span ends here.
     /// # }
     /// ```
-    fn in_span(self, span: Span) -> InSpan<Self> {
+    fn in_span<U: Borrow<Span>>(self, span: U) -> InSpan<Self, U> {
         InSpan {
             inner: self,
             span: Some(span),
@@ -96,22 +97,24 @@ impl<T, Item> SinkExt<Item> for T where T: futures::Sink<Item> {}
 
 pin_project! {
     /// Adapter for [`StreamExt::in_span()`](StreamExt::in_span) and [`SinkExt::in_span()`](SinkExt::in_span).
-    pub struct InSpan<T> {
+    pub struct InSpan<T, U> {
         #[pin]
         inner: T,
-        span: Option<Span>,
+        span: Option<U>,
     }
 }
 
-impl<T> Stream for InSpan<T>
-where T: Stream
+impl<T, U> Stream for InSpan<T, U>
+where
+    T: Stream,
+    U: Borrow<Span>,
 {
     type Item = T::Item;
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let this = self.project();
 
-        let _guard = this.span.as_ref().map(|s| s.set_local_parent());
+        let _guard = this.span.as_ref().map(|s| s.borrow().set_local_parent());
         let res = this.inner.poll_next(cx);
 
         match res {
@@ -126,33 +129,35 @@ where T: Stream
     }
 }
 
-impl<T, I> Sink<I> for InSpan<T>
-where T: Sink<I>
+impl<T, U, I> Sink<I> for InSpan<T, U>
+where
+    T: Sink<I>,
+    U: Borrow<Span>,
 {
     type Error = T::Error;
 
     fn poll_ready(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
         let this = self.project();
-        let _guard = this.span.as_ref().map(|s| s.set_local_parent());
+        let _guard = this.span.as_ref().map(|s| s.borrow().set_local_parent());
         this.inner.poll_ready(cx)
     }
 
     fn start_send(self: Pin<&mut Self>, item: I) -> Result<(), Self::Error> {
         let this = self.project();
-        let _guard = this.span.as_ref().map(|s| s.set_local_parent());
+        let _guard = this.span.as_ref().map(|s| s.borrow().set_local_parent());
         this.inner.start_send(item)
     }
 
     fn poll_flush(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
         let this = self.project();
-        let _guard = this.span.as_ref().map(|s| s.set_local_parent());
+        let _guard = this.span.as_ref().map(|s| s.borrow().set_local_parent());
         this.inner.poll_flush(cx)
     }
 
     fn poll_close(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
         let this = self.project();
 
-        let _guard = this.span.as_ref().map(|s| s.set_local_parent());
+        let _guard = this.span.as_ref().map(|s| s.borrow().set_local_parent());
         let res = this.inner.poll_close(cx);
 
         match res {
