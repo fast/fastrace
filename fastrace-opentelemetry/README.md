@@ -55,7 +55,7 @@ let reporter = OpenTelemetryReporter::new(
         .expect("initialize oltp exporter"),
     SpanKind::Server,
     Cow::Owned(Resource::new([KeyValue::new("service.name", "asynchronous")])),
-    InstrumentationLibrary::new("example-crate", Some(env!("CARGO_PKG_VERSION")), None::<&'static str>, None),
+    InstrumentationLibrary::builder("example-crate").with_version(env!("CARGO_PKG_VERSION")).build(),
 );
 fastrace::set_reporter(reporter, Config::default());
 
