@@ -1,11 +1,11 @@
 // Copyright 2020 TiKV Project Authors. Licensed under Apache-2.0.
 
-use std::io::Write;
-
 use fastrace::collector::Config;
 use fastrace::collector::ConsoleReporter;
 use fastrace::prelude::*;
 use log::info;
+use logforth::append;
+use logforth::filter::EnvFilter;
 
 /// An example of automatically logging function arguments and return values.
 #[logcall::logcall("debug", input = "a = {a:?}, b = {b:?}")]
@@ -17,32 +17,15 @@ fn plus(a: u64, b: u64) -> Result<u64, std::io::Error> {
 fn main() {
     fastrace::set_reporter(ConsoleReporter, Config::default());
 
-    // Setup a custom logger. `env_logger` is a commonly used logger in Rust and it's easy to
-    // integrate with `fastrace`.
-    //
-    // For more fine-grained logging, We recommend using [`logforth`](https://github.com/fast/logforth).
-    env_logger::Builder::from_default_env()
-        .format(|buf, record| {
-            // Convert every log to an event in the current local parent span
-            Event::add_to_local_parent(record.level().as_str(), || {
-                [("message".into(), record.args().to_string().into())]
-            });
-
-            // Attach the current trace id to the log message
-            if let Some(current) = SpanContext::current_local_parent() {
-                writeln!(
-                    buf,
-                    "[{}] {} {}",
-                    record.level(),
-                    current.trace_id.0,
-                    record.args()
-                )
-            } else {
-                writeln!(buf, "[{}] {}", record.level(), record.args())
-            }
+    // Set up a custom logger. [`logforth`](https://github.com/fast/logforth)
+    // is easy to start and integrated with `fastrace`.
+    logforth::builder()
+        .dispatch(|d| {
+            d.filter(EnvFilter::from_default_env())
+                .append(append::Stderr::default())
         })
-        .filter_level(log::LevelFilter::Debug)
-        .init();
+        .dispatch(|d| d.append(append::FastraceEvent::default()))
+        .apply();
 
     {
         let parent = SpanContext::random();
