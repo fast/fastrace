@@ -16,7 +16,7 @@ fastrace-opentelemetry = "0.7"
 
 ## Setup OpenTelemetry Collector
 
-```sh
+```shell
 cd fastrace-opentelemetry/examples
 docker compose up -d
 
@@ -35,27 +35,30 @@ use std::time::Duration;
 use fastrace::collector::Config;
 use fastrace::prelude::*;
 use fastrace_opentelemetry::OpenTelemetryReporter;
-use opentelemetry_otlp::{SpanExporter, ExportConfig, Protocol, TonicConfig};
+use opentelemetry_otlp::ExportConfig;
+use opentelemetry_otlp::Protocol;
+use opentelemetry_otlp::SpanExporter;
+use opentelemetry_otlp::TonicConfig;
 use opentelemetry::trace::SpanKind;
 use opentelemetry_sdk::Resource;
 use opentelemetry::KeyValue;
-use opentelemetry::InstrumentationLibrary;
+use opentelemetry::InstrumentationScope;
 use opentelemetry_otlp::WithExportConfig;
 
 // Initialize reporter
 let reporter = OpenTelemetryReporter::new(
-    opentelemetry_otlp::new_exporter()
-        .tonic()
+    SpanExporter::builder()
+        .with_tonic()
         .with_endpoint("http://127.0.0.1:4317".to_string())
         .with_protocol(opentelemetry_otlp::Protocol::Grpc)
         .with_timeout(Duration::from_secs(
             opentelemetry_otlp::OTEL_EXPORTER_OTLP_TIMEOUT_DEFAULT,
         ))
-        .build_span_exporter()
+        .build()
         .expect("initialize oltp exporter"),
     SpanKind::Server,
     Cow::Owned(Resource::new([KeyValue::new("service.name", "asynchronous")])),
-    InstrumentationLibrary::builder("example-crate").with_version(env!("CARGO_PKG_VERSION")).build(),
+    InstrumentationScope::builder("example-crate").with_version(env!("CARGO_PKG_VERSION")).build(),
 );
 fastrace::set_reporter(reporter, Config::default());
 
