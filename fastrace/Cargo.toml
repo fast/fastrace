@@ -34,17 +34,14 @@ crossbeam = "0.8"
 fastrace = { workspace = true, features = ["enable"] }
 fastrace-datadog = { workspace = true }
 fastrace-jaeger = { workspace = true }
-fastrace-opentelemetry = { workspace = true }
+fastrace-opentelemetry = { workspace = true, features = ["bundle"] }
 flume = "0.11"
 futures = { workspace = true }
 futures-timer = "3"
 log = { workspace = true }
 logcall = "0.1"
-logforth = { version = "0.16", features = ["fastrace"] }
+logforth = { version = "0.18", features = ["fastrace"] }
 mockall = "0.13"
-opentelemetry = { version = "0.26", features = ["trace"] }
-opentelemetry-otlp = { version = "0.26", features = ["trace"] }
-opentelemetry_sdk = { version = "0.26", features = ["trace"] }
 rand = "0.8"
 rustracing = "0.6"
 serial_test = "3.1"

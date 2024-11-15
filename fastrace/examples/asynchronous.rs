@@ -1,4 +1,20 @@
+// Copyright 2024 FastLabs Developers
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// This file is derived from [1] under the original license header:
 // Copyright 2020 TiKV Project Authors. Licensed under Apache-2.0.
+// [1]: https://github.com/tikv/minitrace-rust/blob/v0.6.4/minitrace/examples/asynchronous.rs
 
 #![allow(clippy::new_without_default)]
 
@@ -8,7 +24,10 @@ use std::time::Duration;
 use fastrace::collector::Config;
 use fastrace::collector::Reporter;
 use fastrace::prelude::*;
-use opentelemetry_otlp::WithExportConfig;
+use fastrace_opentelemetry::opentelemetry;
+use fastrace_opentelemetry::opentelemetry_otlp;
+use fastrace_opentelemetry::opentelemetry_otlp::WithExportConfig;
+use fastrace_opentelemetry::opentelemetry_sdk;
 
 fn parallel_job() -> Vec<tokio::task::JoinHandle<()>> {
     let mut v = Vec::with_capacity(4);
@@ -38,7 +57,7 @@ async fn other_job() {
 
 #[tokio::main]
 async fn main() {
-    fastrace::set_reporter(ReportAll::new(), Config::default());
+    fastrace::set_reporter(ReportAll::create(), Config::default());
 
     {
         let parent = SpanContext::random();
@@ -72,7 +91,7 @@ pub struct ReportAll {
 }
 
 impl ReportAll {
-    pub fn new() -> ReportAll {
+    pub fn create() -> ReportAll {
         ReportAll {
             jaeger: fastrace_jaeger::JaegerReporter::new(
                 "127.0.0.1:6831".parse().unwrap(),
@@ -86,20 +105,20 @@ impl ReportAll {
                 "select",
             ),
             opentelemetry: fastrace_opentelemetry::OpenTelemetryReporter::new(
-                opentelemetry_otlp::new_exporter()
-                    .tonic()
+                opentelemetry_otlp::SpanExporter::builder()
+                    .with_tonic()
                     .with_endpoint("http://127.0.0.1:4317".to_string())
                     .with_protocol(opentelemetry_otlp::Protocol::Grpc)
                     .with_timeout(Duration::from_secs(
                         opentelemetry_otlp::OTEL_EXPORTER_OTLP_TIMEOUT_DEFAULT,
                     ))
-                    .build_span_exporter()
+                    .build()
                     .expect("initialize oltp exporter"),
                 opentelemetry::trace::SpanKind::Server,
                 Cow::Owned(opentelemetry_sdk::Resource::new([
                     opentelemetry::KeyValue::new("service.name", "asynchronous(opentelemetry)"),
                 ])),
-                opentelemetry::InstrumentationLibrary::builder("example-crate")
+                opentelemetry::InstrumentationScope::builder("example-crate")
                     .with_version(env!("CARGO_PKG_VERSION"))
                     .build(),
             ),

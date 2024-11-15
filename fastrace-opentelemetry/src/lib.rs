@@ -19,11 +19,11 @@
 #![doc = include_str!("../README.md")]
 
 #[cfg(feature = "bundle")]
-extern crate opentelemetry;
+pub extern crate opentelemetry;
 #[cfg(feature = "bundle")]
-extern crate opentelemetry_otlp;
+pub extern crate opentelemetry_otlp;
 #[cfg(feature = "bundle")]
-extern crate opentelemetry_sdk;
+pub extern crate opentelemetry_sdk;
 
 use std::borrow::Cow;
 use std::time::Duration;
@@ -49,7 +49,7 @@ use opentelemetry_sdk::trace::SpanLinks;
 /// [OpenTelemetry](https://github.com/open-telemetry/opentelemetry-rust) reporter for `fastrace`.
 ///
 /// `OpenTelemetryReporter` exports trace records to remote agents that implements the
-/// OpenTelemetry protocol, such as Jaeger, Zipkin, and OpenTelemetry Collector.
+/// OpenTelemetry protocol, such as Jaeger, Zipkin, etc.
 pub struct OpenTelemetryReporter {
     exporter: Box<dyn SpanExporter>,
     span_kind: SpanKind,
