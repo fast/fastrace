@@ -33,10 +33,7 @@ use fastrace::collector::EventRecord;
 use fastrace::collector::Reporter;
 use fastrace::prelude::*;
 use opentelemetry::InstrumentationScope;
-use opentelemetry::Key;
 use opentelemetry::KeyValue;
-use opentelemetry::StringValue;
-use opentelemetry::Value;
 use opentelemetry::trace::Event;
 use opentelemetry::trace::SpanContext;
 use opentelemetry::trace::SpanKind;
@@ -59,18 +56,8 @@ pub struct OpenTelemetryReporter {
     instrumentation_scope: InstrumentationScope,
 }
 
-/// Calculate the start time of a span.
-fn span_start_time(span: &SpanRecord) -> SystemTime {
-    SystemTime::UNIX_EPOCH + Duration::from_nanos(span.begin_time_unix_ns)
-}
-
-/// Calculate the end time of a span.
-fn span_end_time(span: &SpanRecord) -> SystemTime {
-    SystemTime::UNIX_EPOCH + Duration::from_nanos(span.begin_time_unix_ns + span.duration_ns)
-}
-
 /// Convert a list of properties to a list of key-value pairs.
-fn props_to_kvs(props: Vec<(Cow<'static, str>, Cow<'static, str>)>) -> Vec<KeyValue> {
+fn map_props_to_kvs(props: Vec<(Cow<'static, str>, Cow<'static, str>)>) -> Vec<KeyValue> {
     props
         .into_iter()
         .map(|(k, v)| KeyValue::new(k, v))
@@ -89,7 +76,7 @@ fn map_events(events: Vec<EventRecord>) -> SpanEvents {
     } in events
     {
         let time = SystemTime::UNIX_EPOCH + Duration::from_nanos(timestamp_unix_ns);
-        let attributes = props_to_kvs(properties);
+        let attributes = map_props_to_kvs(properties);
         queue.events.push(Event::new(name, time, attributes, 0));
     }
 
@@ -114,26 +101,49 @@ impl OpenTelemetryReporter {
     fn convert(&self, spans: Vec<SpanRecord>) -> Vec<SpanData> {
         spans
             .into_iter()
-            .map(|span| SpanData {
-                span_context: SpanContext::new(
-                    span.trace_id.0.into(),
-                    span.span_id.0.into(),
-                    TraceFlags::default(),
-                    false,
-                    TraceState::default(),
-                ),
-                dropped_attributes_count: 0,
-                parent_span_id: span.parent_id.0.into(),
-                name: span.name,
-                start_time: span_start_time(&span),
-                end_time: span_end_time(&span),
-                attributes: props_to_kvs(span.properties),
-                events: map_events(span.events),
-                links: SpanLinks::default(),
-                status: Status::default(),
-                span_kind: self.span_kind.clone(),
-                instrumentation_scope: self.instrumentation_scope.clone(),
-            })
+            .map(
+                |SpanRecord {
+                     trace_id,
+                     span_id,
+                     parent_id,
+                     begin_time_unix_ns,
+                     duration_ns,
+                     name,
+                     properties,
+                     events,
+                 }| {
+                    let span_context = SpanContext::new(
+                        trace_id.0.into(),
+                        span_id.0.into(),
+                        TraceFlags::default(),
+                        false,
+                        TraceState::default(),
+                    );
+                    let parent_span_id = parent_id.0.into();
+                    let span_kind = self.span_kind.clone();
+                    let instrumentation_scope = self.instrumentation_scope.clone();
+                    let start_time =
+                        SystemTime::UNIX_EPOCH + Duration::from_nanos(begin_time_unix_ns);
+                    let end_time = SystemTime::UNIX_EPOCH
+                        + Duration::from_nanos(begin_time_unix_ns + duration_ns);
+                    let attributes = map_props_to_kvs(properties);
+                    let events = map_events(events);
+                    SpanData {
+                        span_context,
+                        parent_span_id,
+                        span_kind,
+                        name,
+                        start_time,
+                        end_time,
+                        attributes,
+                        dropped_attributes_count: 0,
+                        events,
+                        links: SpanLinks::default(),
+                        status: Status::default(),
+                        instrumentation_scope,
+                    }
+                },
+            )
             .collect()
     }
 
