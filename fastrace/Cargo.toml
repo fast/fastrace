@@ -40,11 +40,11 @@ futures = { workspace = true }
 futures-timer = "3"
 log = { workspace = true }
 logcall = "0.1"
-logforth = { version = "0.16", features = ["fastrace"] }
+logforth = { version = "0.18", features = ["fastrace"] }
 mockall = "0.13"
-opentelemetry = { version = "0.26", features = ["trace"] }
-opentelemetry-otlp = { version = "0.26", features = ["trace"] }
-opentelemetry_sdk = { version = "0.26", features = ["trace"] }
+opentelemetry = { version = "0.27", features = ["trace"] }
+opentelemetry_sdk = { version = "0.27", features = ["trace"] }
+opentelemetry-otlp = { version = "0.27", features = ["trace"] }
 rand = "0.8"
 rustracing = "0.6"
 serial_test = "3.1"
