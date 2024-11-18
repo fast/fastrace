@@ -22,10 +22,7 @@ use std::time::Duration;
 use fastrace::collector::Config;
 use fastrace::collector::Reporter;
 use fastrace::prelude::*;
-use fastrace_opentelemetry::opentelemetry;
-use fastrace_opentelemetry::opentelemetry_otlp;
-use fastrace_opentelemetry::opentelemetry_otlp::WithExportConfig;
-use fastrace_opentelemetry::opentelemetry_sdk;
+use opentelemetry_otlp::WithExportConfig;
 
 fn func1(i: u64) {
     let _guard = LocalSpan::enter_with_local_parent("func1");

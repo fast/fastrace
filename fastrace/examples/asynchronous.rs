@@ -24,10 +24,7 @@ use std::time::Duration;
 use fastrace::collector::Config;
 use fastrace::collector::Reporter;
 use fastrace::prelude::*;
-use fastrace_opentelemetry::opentelemetry;
-use fastrace_opentelemetry::opentelemetry_otlp;
-use fastrace_opentelemetry::opentelemetry_otlp::WithExportConfig;
-use fastrace_opentelemetry::opentelemetry_sdk;
+use opentelemetry_otlp::WithExportConfig;
 
 fn parallel_job() -> Vec<tokio::task::JoinHandle<()>> {
     let mut v = Vec::with_capacity(4);

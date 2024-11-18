@@ -18,13 +18,6 @@
 
 #![doc = include_str!("../README.md")]
 
-#[cfg(feature = "bundle")]
-pub extern crate opentelemetry;
-#[cfg(feature = "bundle")]
-pub extern crate opentelemetry_otlp;
-#[cfg(feature = "bundle")]
-pub extern crate opentelemetry_sdk;
-
 use std::borrow::Cow;
 use std::time::Duration;
 use std::time::SystemTime;
