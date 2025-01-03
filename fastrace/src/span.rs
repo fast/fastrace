@@ -13,6 +13,7 @@ use crate::collector::GlobalCollect;
 use crate::collector::SpanContext;
 use crate::collector::SpanId;
 use crate::collector::SpanSet;
+use crate::collector::global_collector::NOT_SAMPLED_COLLECT_ID;
 use crate::collector::global_collector::reporter_ready;
 use crate::local::LocalCollector;
 use crate::local::LocalSpans;
@@ -82,8 +83,12 @@ impl Span {
                 return Self::noop();
             }
 
-            let collect = current_collect();
-            let collect_id = collect.start_collect();
+            let collect_id = if parent.sampled {
+                current_collect().start_collect()
+            } else {
+                NOT_SAMPLED_COLLECT_ID
+            };
+
             let token = CollectTokenItem {
                 trace_id: parent.trace_id,
                 parent_id: parent.span_id,
@@ -92,9 +97,7 @@ impl Span {
                 is_sampled: parent.sampled,
             }
             .into();
-            if !parent.sampled {
-                collect.drop_collect(collect_id);
-            }
+
             Self::new(token, name, Some(collect_id))
         }
     }

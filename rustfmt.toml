@@ -7,6 +7,6 @@ normalize_comments = true
 overflow_delimited_expr = true
 reorder_imports = true
 trailing_comma = "Vertical"
-version = "Two"
+style_edition = "2024"
 where_single_line = true
 wrap_comments = true

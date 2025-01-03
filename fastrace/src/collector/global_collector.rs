@@ -38,6 +38,8 @@ static GLOBAL_COLLECTOR: Mutex<Option<GlobalCollector>> = Mutex::new(None);
 static SPSC_RXS: Mutex<Vec<Receiver<CollectCommand>>> = Mutex::new(Vec::new());
 static REPORTER_READY: AtomicBool = AtomicBool::new(false);
 
+pub const NOT_SAMPLED_COLLECT_ID: usize = usize::MAX;
+
 thread_local! {
     static COMMAND_SENDER: UnsafeCell<Sender<CollectCommand>> = {
         let (tx, rx) = spsc::bounded(10240);

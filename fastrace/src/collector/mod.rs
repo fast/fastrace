@@ -30,6 +30,7 @@ use crate::Span;
 use crate::local::local_collector::LocalSpansInner;
 use crate::local::local_span_stack::LOCAL_SPAN_STACK;
 use crate::local::raw_span::RawSpan;
+
 #[cfg(test)]
 pub(crate) type GlobalCollect = Arc<MockGlobalCollect>;
 

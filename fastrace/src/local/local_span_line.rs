@@ -12,6 +12,7 @@ pub struct SpanLine {
     span_queue: SpanQueue,
     epoch: usize,
     collect_token: Option<CollectToken>,
+    is_sampled: bool,
 }
 
 impl SpanLine {
@@ -20,10 +21,16 @@ impl SpanLine {
         span_line_epoch: usize,
         collect_token: Option<CollectToken>,
     ) -> Self {
+        let is_sampled = match &collect_token {
+            Some(token) => token.iter().any(|item| item.is_sampled),
+            None => true,
+        };
+
         Self {
             span_queue: SpanQueue::with_capacity(capacity),
             epoch: span_line_epoch,
             collect_token,
+            is_sampled,
         }
     }
 
@@ -34,6 +41,10 @@ impl SpanLine {
 
     #[inline]
     pub fn start_span(&mut self, name: impl Into<Cow<'static, str>>) -> Option<LocalSpanHandle> {
+        if !self.is_sampled {
+            return None;
+        }
+
         Some(LocalSpanHandle {
             span_handle: self.span_queue.start_span(name)?,
             span_line_epoch: self.epoch,
@@ -53,6 +64,10 @@ impl SpanLine {
         I: IntoIterator<Item = (Cow<'static, str>, Cow<'static, str>)>,
         F: FnOnce() -> I,
     {
+        if !self.is_sampled {
+            return;
+        }
+
         self.span_queue.add_event(name, properties);
     }
 
@@ -64,6 +79,10 @@ impl SpanLine {
         I: IntoIterator<Item = (K, V)>,
         F: FnOnce() -> I,
     {
+        if !self.is_sampled {
+            return;
+        }
+
         self.span_queue.add_properties(properties());
     }
 
@@ -75,6 +94,10 @@ impl SpanLine {
         I: IntoIterator<Item = (K, V)>,
         F: FnOnce() -> I,
     {
+        if !self.is_sampled {
+            return;
+        }
+
         if self.epoch == handle.span_line_epoch {
             self.span_queue
                 .with_properties(&handle.span_handle, properties());
