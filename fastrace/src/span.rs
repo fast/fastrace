@@ -8,20 +8,20 @@ use std::time::Duration;
 
 use minstant::Instant;
 
-use crate::collector::global_collector::reporter_ready;
-use crate::collector::global_collector::NOT_SAMPLED_COLLECT_ID;
 use crate::collector::CollectTokenItem;
 use crate::collector::GlobalCollect;
 use crate::collector::SpanContext;
 use crate::collector::SpanId;
 use crate::collector::SpanSet;
-use crate::local::local_collector::LocalSpansInner;
-use crate::local::local_span_stack::LocalSpanStack;
-use crate::local::local_span_stack::LOCAL_SPAN_STACK;
-use crate::local::raw_span::RawKind;
-use crate::local::raw_span::RawSpan;
+use crate::collector::global_collector::NOT_SAMPLED_COLLECT_ID;
+use crate::collector::global_collector::reporter_ready;
 use crate::local::LocalCollector;
 use crate::local::LocalSpans;
+use crate::local::local_collector::LocalSpansInner;
+use crate::local::local_span_stack::LOCAL_SPAN_STACK;
+use crate::local::local_span_stack::LocalSpanStack;
+use crate::local::raw_span::RawKind;
+use crate::local::raw_span::RawSpan;
 use crate::util::CollectToken;
 
 /// A thread-safe span.
@@ -564,12 +564,12 @@ fn current_collect() -> GlobalCollect {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Mutex;
     use std::sync::atomic::AtomicUsize;
     use std::sync::atomic::Ordering;
-    use std::sync::Mutex;
 
-    use mockall::predicate;
     use mockall::Sequence;
+    use mockall::predicate;
     use rand::seq::SliceRandom;
     use rand::thread_rng;
 
