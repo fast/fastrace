@@ -4,7 +4,7 @@
 
 ## v0.7.5
 
-- Optimze collect behavior when the span is not sampled.
+- Optimize collect behavior when the span is not sampled.
 
 ## v0.7.4
 
