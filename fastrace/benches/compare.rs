@@ -1,8 +1,8 @@
 // Copyright 2020 TiKV Project Authors. Licensed under Apache-2.0.
 
-use criterion::Criterion;
 use criterion::criterion_group;
 use criterion::criterion_main;
+use criterion::Criterion;
 
 fn init_opentelemetry() {
     use tracing_subscriber::prelude::*;

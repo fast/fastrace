@@ -26,10 +26,11 @@ pub use id::TraceId;
 #[doc(hidden)]
 pub use test_reporter::TestReporter;
 
-use crate::Span;
 use crate::local::local_collector::LocalSpansInner;
 use crate::local::local_span_stack::LOCAL_SPAN_STACK;
 use crate::local::raw_span::RawSpan;
+use crate::Span;
+
 #[cfg(test)]
 pub(crate) type GlobalCollect = Arc<MockGlobalCollect>;
 

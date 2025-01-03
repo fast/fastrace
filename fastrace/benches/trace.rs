@@ -1,9 +1,9 @@
 // Copyright 2020 TiKV Project Authors. Licensed under Apache-2.0.
 
-use criterion::Criterion;
 use criterion::black_box;
 use criterion::criterion_group;
 use criterion::criterion_main;
+use criterion::Criterion;
 use fastrace::local::LocalCollector;
 use fastrace::prelude::*;
 

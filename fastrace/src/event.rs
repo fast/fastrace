@@ -2,9 +2,9 @@
 
 use std::borrow::Cow;
 
-use crate::Span;
 use crate::local::local_span_stack::LOCAL_SPAN_STACK;
 use crate::local::raw_span::RawKind;
+use crate::Span;
 
 /// An event that represents a single point in time during the execution of a span.
 pub struct Event {

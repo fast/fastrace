@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## v0.7.5
+
+- Optimze collect behavior when the span is not sampled.
+
+## v0.7.4
+
+- Upgrade opentelemtry to 0.26.0.
+
 ## v0.7.3
 
 - Upgrade opentelemtry to 0.25.0.
