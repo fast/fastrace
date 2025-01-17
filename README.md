@@ -157,7 +157,7 @@ The concept of 'level' may not be an optimal feature for tracing systems. While 
 1. Disregarding a low-level span might inadvertently discard a high-level child span.
 2. The process of filtering, or 'level' as it's often called, in a tracing system should be applied to a trace as a whole rather than individual spans within a trace.
 
-In this context, fastrace offers a more efficient solution by filtering out entire traces that are not of interest through its unique tail-sampling design. Therefore, the concept of 'level', borrowed directly from logging systems, may not be suitable for fastrace.
+In this context, fastrace offers a more efficient solution by filtering out entire traces that are not of interest through its unique [tail-sampling](https://opentelemetry.io/blog/2022/tail-sampling/) design. Therefore, the concept of 'level', borrowed directly from logging systems, may not be suitable for fastrace.
 
 ### Will fastrace support OpenTelemetry feature 'X'?
 
