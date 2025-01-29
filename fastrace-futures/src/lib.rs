@@ -7,8 +7,8 @@ use std::task::Context;
 use std::task::Poll;
 
 use fastrace::Span;
-use futures::Sink;
-use futures::Stream;
+use futures_core::Stream;
+use futures_sink::Sink;
 
 /// An extension trait for [`Stream`] that provides tracing instrument adapters.
 pub trait StreamExt: Stream + Sized {

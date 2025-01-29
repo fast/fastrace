@@ -142,7 +142,7 @@ impl OpenTelemetryReporter {
 
     fn try_report(&mut self, spans: Vec<SpanRecord>) -> Result<(), Box<dyn std::error::Error>> {
         let spans = self.convert(spans);
-        futures::executor::block_on(self.exporter.export(spans))?;
+        pollster::block_on(self.exporter.export(spans))?;
         Ok(())
     }
 }

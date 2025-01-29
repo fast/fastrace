@@ -264,7 +264,7 @@
 //! use fastrace::collector::Config;
 //! use fastrace::collector::ConsoleReporter;
 //! use fastrace::prelude::*;
-//! use futures::executor::block_on;
+//! use pollster::block_on;
 //!
 //! #[trace]
 //! fn do_something(i: u64) {
