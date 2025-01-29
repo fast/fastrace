@@ -40,7 +40,7 @@ futures = { workspace = true }
 futures-timer = "3"
 log = { workspace = true }
 logcall = "0.1"
-logforth = { version = "0.21.0", features = ["fastrace"] }
+logforth = { version = "0.19.2", features = ["fastrace"] }
 mockall = "0.13"
 opentelemetry = { version = "0.27", features = ["trace"] }
 opentelemetry-otlp = { version = "0.27", features = ["trace"] }
