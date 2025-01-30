@@ -36,7 +36,6 @@ fastrace-datadog = { workspace = true }
 fastrace-jaeger = { workspace = true }
 fastrace-opentelemetry = { workspace = true }
 flume = "0.11"
-futures = { workspace = true }
 futures-timer = "3"
 log = { workspace = true }
 logcall = "0.1"
@@ -45,6 +44,7 @@ mockall = "0.13"
 opentelemetry = { version = "0.27", features = ["trace"] }
 opentelemetry-otlp = { version = "0.27", features = ["trace"] }
 opentelemetry_sdk = { version = "0.27", features = ["trace"] }
+pollster = { version = "0.4.0" }
 rand = "0.9"
 rustracing = "0.6"
 serial_test = "3.1"

@@ -119,7 +119,7 @@ fn bench_trace_future(c: &mut Criterion) {
         group.bench_function(len.to_string(), |b| {
             b.iter(|| {
                 let root = Span::root("root", SpanContext::new(TraceId(12), SpanId::default()));
-                futures::executor::block_on(f(*len).in_span(root));
+                pollster::block_on(f(*len).in_span(root));
             })
         });
     }
