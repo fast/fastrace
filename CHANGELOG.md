@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## v0.7.6
+
+- Reduce dependencies to futures 0.3.
+
 ## v0.7.5
 
 - Optimize collect behavior when the span is not sampled.
@@ -93,7 +97,7 @@
 - Remove `LocalSpanGuard` and merge it into `LocalSpan`.
 - Remove `LocalSpan::with_property`, `LocalSpan::with_properties`, `Span::with_property` and `Span::with_properties`.
 - Add `LocalSpan::add_property`, `LocalSpan::add_properties`, `Span::add_property` and `Span::add_properties`.
-- Remove `LocalParentGuard`. `Span::set_local_parent` returns a general `Option<Guard<impl FnOnce()>>` instead. 
+- Remove `LocalParentGuard`. `Span::set_local_parent` returns a general `Option<Guard<impl FnOnce()>>` instead.
 
 ## v0.3.1
 
