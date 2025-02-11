@@ -34,9 +34,9 @@ use opentelemetry::trace::Status;
 use opentelemetry::trace::TraceFlags;
 use opentelemetry::trace::TraceState;
 use opentelemetry_sdk::Resource;
-use opentelemetry_sdk::export::trace::SpanData;
-use opentelemetry_sdk::export::trace::SpanExporter;
+use opentelemetry_sdk::trace::SpanData;
 use opentelemetry_sdk::trace::SpanEvents;
+use opentelemetry_sdk::trace::SpanExporter;
 use opentelemetry_sdk::trace::SpanLinks;
 
 /// [OpenTelemetry](https://github.com/open-telemetry/opentelemetry-rust) reporter for `fastrace`.
