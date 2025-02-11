@@ -11,7 +11,7 @@
 ```toml
 [dependencies]
 fastrace = "0.7"
-fastrace-opentelemetry = "0.7"
+fastrace-opentelemetry = "0.9"
 ```
 
 ## Setup OpenTelemetry Collector
@@ -62,7 +62,11 @@ let reporter = OpenTelemetryReporter::new(
         .build()
         .expect("initialize oltp exporter"),
     SpanKind::Server,
-    Cow::Owned(Resource::new([KeyValue::new("service.name", "asynchronous")])),
+    Cow::Owned(
+        Resource::builder()
+            .with_attributes([KeyValue::new("service.name", "asynchronous")])
+            .build()
+    ),
     InstrumentationScope::builder("example-crate").with_version(env!("CARGO_PKG_VERSION")).build(),
 );
 fastrace::set_reporter(reporter, Config::default());
