@@ -8,6 +8,7 @@ use std::time::Duration;
 
 use minstant::Instant;
 
+use crate::Event;
 use crate::collector::CollectTokenItem;
 use crate::collector::GlobalCollect;
 use crate::collector::SpanContext;
@@ -195,6 +196,28 @@ impl Span {
                 .try_with(move |stack| Self::enter_with_stack(name, &mut (*stack).borrow_mut()))
                 .unwrap_or_default()
         }
+    }
+
+    /// Adds an event to the span with the given name and properties.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use fastrace::prelude::*;
+    ///
+    /// let root = Span::root("root", SpanContext::random());
+    ///
+    /// root.add_event("event in root", || [("key".into(), "value".into())])
+    ///     .add_event("event2 in root", || [("key2".into(), "value2".into())]);
+    /// ```
+    #[inline]
+    pub fn add_event<I, F>(&self, name: impl Into<Cow<'static, str>>, properties: F) -> &Self
+    where
+        I: IntoIterator<Item = (Cow<'static, str>, Cow<'static, str>)>,
+        F: FnOnce() -> I,
+    {
+        Event::add_to_parent(name, self, properties);
+        self
     }
 
     /// Sets the current `Span` as the local parent for the current thread.
