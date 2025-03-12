@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## v0.7.7
+
 - Add `TraceId::random()` and `SpanId::random()`.
 - Add `FromStr`, `Display`, and `serde` support for `TraceId`, `SpanId`.
 

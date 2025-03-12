@@ -18,12 +18,12 @@ pub struct TraceId(pub u128);
 
 impl TraceId {
     /// Create a random `TraceId`.
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```
     /// use fastrace::prelude::*;
-    /// 
+    ///
     /// let trace_id = TraceId::random();
     /// ```
     pub fn random() -> Self {
@@ -68,12 +68,12 @@ pub struct SpanId(pub u64);
 
 impl SpanId {
     /// Create a random `SpanId`.
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```
     /// use fastrace::prelude::*;
-    /// 
+    ///
     /// let span_id = SpanId::random();
     /// ```
     pub fn random() -> Self {
@@ -172,7 +172,7 @@ impl SpanContext {
     pub fn random() -> Self {
         Self {
             trace_id: TraceId::random(),
-            span_id: SpanId::random(),
+            span_id: SpanId::default(),
             sampled: true,
         }
     }
