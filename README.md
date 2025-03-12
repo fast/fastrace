@@ -2,7 +2,7 @@
 
 [![Crates.io](https://img.shields.io/crates/v/fastrace.svg?style=flat-square&logo=rust)](https://crates.io/crates/fastrace)
 [![Documentation](https://img.shields.io/docsrs/fastrace?style=flat-square&logo=rust)](https://docs.rs/fastrace/)
-[![MSRV 1.75.0](https://img.shields.io/badge/MSRV-1.75.0-green?style=flat-square&logo=rust)](https://www.whatrustisit.com)
+[![MSRV 1.80.0](https://img.shields.io/badge/MSRV-1.80.0-green?style=flat-square&logo=rust)](https://www.whatrustisit.com)
 [![CI Status](https://img.shields.io/github/actions/workflow/status/fast/fastrace/ci.yml?style=flat-square&logo=github)](https://github.com/fast/fastrace/actions)
 [![License](https://img.shields.io/crates/l/fastrace?style=flat-square)](https://github.com/fast/fastrace/blob/main/LICENSE)
 
@@ -113,9 +113,9 @@ fn main() {
 
 Detailed results are available in [etc/benchmark-result](etc/benchmark-result).
 
-## Supported Rust Versions (MSRV 1.75.0)
+## Supported Rust Versions (MSRV 1.80.0)
 
-Fastrace is built against the latest stable release. The minimum supported version is 1.75.0. The current Fastrace version is not guaranteed to build on Rust versions earlier than the minimum supported version.
+Fastrace is built against the latest stable release. The minimum supported version is 1.80.0. The current Fastrace version is not guaranteed to build on Rust versions earlier than the minimum supported version.
 
 ## Projects using fastrace
 
