@@ -14,12 +14,12 @@ resolver = "2"
 edition = "2021"
 license = "Apache-2.0"
 repository = "https://github.com/fast/fastrace"
-rust-version = "1.75"
+rust-version = "1.81"
 
 [workspace.dependencies]
 # workspace dependencies
-fastrace = { version = "0.7.6", path = "fastrace" }
-fastrace-macro = { version = "0.7.6", path = "fastrace-macro" }
+fastrace = { version = "0.7.7", path = "fastrace" }
+fastrace-macro = { version = "0.7.7", path = "fastrace-macro" }
 
 # workspace leaves
 fastrace-datadog = { path = "fastrace-datadog" }

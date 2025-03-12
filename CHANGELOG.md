@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## v0.7.7
+
+- Add `TraceId::random()` and `SpanId::random()`.
+- Add `FromStr`, `Display`, and `serde` support for `TraceId`, `SpanId`.
+- Bump MSRV 1.81.0.
+
 ## v0.7.6
 
 - Reduce dependencies to futures 0.3.

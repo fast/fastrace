@@ -16,7 +16,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ windows-latest, macos-latest, ubuntu-latest ]
-        rust: [ "1.75", stable, nightly ]
+        rust: [ "1.81", stable, nightly ]
     env:
       RUST_BACKTRACE: 1
     steps:
@@ -42,10 +42,6 @@ jobs:
         run: |
           cargo test --workspace --all-targets -- --nocapture
           cargo test --doc
-
-      # GitHub Action sometimes run out of resources to run benches
-      # - name: Run benches
-      #   run: cargo bench --workspace --bench compare --bench trace
 
       - name: Run examples
         run: |
