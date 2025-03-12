@@ -6,7 +6,7 @@
 
 - Add `TraceId::random()` and `SpanId::random()`.
 - Add `FromStr`, `Display`, and `serde` support for `TraceId`, `SpanId`.
-- Bump MSRV 1.80.0.
+- Bump MSRV 1.81.0.
 
 ## v0.7.6
 
