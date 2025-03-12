@@ -8,8 +8,8 @@ use std::sync::atomic::AtomicBool;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
 
-use minstant::Anchor;
-use minstant::Instant;
+use fastant::Anchor;
+use fastant::Instant;
 use parking_lot::Mutex;
 
 use crate::collector::Config;

@@ -6,7 +6,7 @@ use std::rc::Rc;
 use std::sync::Arc;
 use std::time::Duration;
 
-use minstant::Instant;
+use fastant::Instant;
 
 use crate::Event;
 use crate::collector::CollectTokenItem;
@@ -593,8 +593,8 @@ mod tests {
 
     use mockall::Sequence;
     use mockall::predicate;
+    use rand::rng;
     use rand::seq::SliceRandom;
-    use rand::thread_rng;
 
     use super::*;
     use crate::collector::ConsoleReporter;
@@ -689,7 +689,7 @@ mod tests {
             let child2 = Span::enter_with_parent("child2", &root);
 
             crossbeam::scope(move |scope| {
-                let mut rng = thread_rng();
+                let mut rng = rng();
                 let mut spans = [child1, grandchild, child2];
                 spans.shuffle(&mut rng);
                 for span in spans {
@@ -757,7 +757,7 @@ root []
             .with_property(|| ("k1", "v1"));
 
             crossbeam::scope(move |scope| {
-                let mut rng = thread_rng();
+                let mut rng = rng();
                 let mut spans = [child1, child2];
                 spans.shuffle(&mut rng);
                 for span in spans {
@@ -766,7 +766,7 @@ root []
             })
             .unwrap();
             crossbeam::scope(move |scope| {
-                let mut rng = thread_rng();
+                let mut rng = rng();
                 let mut spans = [parent1, parent2, parent3, parent4, parent5];
                 spans.shuffle(&mut rng);
                 for span in spans {
@@ -857,7 +857,7 @@ parent5 []
             }
 
             crossbeam::scope(move |scope| {
-                let mut rng = thread_rng();
+                let mut rng = rng();
                 let mut spans = [parent1, parent2, parent3, parent4, parent5];
                 spans.shuffle(&mut rng);
                 for span in spans {

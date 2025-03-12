@@ -7,12 +7,11 @@ use std::task::Context;
 use std::task::Poll;
 
 use fastrace::Span;
-use futures::Sink;
-use futures::Stream;
-use pin_project_lite::pin_project;
+use futures_core::Stream;
+use futures_sink::Sink;
 
-/// An extension trait for [`futures::Stream`] that provides tracing instrument adapters.
-pub trait StreamExt: futures::Stream + Sized {
+/// An extension trait for [`Stream`] that provides tracing instrument adapters.
+pub trait StreamExt: Stream + Sized {
     /// Binds a [`Span`] to the [`Stream`] that continues to record until the stream is
     /// **finished**.
     ///
@@ -54,10 +53,10 @@ pub trait StreamExt: futures::Stream + Sized {
     }
 }
 
-impl<T> StreamExt for T where T: futures::Stream {}
+impl<T> StreamExt for T where T: Stream {}
 
-/// An extension trait for [`futures::Sink`] that provides tracing instrument adapters.
-pub trait SinkExt<Item>: futures::Sink<Item> + Sized {
+/// An extension trait for [`Sink`] that provides tracing instrument adapters.
+pub trait SinkExt<Item>: Sink<Item> + Sized {
     /// Binds a [`Span`] to the [`Sink`] that continues to record until the sink is **closed**.
     ///
     /// In addition, it sets the span as the local parent at every poll so that
@@ -92,15 +91,15 @@ pub trait SinkExt<Item>: futures::Sink<Item> + Sized {
     }
 }
 
-impl<T, Item> SinkExt<Item> for T where T: futures::Sink<Item> {}
+impl<T, Item> SinkExt<Item> for T where T: Sink<Item> {}
 
-pin_project! {
-    /// Adapter for [`StreamExt::in_span()`](StreamExt::in_span) and [`SinkExt::in_span()`](SinkExt::in_span).
-    pub struct InSpan<T> {
-        #[pin]
-        inner: T,
-        span: Option<Span>,
-    }
+/// Adapter for [`StreamExt::in_span()`](StreamExt::in_span) and
+/// [`SinkExt::in_span()`](SinkExt::in_span).
+#[pin_project::pin_project]
+pub struct InSpan<T> {
+    #[pin]
+    inner: T,
+    span: Option<Span>,
 }
 
 impl<T> Stream for InSpan<T>
@@ -115,13 +114,13 @@ where T: Stream
         let res = this.inner.poll_next(cx);
 
         match res {
-            r @ Poll::Pending => r,
-            r @ Poll::Ready(None) => {
+            Poll::Pending => Poll::Pending,
+            Poll::Ready(None) => {
                 // finished
                 this.span.take();
-                r
+                Poll::Ready(None)
             }
-            other => other,
+            Poll::Ready(Some(item)) => Poll::Ready(Some(item)),
         }
     }
 }

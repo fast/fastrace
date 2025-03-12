@@ -18,8 +18,8 @@ rust-version = "1.75"
 
 [workspace.dependencies]
 # workspace dependencies
-fastrace = { version = "0.7.5", path = "fastrace" }
-fastrace-macro = { version = "0.7.5", path = "fastrace-macro" }
+fastrace = { version = "0.7.6", path = "fastrace" }
+fastrace-macro = { version = "0.7.6", path = "fastrace-macro" }
 
 # workspace leaves
 fastrace-datadog = { path = "fastrace-datadog" }
@@ -28,7 +28,6 @@ fastrace-jaeger = { path = "fastrace-jaeger" }
 fastrace-opentelemetry = { path = "fastrace-opentelemetry" }
 
 # crates.io dependencies
-futures = { version = "0.3" }
 log = { version = "0.4" }
 serde = { version = "1.0", features = ["derive"] }
 

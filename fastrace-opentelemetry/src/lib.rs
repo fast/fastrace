@@ -34,9 +34,9 @@ use opentelemetry::trace::Status;
 use opentelemetry::trace::TraceFlags;
 use opentelemetry::trace::TraceState;
 use opentelemetry_sdk::Resource;
-use opentelemetry_sdk::export::trace::SpanData;
-use opentelemetry_sdk::export::trace::SpanExporter;
+use opentelemetry_sdk::trace::SpanData;
 use opentelemetry_sdk::trace::SpanEvents;
+use opentelemetry_sdk::trace::SpanExporter;
 use opentelemetry_sdk::trace::SpanLinks;
 
 /// [OpenTelemetry](https://github.com/open-telemetry/opentelemetry-rust) reporter for `fastrace`.
@@ -142,7 +142,7 @@ impl OpenTelemetryReporter {
 
     fn try_report(&mut self, spans: Vec<SpanRecord>) -> Result<(), Box<dyn std::error::Error>> {
         let spans = self.convert(spans);
-        futures::executor::block_on(self.exporter.export(spans))?;
+        pollster::block_on(self.exporter.export(spans))?;
         Ok(())
     }
 }

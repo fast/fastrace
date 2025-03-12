@@ -8,7 +8,7 @@ use fastrace::collector::TestReporter;
 use fastrace::local::LocalCollector;
 use fastrace::prelude::*;
 use fastrace::util::tree::tree_str_from_span_records;
-use futures::executor::block_on;
+use pollster::block_on;
 use serial_test::serial;
 use tokio::runtime::Builder;
 

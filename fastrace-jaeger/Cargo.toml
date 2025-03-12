@@ -1,6 +1,6 @@
 [package]
 name = "fastrace-jaeger"
-version = "0.7.5"
+version = "0.7.6"
 
 categories = ["development-tools::debugging"]
 description = "Jaeger reporter for fastrace"
@@ -19,4 +19,3 @@ log = { workspace = true }
 thrift_codec = "0.3"
 
 [dev-dependencies]
-futures = { workspace = true }

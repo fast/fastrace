@@ -112,9 +112,14 @@ impl ReportAll {
                     .build()
                     .expect("initialize oltp exporter"),
                 opentelemetry::trace::SpanKind::Server,
-                Cow::Owned(opentelemetry_sdk::Resource::new([
-                    opentelemetry::KeyValue::new("service.name", "asynchronous(opentelemetry)"),
-                ])),
+                Cow::Owned(
+                    opentelemetry_sdk::Resource::builder()
+                        .with_attributes([opentelemetry::KeyValue::new(
+                            "service.name",
+                            "asynchronous(opentelemetry)",
+                        )])
+                        .build(),
+                ),
                 opentelemetry::InstrumentationScope::builder("example-crate")
                     .with_version(env!("CARGO_PKG_VERSION"))
                     .build(),
