@@ -16,7 +16,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ windows-latest, macos-latest, ubuntu-latest ]
-        rust: [ "1.81", stable, nightly ]
+        rust: [ "1.75", stable, nightly ]
     env:
       RUST_BACKTRACE: 1
     steps:
