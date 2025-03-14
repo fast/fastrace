@@ -45,14 +45,12 @@ impl FromStr for TraceId {
     }
 }
 
-#[cfg(feature = "serde")]
 impl serde::Serialize for TraceId {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         serializer.serialize_str(&format!("{:032x}", self.0))
     }
 }
 
-#[cfg(feature = "serde")]
 impl<'de> serde::Deserialize<'de> for TraceId {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         let s = String::deserialize(deserializer)?;
@@ -111,14 +109,12 @@ impl FromStr for SpanId {
     }
 }
 
-#[cfg(feature = "serde")]
 impl serde::Serialize for SpanId {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         serializer.serialize_str(&format!("{:016x}", self.0))
     }
 }
 
-#[cfg(feature = "serde")]
 impl<'de> serde::Deserialize<'de> for SpanId {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         let s = String::deserialize(deserializer)?;

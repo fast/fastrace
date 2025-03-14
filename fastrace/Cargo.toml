@@ -1,6 +1,6 @@
 [package]
 name = "fastrace"
-version = "0.7.7"
+version = "0.7.8"
 
 categories = ["development-tools::debugging"]
 description = "A high-performance timeline tracing library for Rust"
@@ -15,7 +15,6 @@ rust-version.workspace = true
 
 [features]
 enable = []
-serde = ["dep:serde"]
 
 [dependencies]
 fastant = "0.1"
@@ -24,7 +23,7 @@ parking_lot = "0.12"
 pin-project = { version = "1.1.8" }
 rand = "0.9"
 rtrb = "0.3"
-serde = { version = "1", optional = true }
+serde = { workspace = true }
 
 # TODO: remove once_cell once MSRV is above 1.80
 once_cell = "1.19"
