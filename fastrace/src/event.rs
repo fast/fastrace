@@ -88,7 +88,7 @@ impl Event {
     ///
     /// Event::add_to_parent("event in root", &root, || [("key".into(), "value".into())]);
     /// ```
-    #[deprecated(since = "0.7.7", note = "use `Span::add_event` instead")]
+    #[deprecated(since = "0.7.8", note = "use `Span::add_event` instead")]
     pub fn add_to_parent<I, F>(name: impl Into<Cow<'static, str>>, parent: &Span, properties: F)
     where
         I: IntoIterator<Item = (Cow<'static, str>, Cow<'static, str>)>,
@@ -110,7 +110,7 @@ impl Event {
     ///
     /// Event::add_to_local_parent("event in root", || [("key".into(), "value".into())]);
     /// ```
-    #[deprecated(since = "0.7.7", note = "use `LocalSpan::add_event` instead")]
+    #[deprecated(since = "0.7.8", note = "use `LocalSpan::add_event` instead")]
     pub fn add_to_local_parent<I, F>(name: impl Into<Cow<'static, str>>, properties: F)
     where
         I: IntoIterator<Item = (Cow<'static, str>, Cow<'static, str>)>,

@@ -1,6 +1,6 @@
 [package]
 name = "fastrace-jaeger"
-version = "0.7.7"
+version = "0.7.8"
 
 categories = ["development-tools::debugging"]
 description = "Jaeger reporter for fastrace"
