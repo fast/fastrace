@@ -6,8 +6,8 @@ use crate::collector::CollectTokenItem;
 use crate::local::span_queue::SpanHandle;
 use crate::local::span_queue::SpanQueue;
 use crate::util::CollectToken;
-use crate::util::Properties;
 use crate::util::RawSpans;
+use crate::Event;
 
 pub struct SpanLine {
     span_queue: SpanQueue,
@@ -62,14 +62,13 @@ impl SpanLine {
     #[inline]
     pub fn add_event(
         &mut self,
-        name: impl Into<Cow<'static, str>>,
-        properties: Option<Properties>,
+        event: Event,
     ) {
         if !self.is_sampled {
             return;
         }
 
-        self.span_queue.add_event(name, properties);
+        self.span_queue.add_event(event);
     }
 
     #[inline]

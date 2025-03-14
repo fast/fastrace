@@ -7,8 +7,8 @@ use std::rc::Rc;
 use crate::local::local_span_line::LocalSpanHandle;
 use crate::local::local_span_line::SpanLine;
 use crate::util::CollectToken;
-use crate::util::Properties;
 use crate::util::RawSpans;
+use crate::Event;
 
 const DEFAULT_SPAN_STACK_SIZE: usize = 4096;
 const DEFAULT_SPAN_QUEUE_SIZE: usize = 10240;
@@ -53,11 +53,10 @@ impl LocalSpanStack {
     #[inline]
     pub fn add_event(
         &mut self,
-        name: impl Into<Cow<'static, str>>,
-        properties: Option<Properties>,
+        event: Event,
     ) {
         if let Some(span_line) = self.current_span_line() {
-            span_line.add_event(name, properties);
+            span_line.add_event(event);
         }
     }
 

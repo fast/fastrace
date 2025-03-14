@@ -9,6 +9,7 @@ use crate::collector::SpanId;
 use crate::local::raw_span::RawSpan;
 use crate::util::Properties;
 use crate::util::RawSpans;
+use crate::Event;
 
 pub struct SpanQueue {
     span_queue: RawSpans,
@@ -67,8 +68,7 @@ impl SpanQueue {
     #[inline]
     pub fn add_event(
         &mut self,
-        name: impl Into<Cow<'static, str>>,
-        properties: Option<Properties>,
+        event: Event,
     ) {
         if self.span_queue.len() >= self.capacity {
             return;
@@ -78,10 +78,10 @@ impl SpanQueue {
             SpanId::next_id(),
             self.next_parent_id.unwrap_or_default(),
             Instant::now(),
-            name,
+            event.name,
             RawKind::Event,
         );
-        span.properties = properties;
+        span.properties = event.properties;
 
         self.span_queue.push(span);
     }

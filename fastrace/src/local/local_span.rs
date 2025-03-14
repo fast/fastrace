@@ -172,7 +172,7 @@ impl LocalSpan {
         #[cfg(feature = "enable")]
         {
             LOCAL_SPAN_STACK
-                .try_with(|stack| stack.borrow_mut().add_event(event.name, event.properties))
+                .try_with(|stack| stack.borrow_mut().add_event(event))
                 .ok();
         }
     }
