@@ -8,7 +8,8 @@ pub mod tree;
 
 use std::borrow::Cow;
 use std::cell::RefCell;
-use std::sync::LazyLock;
+
+use once_cell::sync::Lazy;
 
 use crate::collector::CollectTokenItem;
 use crate::local::raw_span::RawSpan;
@@ -16,13 +17,12 @@ use crate::util::object_pool::Pool;
 use crate::util::object_pool::Puller;
 use crate::util::object_pool::Reusable;
 
-static RAW_SPANS_POOL: LazyLock<Pool<Vec<RawSpan>>> =
-    LazyLock::new(|| Pool::new(Vec::new, Vec::clear));
-static COLLECT_TOKEN_ITEMS_POOL: LazyLock<Pool<Vec<CollectTokenItem>>> =
-    LazyLock::new(|| Pool::new(Vec::new, Vec::clear));
+static RAW_SPANS_POOL: Lazy<Pool<Vec<RawSpan>>> = Lazy::new(|| Pool::new(Vec::new, Vec::clear));
+static COLLECT_TOKEN_ITEMS_POOL: Lazy<Pool<Vec<CollectTokenItem>>> =
+    Lazy::new(|| Pool::new(Vec::new, Vec::clear));
 #[allow(clippy::type_complexity)]
-static PROPERTIES_POOL: LazyLock<Pool<Vec<(Cow<'static, str>, Cow<'static, str>)>>> =
-    LazyLock::new(|| Pool::new(Vec::new, Vec::clear));
+static PROPERTIES_POOL: Lazy<Pool<Vec<(Cow<'static, str>, Cow<'static, str>)>>> =
+    Lazy::new(|| Pool::new(Vec::new, Vec::clear));
 
 thread_local! {
     static RAW_SPANS_PULLER: RefCell<Puller<'static, Vec<RawSpan>>> = RefCell::new(RAW_SPANS_POOL.puller(512));
