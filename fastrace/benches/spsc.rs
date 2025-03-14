@@ -3,9 +3,9 @@
 use std::time::Duration;
 use std::time::Instant;
 
-use criterion::Criterion;
 use criterion::criterion_group;
 use criterion::criterion_main;
+use criterion::Criterion;
 
 fn spsc_comparison(c: &mut Criterion) {
     let mut bgroup = c.benchmark_group("spsc channel");

@@ -20,7 +20,7 @@ pub struct RawSpan {
     pub parent_id: SpanId,
     pub begin_instant: Instant,
     pub name: Cow<'static, str>,
-    pub properties: Properties,
+    pub properties: Option<Properties>,
     pub raw_kind: RawKind,
 
     // Will write this field at post processing
@@ -41,7 +41,7 @@ impl RawSpan {
             parent_id,
             begin_instant,
             name: name.into(),
-            properties: Properties::default(),
+            properties: None,
             raw_kind,
             end_instant: Instant::ZERO,
         }
@@ -55,8 +55,11 @@ impl RawSpan {
 
 impl Clone for RawSpan {
     fn clone(&self) -> Self {
-        let mut properties = Properties::default();
-        properties.extend(self.properties.iter().cloned());
+        let properties = self.properties.as_ref().map(|properties| {
+            let mut new_properties = Properties::default();
+            new_properties.extend(properties.iter().cloned());
+            new_properties
+        });
 
         RawSpan {
             id: self.id,

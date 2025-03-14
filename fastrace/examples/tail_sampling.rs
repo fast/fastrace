@@ -11,7 +11,7 @@ fn main() {
 
     {
         let parent = SpanContext::random();
-        let mut root = Span::root("light work", parent);
+        let root = Span::root("light work", parent);
         let _span_guard = root.set_local_parent();
 
         expensive_work(Duration::from_millis(50));
@@ -24,7 +24,7 @@ fn main() {
 
     {
         let parent = SpanContext::random();
-        let mut root = Span::root("heavy work", parent);
+        let root = Span::root("heavy work", parent);
         let _span_guard = root.set_local_parent();
 
         expensive_work(Duration::from_millis(200));

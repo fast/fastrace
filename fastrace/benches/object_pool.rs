@@ -1,9 +1,9 @@
 // Copyright 2020 TiKV Project Authors. Licensed under Apache-2.0.
 
-use criterion::BatchSize;
-use criterion::Criterion;
 use criterion::criterion_group;
 use criterion::criterion_main;
+use criterion::BatchSize;
+use criterion::Criterion;
 use fastrace::util::object_pool::Pool;
 
 fn bench_alloc_vec(c: &mut Criterion) {

@@ -5,8 +5,8 @@ use std::fmt;
 use std::rc::Rc;
 use std::str::FromStr;
 
-use crate::Span;
 use crate::local::local_span_stack::LOCAL_SPAN_STACK;
+use crate::Span;
 
 thread_local! {
     static LOCAL_ID_GENERATOR: Cell<(u32, u32)> = Cell::new((rand::random(), 0))

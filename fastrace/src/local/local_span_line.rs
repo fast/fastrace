@@ -6,6 +6,7 @@ use crate::collector::CollectTokenItem;
 use crate::local::span_queue::SpanHandle;
 use crate::local::span_queue::SpanQueue;
 use crate::util::CollectToken;
+use crate::util::Properties;
 use crate::util::RawSpans;
 
 pub struct SpanLine {
@@ -59,18 +60,16 @@ impl SpanLine {
     }
 
     #[inline]
-    pub fn add_event<K, V, I, F>(&mut self, name: impl Into<Cow<'static, str>>, properties: F)
-    where
-        K: Into<Cow<'static, str>>,
-        V: Into<Cow<'static, str>>,
-        I: IntoIterator<Item = (K, V)>,
-        F: FnOnce() -> I,
-    {
+    pub fn add_event(
+        &mut self,
+        name: impl Into<Cow<'static, str>>,
+        properties: Option<Properties>,
+    ) {
         if !self.is_sampled {
             return;
         }
 
-        self.span_queue.add_event(name, properties());
+        self.span_queue.add_event(name, properties);
     }
 
     #[inline]
@@ -197,22 +196,25 @@ span1 []
         let span = span_line.start_span("span").unwrap();
         let current_token = span_line.current_collect_token().unwrap();
         assert_eq!(current_token.len(), 2);
-        assert_eq!(current_token.as_slice(), &[
-            CollectTokenItem {
-                trace_id: TraceId(1234),
-                parent_id: span_line.span_queue.current_parent_id().unwrap(),
-                collect_id: 42,
-                is_root: false,
-                is_sampled: true,
-            },
-            CollectTokenItem {
-                trace_id: TraceId(1235),
-                parent_id: span_line.span_queue.current_parent_id().unwrap(),
-                collect_id: 43,
-                is_root: false,
-                is_sampled: true,
-            }
-        ]);
+        assert_eq!(
+            current_token.as_slice(),
+            &[
+                CollectTokenItem {
+                    trace_id: TraceId(1234),
+                    parent_id: span_line.span_queue.current_parent_id().unwrap(),
+                    collect_id: 42,
+                    is_root: false,
+                    is_sampled: true,
+                },
+                CollectTokenItem {
+                    trace_id: TraceId(1235),
+                    parent_id: span_line.span_queue.current_parent_id().unwrap(),
+                    collect_id: 43,
+                    is_root: false,
+                    is_sampled: true,
+                }
+            ]
+        );
         span_line.finish_span(span);
 
         let current_token = span_line.current_collect_token().unwrap();
@@ -241,7 +243,7 @@ span []
 
         let raw_spans = span_line1.collect(1).unwrap().0.into_inner();
         assert_eq!(raw_spans.len(), 1);
-        assert_eq!(raw_spans[0].properties.len(), 0);
+        assert_eq!(raw_spans[0].properties, None);
 
         let raw_spans = span_line2.collect(2).unwrap().0.into_inner();
         assert!(raw_spans.is_empty());

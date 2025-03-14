@@ -8,7 +8,6 @@ use fastrace::collector::TestReporter;
 use fastrace::local::LocalCollector;
 use fastrace::prelude::*;
 use fastrace::util::tree::tree_str_from_span_records;
-use pollster::block_on;
 use serial_test::serial;
 use tokio::runtime::Builder;
 
@@ -342,7 +341,7 @@ fn multiple_spans_without_local_spans() {
     {
         let root1 = Span::root("root1", SpanContext::new(TraceId(12), SpanId::default()));
         let root2 = Span::root("root2", SpanContext::new(TraceId(13), SpanId::default()));
-        let mut root3 = Span::root("root3", SpanContext::new(TraceId(14), SpanId::default()));
+        let root3 = Span::root("root3", SpanContext::new(TraceId(14), SpanId::default()));
 
         let local_collector = LocalCollector::start();
 
@@ -445,7 +444,7 @@ fn test_macro() {
             .build()
             .unwrap();
 
-        block_on(
+        pollster::block_on(
             runtime.spawn(
                 async {
                     Bar.run(&100).await;
@@ -517,9 +516,9 @@ fn macro_example() {
         let root = Span::root("root", SpanContext::random());
         let _g = root.set_local_parent();
         do_something(100);
-        block_on(do_something_async(100));
+        pollster::block_on(do_something_async(100));
         do_something_short_name(100);
-        block_on(do_something_async_short_name(100));
+        pollster::block_on(do_something_async_short_name(100));
     }
 
     fastrace::flush();
@@ -669,25 +668,70 @@ fn test_elapsed() {
 
 #[test]
 #[serial]
-fn test_add_property() {
+fn test_property() {
     let (reporter, collected_spans) = TestReporter::new();
     fastrace::set_reporter(reporter, Config::default());
 
     {
-        let root = Span::root("root", SpanContext::random());
+        let root = Span::root("root", SpanContext::random())
+            .with_property(|| ("k1", "v1"))
+            .with_properties(|| [("k2", "v2"), ("k3", "v3")]);
+        root.add_property(|| ("k4", "v4"));
+        root.add_properties(|| [("k5", "v5"), ("k6", "v6")]);
         let _g = root.set_local_parent();
-        LocalSpan::add_property(|| ("k1", "v1"));
-        LocalSpan::add_properties(|| [("k2", "v2")]);
-        let _span = LocalSpan::enter_with_local_parent("span");
-        LocalSpan::add_property(|| ("k3", "v3"));
-        LocalSpan::add_properties(|| [("k4", "v4"), ("k5", "v5")]);
+        LocalSpan::add_property(|| ("k7", "v7"));
+        LocalSpan::add_properties(|| [("k8", "v8"), ("k9", "v9")]);
+        let _span = LocalSpan::enter_with_local_parent("span")
+            .with_property(|| ("k10", "v10"))
+            .with_properties(|| [("k11", "v11"), ("k12", "v12")]);
+        LocalSpan::add_property(|| ("k13", "v13"));
+        LocalSpan::add_properties(|| [("k14", "v14"), ("k15", "v15")]);
     }
 
     fastrace::flush();
 
     let expected_graph = r#"
-root [("k1", "v1"), ("k2", "v2")]
-    span [("k3", "v3"), ("k4", "v4"), ("k5", "v5")]
+root [("k1", "v1"), ("k2", "v2"), ("k3", "v3"), ("k4", "v4"), ("k5", "v5"), ("k6", "v6"), ("k7", "v7"), ("k8", "v8"), ("k9", "v9")]
+    span [("k10", "v10"), ("k11", "v11"), ("k12", "v12"), ("k13", "v13"), ("k14", "v14"), ("k15", "v15")]
+"#;
+    assert_eq!(
+        tree_str_from_span_records(collected_spans.lock().clone()),
+        expected_graph
+    );
+}
+
+#[test]
+#[serial]
+fn test_event() {
+    let (reporter, collected_spans) = TestReporter::new();
+    fastrace::set_reporter(reporter, Config::default());
+
+    {
+        let root = Span::root("root", SpanContext::random());
+        root.add_event(
+            Event::new("event1 in root")
+                .with_property(|| ("k1", "v1"))
+                .with_properties(|| [("k2", "v2"), ("k3", "v3")]),
+        );
+        let _g = root.set_local_parent();
+        LocalSpan::add_event(
+            Event::new("event2 in root")
+                .with_property(|| ("k4", "v4"))
+                .with_properties(|| [("k5", "v5"), ("k6", "v6")]),
+        );
+        let _span = LocalSpan::enter_with_local_parent("span");
+        LocalSpan::add_event(
+            Event::new("event3 in span")
+                .with_property(|| ("k7", "v7"))
+                .with_properties(|| [("k8", "v8"), ("k9", "v9")]),
+        );
+    }
+
+    fastrace::flush();
+
+    let expected_graph = r#"
+root [] [("event1 in root", [("k1", "v1"), ("k2", "v2"), ("k3", "v3")]), ("event2 in root", [("k4", "v4"), ("k5", "v5"), ("k6", "v6")])]
+    span [] [("event3 in span", [("k7", "v7"), ("k8", "v8"), ("k9", "v9")])]
 "#;
     assert_eq!(
         tree_str_from_span_records(collected_spans.lock().clone()),
@@ -734,7 +778,7 @@ fn test_macro_properties() {
             .build()
             .unwrap();
 
-        block_on(
+        pollster::block_on(
             runtime.spawn(
                 async {
                     foo_async(1, &Bar, Bar).await;

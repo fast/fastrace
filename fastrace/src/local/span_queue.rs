@@ -7,6 +7,7 @@ use fastant::Instant;
 use super::raw_span::RawKind;
 use crate::collector::SpanId;
 use crate::local::raw_span::RawSpan;
+use crate::util::Properties;
 use crate::util::RawSpans;
 
 pub struct SpanQueue {
@@ -64,12 +65,11 @@ impl SpanQueue {
     }
 
     #[inline]
-    pub fn add_event<K, V, I>(&mut self, name: impl Into<Cow<'static, str>>, properties: I)
-    where
-        K: Into<Cow<'static, str>>,
-        V: Into<Cow<'static, str>>,
-        I: IntoIterator<Item = (K, V)>,
-    {
+    pub fn add_event(
+        &mut self,
+        name: impl Into<Cow<'static, str>>,
+        properties: Option<Properties>,
+    ) {
         if self.span_queue.len() >= self.capacity {
             return;
         }
@@ -81,8 +81,7 @@ impl SpanQueue {
             name,
             RawKind::Event,
         );
-        span.properties
-            .extend(properties.into_iter().map(|(k, v)| (k.into(), v.into())));
+        span.properties = properties;
 
         self.span_queue.push(span);
     }
@@ -106,6 +105,7 @@ impl SpanQueue {
             RawKind::Properties,
         );
         span.properties
+            .get_or_insert_with(Properties::default)
             .extend(properties.into_iter().map(|(k, v)| (k.into(), v.into())));
 
         self.span_queue.push(span);
@@ -122,6 +122,7 @@ impl SpanQueue {
 
         let span = &mut self.span_queue[span_handle.index];
         span.properties
+            .get_or_insert_with(Properties::default)
             .extend(properties.into_iter().map(|(k, v)| (k.into(), v.into())));
     }
 

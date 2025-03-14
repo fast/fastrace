@@ -1,6 +1,7 @@
 // Copyright 2020 TiKV Project Authors. Licensed under Apache-2.0.
 
 use std::cell::Cell;
+use std::fmt;
 use std::mem::ManuallyDrop;
 use std::ops::Deref;
 use std::ops::DerefMut;
@@ -85,6 +86,18 @@ impl<'a, T> Puller<'a, T> {
     }
 }
 
+impl<'a, T> Drop for Puller<'a, T> {
+    #[inline]
+    fn drop(&mut self) {
+        unsafe {
+            for mut obj in self.buffer.drain(..) {
+                drop(ManuallyDrop::take(&mut obj.obj));
+                std::mem::forget(obj);
+            }
+        }
+    }
+}
+
 pub struct Reusable<'a, T> {
     pool: &'a Pool<T>,
     obj: ManuallyDrop<T>,
@@ -109,16 +122,18 @@ impl<'a, T> Reusable<'a, T> {
     }
 }
 
-impl<T> std::fmt::Debug for Reusable<'_, T>
-where T: std::fmt::Debug
+impl<T> fmt::Debug for Reusable<'_, T>
+where
+    T: fmt::Debug,
 {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.obj.fmt(f)
     }
 }
 
 impl<T> std::cmp::PartialEq for Reusable<'_, T>
-where T: std::cmp::PartialEq
+where
+    T: std::cmp::PartialEq,
 {
     fn eq(&self, other: &Self) -> bool {
         T::eq(self, other)

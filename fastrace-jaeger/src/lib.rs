@@ -11,8 +11,8 @@ use std::net::UdpSocket;
 use fastrace::collector::Reporter;
 use fastrace::prelude::*;
 use thrift::Log;
-use thrift_codec::CompactEncode;
 use thrift_codec::message::Message;
+use thrift_codec::CompactEncode;
 
 use crate::thrift::Batch;
 use crate::thrift::EmitBatchNotification;

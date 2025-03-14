@@ -5,8 +5,9 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use crate::local::local_span_line::LocalSpanHandle;
-use crate::local::local_span_stack::LOCAL_SPAN_STACK;
 use crate::local::local_span_stack::LocalSpanStack;
+use crate::local::local_span_stack::LOCAL_SPAN_STACK;
+use crate::Event;
 
 /// An optimized [`Span`] for tracing operations within a single thread.
 ///
@@ -103,8 +104,7 @@ impl LocalSpan {
         self
     }
 
-    /// Add a single property to the current local parent. If the local parent is a [`Span`],
-    /// the property will be added to the `Span`.
+    /// Add a single property to the current local parent.
     ///
     /// A property is an arbitrary key-value pair associated with a span.
     ///
@@ -127,8 +127,7 @@ impl LocalSpan {
         Self::add_properties(|| [property()])
     }
 
-    /// Add multiple properties to the current local parent. If the local parent is a [`Span`],
-    /// the properties will be added to the `Span`.
+    /// Add multiple properties to the current local parent.
     ///
     /// # Examples
     ///
@@ -159,26 +158,21 @@ impl LocalSpan {
         }
     }
 
-    /// Adds an event to the `LocalSpan` with the given name and properties.
+    /// Adds an event to the `LocalSpan`.
     ///
     /// # Examples
     ///
     /// ```
     /// use fastrace::prelude::*;
     ///
-    /// LocalSpan::add_event("event in local span", || [("key", "value")]);
+    /// LocalSpan::add_event(Event::new("event in local span"));
     /// ```
-    pub fn add_event<K, V, I, F>(name: impl Into<Cow<'static, str>>, properties: F)
-    where
-        K: Into<Cow<'static, str>>,
-        V: Into<Cow<'static, str>>,
-        I: IntoIterator<Item = (K, V)>,
-        F: FnOnce() -> I,
-    {
+    #[inline]
+    pub fn add_event(event: Event) {
         #[cfg(feature = "enable")]
         {
             LOCAL_SPAN_STACK
-                .try_with(|stack| stack.borrow_mut().add_event(name, properties))
+                .try_with(|stack| stack.borrow_mut().add_event(event.name, event.properties))
                 .ok();
         }
     }
