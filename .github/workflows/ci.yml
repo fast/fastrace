@@ -16,7 +16,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ windows-latest, macos-latest, ubuntu-latest ]
-        rust: [ "1.75", stable, nightly ]
+        rust: [ "1.75.0", "stable", "nightly" ]
     env:
       RUST_BACKTRACE: 1
     steps:
@@ -29,23 +29,23 @@ jobs:
 
       - name: Check format
         if: ${{ matrix.rust == 'nightly' }}
-        run: cargo fmt --all -- --check
+        run: cargo +${{ matrix.rust }} fmt --all -- --check
 
       - name: Check clippy
         if: ${{ matrix.rust == 'nightly' }}
-        run: cargo clippy --all-targets --all-features -- --deny warnings
+        run: cargo +${{ matrix.rust }} clippy --all-targets --all-features -- --deny warnings
 
       - name: Build
-        run: cargo build --workspace --all-targets
+        run: cargo +${{ matrix.rust }} build --workspace --all-targets
 
       - name: Run tests
         run: |
-          cargo test --workspace --all-targets -- --nocapture
-          cargo test --doc
+          cargo +${{ matrix.rust }} test --workspace --all-targets -- --nocapture
+          cargo +${{ matrix.rust }} test --doc
 
       - name: Run examples
         run: |
-          cargo run --example asynchronous
-          cargo run --example synchronous
-          cargo run --example get_started
-          cargo run --package test-statically-disable
+          cargo +${{ matrix.rust }} run --example asynchronous
+          cargo +${{ matrix.rust }} run --example synchronous
+          cargo +${{ matrix.rust }} run --example get_started
+          cargo +${{ matrix.rust }} run --package test-statically-disable

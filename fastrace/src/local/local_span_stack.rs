@@ -4,6 +4,7 @@ use std::borrow::Cow;
 use std::cell::RefCell;
 use std::rc::Rc;
 
+use crate::Event;
 use crate::local::local_span_line::LocalSpanHandle;
 use crate::local::local_span_line::SpanLine;
 use crate::util::CollectToken;
@@ -50,13 +51,9 @@ impl LocalSpanStack {
     }
 
     #[inline]
-    pub fn add_event<I, F>(&mut self, name: impl Into<Cow<'static, str>>, properties: F)
-    where
-        I: IntoIterator<Item = (Cow<'static, str>, Cow<'static, str>)>,
-        F: FnOnce() -> I,
-    {
+    pub fn add_event(&mut self, event: Event) {
         if let Some(span_line) = self.current_span_line() {
-            span_line.add_event(name, properties);
+            span_line.add_event(event);
         }
     }
 

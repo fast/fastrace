@@ -507,7 +507,11 @@ fn amend_local_span(
                     begin_time_unix_ns,
                     duration_ns: end_time_unix_ns.saturating_sub(begin_time_unix_ns),
                     name: span.name.clone(),
-                    properties: span.properties.clone(),
+                    properties: span
+                        .properties
+                        .as_ref()
+                        .map(|p| (*p).clone())
+                        .unwrap_or_default(),
                     events: vec![],
                 });
             }
@@ -516,7 +520,11 @@ fn amend_local_span(
                 let event = EventRecord {
                     name: span.name.clone(),
                     timestamp_unix_ns: begin_time_unix_ns,
-                    properties: span.properties.clone(),
+                    properties: span
+                        .properties
+                        .as_ref()
+                        .map(|p| (*p).clone())
+                        .unwrap_or_default(),
                 };
                 dangling
                     .entry(parent_id)
@@ -527,7 +535,12 @@ fn amend_local_span(
                 dangling
                     .entry(parent_id)
                     .or_default()
-                    .push(DanglingItem::Properties(span.properties.clone()));
+                    .push(DanglingItem::Properties(
+                        span.properties
+                            .as_ref()
+                            .map(|p| (*p).clone())
+                            .unwrap_or_default(),
+                    ));
             }
         }
     }
@@ -552,7 +565,11 @@ fn amend_span(
                 begin_time_unix_ns,
                 duration_ns: end_time_unix_ns.saturating_sub(begin_time_unix_ns),
                 name: span.name.clone(),
-                properties: span.properties.clone(),
+                properties: span
+                    .properties
+                    .as_ref()
+                    .map(|p| (*p).clone())
+                    .unwrap_or_default(),
                 events: vec![],
             });
         }
@@ -561,7 +578,11 @@ fn amend_span(
             let event = EventRecord {
                 name: span.name.clone(),
                 timestamp_unix_ns: begin_time_unix_ns,
-                properties: span.properties.clone(),
+                properties: span
+                    .properties
+                    .as_ref()
+                    .map(|p| (*p).clone())
+                    .unwrap_or_default(),
             };
             dangling
                 .entry(parent_id)
@@ -572,7 +593,12 @@ fn amend_span(
             dangling
                 .entry(parent_id)
                 .or_default()
-                .push(DanglingItem::Properties(span.properties.clone()));
+                .push(DanglingItem::Properties(
+                    span.properties
+                        .as_ref()
+                        .map(|p| (*p).clone())
+                        .unwrap_or_default(),
+                ));
         }
     }
 }

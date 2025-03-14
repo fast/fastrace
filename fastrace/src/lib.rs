@@ -240,11 +240,12 @@
 //!     let root = Span::root("root", SpanContext::random());
 //!     let _guard = root.set_local_parent();
 //!
-//!     Event::add_to_parent("event in root", &root, || []);
+//!     root.add_event(Event::new("event in root"));
+//!
 //!     {
 //!         let _span1 = LocalSpan::enter_with_local_parent("a child span");
 //!
-//!         Event::add_to_local_parent("event in span1", || [("key".into(), "value".into())]);
+//!         LocalSpan::add_event(Event::new("event in span1"));
 //!     }
 //! }
 //!

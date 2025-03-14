@@ -2,10 +2,8 @@
 
 //! A module for relationship checking in test
 
-use std::borrow::Cow;
 use std::collections::HashMap;
-use std::fmt::Display;
-use std::fmt::Formatter;
+use std::fmt;
 
 use crate::collector::SpanId;
 use crate::collector::SpanRecord;
@@ -16,28 +14,30 @@ use crate::util::RawSpans;
 type TreeChildren = HashMap<
     SpanId,
     (
-        Cow<'static, str>,
+        String,
         Vec<SpanId>,
-        Vec<(Cow<'static, str>, Cow<'static, str>)>,
+        Vec<(String, String)>,
+        Vec<(String, Vec<(String, String)>)>,
     ),
 >;
 
 #[derive(Debug, PartialOrd, PartialEq, Ord, Eq)]
 pub struct Tree {
-    name: Cow<'static, str>,
+    name: String,
     children: Vec<Tree>,
-    properties: Vec<(Cow<'static, str>, Cow<'static, str>)>,
+    properties: Vec<(String, String)>,
+    events: Vec<(String, Vec<(String, String)>)>,
 }
 
-impl Display for Tree {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+impl fmt::Display for Tree {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.fmt_with_depth(f, 0)
     }
 }
 
 impl Tree {
-    fn fmt_with_depth(&self, f: &mut Formatter<'_>, depth: usize) -> std::fmt::Result {
-        writeln!(
+    fn fmt_with_depth(&self, f: &mut fmt::Formatter<'_>, depth: usize) -> fmt::Result {
+        write!(
             f,
             "{:indent$}{} {:?}",
             "",
@@ -45,6 +45,11 @@ impl Tree {
             self.properties,
             indent = depth * 4
         )?;
+        // TODO: also optionally print properties.
+        if !self.events.is_empty() {
+            write!(f, " {:?}", self.events)?;
+        }
+        writeln!(f)?;
         for child in &self.children {
             child.fmt_with_depth(f, depth + 1)?;
         }
@@ -64,11 +69,24 @@ impl Tree {
         let mut children: TreeChildren = HashMap::new();
 
         let spans = raw_spans.into_inner();
-        children.insert(SpanId::default(), ("".into(), vec![], vec![]));
+        children.insert(SpanId::default(), ("".into(), vec![], vec![], vec![]));
         for span in &spans {
             children.insert(
                 span.id,
-                (span.name.clone(), vec![], span.properties.clone()),
+                (
+                    span.name.to_string(),
+                    vec![],
+                    span.properties
+                        .as_ref()
+                        .map(|properties| {
+                            properties
+                                .iter()
+                                .map(|(k, v)| (k.to_string(), v.to_string()))
+                                .collect()
+                        })
+                        .unwrap_or_default(),
+                    vec![],
+                ),
             );
         }
         for span in &spans {
@@ -92,9 +110,10 @@ impl Tree {
             HashMap<
                 SpanId,
                 (
-                    Cow<'static, str>,
+                    String,
                     Vec<SpanId>,
-                    Vec<(Cow<'static, str>, Cow<'static, str>)>,
+                    Vec<(String, String)>,
+                    Vec<(String, Vec<(String, String)>)>,
                 ),
             >,
         >::new();
@@ -104,19 +123,45 @@ impl Tree {
                 collect
                     .entry(item.collect_id)
                     .or_default()
-                    .insert(SpanId::default(), ("".into(), vec![], vec![]));
+                    .insert(SpanId::default(), ("".into(), vec![], vec![], vec![]));
                 match span_set {
                     SpanSet::Span(span) => {
                         collect.entry(item.collect_id).or_default().insert(
                             span.id,
-                            (span.name.clone(), vec![], span.properties.clone()),
+                            (
+                                span.name.to_string(),
+                                vec![],
+                                span.properties
+                                    .as_ref()
+                                    .map(|properties| {
+                                        properties
+                                            .iter()
+                                            .map(|(k, v)| (k.to_string(), v.to_string()))
+                                            .collect()
+                                    })
+                                    .unwrap_or_default(),
+                                vec![],
+                            ),
                         );
                     }
                     SpanSet::LocalSpansInner(spans) => {
                         for span in spans.spans.iter() {
                             collect.entry(item.collect_id).or_default().insert(
                                 span.id,
-                                (span.name.clone(), vec![], span.properties.clone()),
+                                (
+                                    span.name.to_string(),
+                                    vec![],
+                                    span.properties
+                                        .as_ref()
+                                        .map(|properties| {
+                                            properties
+                                                .iter()
+                                                .map(|(k, v)| (k.to_string(), v.to_string()))
+                                                .collect()
+                                        })
+                                        .unwrap_or_default(),
+                                    vec![],
+                                ),
                             );
                         }
                     }
@@ -124,7 +169,20 @@ impl Tree {
                         for span in spans.spans.iter() {
                             collect.entry(item.collect_id).or_default().insert(
                                 span.id,
-                                (span.name.clone(), vec![], span.properties.clone()),
+                                (
+                                    span.name.to_string(),
+                                    vec![],
+                                    span.properties
+                                        .as_ref()
+                                        .map(|properties| {
+                                            properties
+                                                .iter()
+                                                .map(|(k, v)| (k.to_string(), v.to_string()))
+                                                .collect()
+                                        })
+                                        .unwrap_or_default(),
+                                    vec![],
+                                ),
                             );
                         }
                     }
@@ -207,11 +265,30 @@ impl Tree {
     pub fn from_span_records(span_records: Vec<SpanRecord>) -> Tree {
         let mut children: TreeChildren = HashMap::new();
 
-        children.insert(SpanId::default(), ("".into(), vec![], vec![]));
+        children.insert(SpanId::default(), ("".into(), vec![], vec![], vec![]));
         for span in &span_records {
             children.insert(
                 span.span_id,
-                (span.name.clone(), vec![], span.properties.clone()),
+                (
+                    span.name.to_string(),
+                    vec![],
+                    span.properties
+                        .iter()
+                        .map(|(k, v)| (k.to_string(), v.to_string()))
+                        .collect(),
+                    span.events
+                        .iter()
+                        .map(|e| {
+                            (
+                                e.name.to_string(),
+                                e.properties
+                                    .iter()
+                                    .map(|(k, v)| (k.to_string(), v.to_string()))
+                                    .collect(),
+                            )
+                        })
+                        .collect(),
+                ),
             );
         }
         for span in &span_records {
@@ -230,7 +307,7 @@ impl Tree {
     }
 
     fn build_tree(id: SpanId, raw: &mut TreeChildren) -> Tree {
-        let (name, children, properties) = raw.get(&id).cloned().unwrap();
+        let (name, children, properties, events) = raw.get(&id).cloned().unwrap();
         Tree {
             name,
             children: children
@@ -238,6 +315,7 @@ impl Tree {
                 .map(|id| Self::build_tree(id, raw))
                 .collect(),
             properties,
+            events,
         }
     }
 }

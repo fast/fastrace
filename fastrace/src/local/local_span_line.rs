@@ -2,6 +2,7 @@
 
 use std::borrow::Cow;
 
+use crate::Event;
 use crate::collector::CollectTokenItem;
 use crate::local::span_queue::SpanHandle;
 use crate::local::span_queue::SpanQueue;
@@ -59,16 +60,12 @@ impl SpanLine {
     }
 
     #[inline]
-    pub fn add_event<I, F>(&mut self, name: impl Into<Cow<'static, str>>, properties: F)
-    where
-        I: IntoIterator<Item = (Cow<'static, str>, Cow<'static, str>)>,
-        F: FnOnce() -> I,
-    {
+    pub fn add_event(&mut self, event: Event) {
         if !self.is_sampled {
             return;
         }
 
-        self.span_queue.add_event(name, properties);
+        self.span_queue.add_event(event);
     }
 
     #[inline]
@@ -239,7 +236,7 @@ span []
 
         let raw_spans = span_line1.collect(1).unwrap().0.into_inner();
         assert_eq!(raw_spans.len(), 1);
-        assert_eq!(raw_spans[0].properties.len(), 0);
+        assert_eq!(raw_spans[0].properties, None);
 
         let raw_spans = span_line2.collect(2).unwrap().0.into_inner();
         assert!(raw_spans.is_empty());

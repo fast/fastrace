@@ -24,6 +24,7 @@ use crate::local::local_span_stack::LocalSpanStack;
 use crate::local::raw_span::RawKind;
 use crate::local::raw_span::RawSpan;
 use crate::util::CollectToken;
+use crate::util::Properties;
 
 /// A thread-safe span.
 #[must_use]
@@ -49,7 +50,7 @@ impl Span {
     /// ```
     /// use fastrace::prelude::*;
     ///
-    /// let mut root = Span::noop();
+    /// let root = Span::noop();
     /// ```
     #[inline]
     pub fn noop() -> Self {
@@ -69,7 +70,7 @@ impl Span {
     /// ```
     /// use fastrace::prelude::*;
     ///
-    /// let mut root = Span::root("root", SpanContext::random());
+    /// let root = Span::root("root", SpanContext::random());
     /// ```
     #[inline]
     pub fn root(name: impl Into<Cow<'static, str>>, parent: SpanContext) -> Self {
@@ -198,28 +199,6 @@ impl Span {
         }
     }
 
-    /// Adds an event to the span with the given name and properties.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use fastrace::prelude::*;
-    ///
-    /// let root = Span::root("root", SpanContext::random());
-    ///
-    /// root.add_event("event in root", || [("key".into(), "value".into())])
-    ///     .add_event("event2 in root", || [("key2".into(), "value2".into())]);
-    /// ```
-    #[inline]
-    pub fn add_event<I, F>(&self, name: impl Into<Cow<'static, str>>, properties: F) -> &Self
-    where
-        I: IntoIterator<Item = (Cow<'static, str>, Cow<'static, str>)>,
-        F: FnOnce() -> I,
-    {
-        Event::add_to_parent(name, self, properties);
-        self
-    }
-
     /// Sets the current `Span` as the local parent for the current thread.
     ///
     /// This method is used to establish a `Span` as the local parent within the current scope.
@@ -242,6 +221,7 @@ impl Span {
     ///
     /// [`LocalSpan`]: crate::local::LocalSpan
     /// [`LocalSpan::enter_with_local_parent()`]: crate::local::LocalSpan::enter_with_local_parent
+    #[inline]
     pub fn set_local_parent(&self) -> LocalParentGuard {
         #[cfg(not(feature = "enable"))]
         {
@@ -274,7 +254,7 @@ impl Span {
         V: Into<Cow<'static, str>>,
         F: FnOnce() -> (K, V),
     {
-        self.with_properties(move || [property()])
+        self.with_properties(|| [property()])
     }
 
     /// Add multiple properties to the `Span` and return the modified `Span`.
@@ -299,8 +279,83 @@ impl Span {
         if let Some(inner) = self.inner.as_mut() {
             inner.add_properties(properties);
         }
-
         self
+    }
+
+    /// Add a single property to the `Span`.
+    ///
+    /// A property is an arbitrary key-value pair associated with a span.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use fastrace::prelude::*;
+    ///
+    /// let root = Span::root("root", SpanContext::random());
+    ///
+    /// root.add_property(|| ("key", "value"));
+    /// ```
+    #[inline]
+    pub fn add_property<K, V, F>(&self, property: F)
+    where
+        K: Into<Cow<'static, str>>,
+        V: Into<Cow<'static, str>>,
+        F: FnOnce() -> (K, V),
+    {
+        self.add_properties(move || [property()])
+    }
+
+    /// Add multiple properties to the `Span`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use fastrace::prelude::*;
+    ///
+    /// let root = Span::root("root", SpanContext::random());
+    ///
+    /// root.add_properties(|| [("key1", "value1"), ("key2", "value2")]);
+    /// ```
+    #[inline]
+    pub fn add_properties<K, V, I, F>(&self, properties: F)
+    where
+        K: Into<Cow<'static, str>>,
+        V: Into<Cow<'static, str>>,
+        I: IntoIterator<Item = (K, V)>,
+        F: FnOnce() -> I,
+    {
+        #[cfg(feature = "enable")]
+        {
+            let mut span = Span::enter_with_parent("", self).with_properties(properties);
+            if let Some(mut inner) = span.inner.take() {
+                inner.raw_span.raw_kind = RawKind::Properties;
+                inner.submit_spans();
+            }
+        }
+    }
+
+    /// Adds an event to the `Span`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use fastrace::prelude::*;
+    ///
+    /// let root = Span::root("root", SpanContext::random());
+    ///
+    /// root.add_event(Event::new("event"));
+    /// ```
+    #[inline]
+    pub fn add_event(&self, event: Event) {
+        #[cfg(feature = "enable")]
+        {
+            let mut span = Span::enter_with_parent(event.name, self);
+            if let Some(mut inner) = span.inner.take() {
+                inner.raw_span.raw_kind = RawKind::Event;
+                inner.raw_span.properties = event.properties;
+                inner.submit_spans();
+            }
+        }
     }
 
     /// Attach a collection of [`LocalSpan`] instances as child spans to the current span.
@@ -348,7 +403,7 @@ impl Span {
     /// use fastrace::prelude::*;
     /// use std::time::Duration;
     ///
-    /// let mut root = Span::root("root", SpanContext::random());
+    /// let root = Span::root("root", SpanContext::random());
     ///
     /// // ...
     ///
@@ -377,21 +432,21 @@ impl Span {
     /// # Note
     ///
     /// This method only dismisses the entire trace when called on the root span.
-    /// If called on a non-root span, it will only cancel the reporting of that specific span.
+    /// If called on a non-root span, it will do nothing.
     ///
     /// # Examples
     ///
     /// ```
     /// use fastrace::prelude::*;
     ///
-    /// let mut root = Span::root("root", SpanContext::random());
+    /// let root = Span::root("root", SpanContext::random());
     ///
     /// root.cancel();
     /// ```
     #[inline]
-    pub fn cancel(&mut self) {
+    pub fn cancel(&self) {
         #[cfg(feature = "enable")]
-        if let Some(inner) = self.inner.take() {
+        if let Some(inner) = &self.inner {
             if let Some(collect_id) = inner.collect_id {
                 inner.collect.drop_collect(collect_id);
             }
@@ -461,6 +516,7 @@ impl SpanInner {
     {
         self.raw_span
             .properties
+            .get_or_insert_with(Properties::default)
             .extend(properties().into_iter().map(|(k, v)| (k.into(), v.into())));
     }
 
@@ -615,6 +671,12 @@ mod tests {
     fn root_collect() {
         crate::set_reporter(ConsoleReporter, crate::collector::Config::default());
 
+        let routine = || {
+            let _root = Span::root("root", SpanContext::new(TraceId(12), SpanId::default()));
+
+            fastrace::flush();
+        };
+
         let mut mock = MockGlobalCollect::new();
         let mut seq = Sequence::new();
         mock.expect_start_collect()
@@ -648,15 +710,23 @@ mod tests {
         let mock = Arc::new(mock);
         set_mock_collect(mock);
 
-        let _root = Span::root("root", SpanContext::new(TraceId(12), SpanId::default()));
+        routine();
     }
 
     #[test]
     fn root_cancel() {
         crate::set_reporter(ConsoleReporter, crate::collector::Config::default());
 
+        let routine = || {
+            let root = Span::root("root", SpanContext::random());
+            root.cancel();
+
+            fastrace::flush();
+        };
+
         let mut mock = MockGlobalCollect::new();
         let mut seq = Sequence::new();
+        let span_sets = Arc::new(Mutex::new(Vec::new()));
         mock.expect_start_collect()
             .times(1)
             .in_sequence(&mut seq)
@@ -666,14 +736,33 @@ mod tests {
             .in_sequence(&mut seq)
             .with(predicate::eq(42_usize))
             .return_const(());
-        mock.expect_commit_collect().times(0);
-        mock.expect_submit_spans().times(0);
+        mock.expect_submit_spans()
+            .times(1)
+            .in_sequence(&mut seq)
+            .withf(|_, collect_token| collect_token.len() == 1 && collect_token[0].collect_id == 42)
+            .returning({
+                let span_sets = span_sets.clone();
+                move |span_set, token| span_sets.lock().unwrap().push((span_set, token))
+            });
+        mock.expect_commit_collect()
+            .times(1)
+            .in_sequence(&mut seq)
+            .with(predicate::eq(42_usize))
+            .return_const(());
 
         let mock = Arc::new(mock);
         set_mock_collect(mock);
 
-        let mut root = Span::root("root", SpanContext::random());
-        root.cancel();
+        routine();
+
+        let span_sets = std::mem::take(&mut *span_sets.lock().unwrap());
+        assert_eq!(
+            tree_str_from_span_sets(span_sets.as_slice()),
+            r#"
+#42
+root []
+"#
+        );
     }
 
     #[test]
@@ -697,6 +786,8 @@ mod tests {
                 }
             })
             .unwrap();
+
+            fastrace::flush();
         };
 
         let mut mock = MockGlobalCollect::new();
@@ -774,6 +865,8 @@ root []
                 }
             })
             .unwrap();
+
+            fastrace::flush();
         };
 
         let mut mock = MockGlobalCollect::new();
@@ -865,6 +958,8 @@ parent5 []
                 }
             })
             .unwrap();
+
+            fastrace::flush();
         };
 
         let mut mock = MockGlobalCollect::new();
@@ -940,6 +1035,8 @@ parent5 []
                 }
                 let _s = LocalSpan::enter_with_stack("local", stack);
             }
+
+            fastrace::flush();
         };
 
         let mut mock = MockGlobalCollect::new();

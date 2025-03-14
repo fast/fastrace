@@ -24,16 +24,26 @@ fn main() {
             .report_before_root_finish(true),
     );
 
-    let mut root = Span::root("root", SpanContext::new(TraceId(0), SpanId(0)))
+    let root = Span::root("root", SpanContext::new(TraceId(0), SpanId(0)))
         .with_property(|| ("k1", "v1"))
         .with_properties(|| [("k2", "v2")]);
 
-    Event::add_to_parent("event", &root, || []);
-    Event::add_to_local_parent("event", || []);
+    root.add_property(|| ("k3", "v3"));
+    root.add_properties(|| [("k4", "v4")]);
+
+    root.add_event(
+        Event::new("event")
+            .with_property(|| ("k1", "v1"))
+            .with_properties(|| [("k2", "v2")]),
+    );
 
     let _g = root.set_local_parent();
 
-    Event::add_to_local_parent("event", || []);
+    LocalSpan::add_event(
+        Event::new("event")
+            .with_property(|| ("k1", "v1"))
+            .with_properties(|| [("k2", "v2")]),
+    );
 
     let _span1 = LocalSpan::enter_with_local_parent("span1")
         .with_property(|| ("k", "v"))
@@ -60,6 +70,7 @@ fn main() {
 
     assert!(root.elapsed().is_none());
 
+    let root = root;
     root.cancel();
 
     fastrace::flush();
