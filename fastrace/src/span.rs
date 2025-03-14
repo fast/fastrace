@@ -8,7 +8,6 @@ use std::time::Duration;
 
 use fastant::Instant;
 
-use crate::Event;
 use crate::collector::CollectTokenItem;
 use crate::collector::GlobalCollect;
 use crate::collector::SpanContext;
@@ -198,28 +197,6 @@ impl Span {
         }
     }
 
-    /// Adds an event to the span with the given name and properties.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use fastrace::prelude::*;
-    ///
-    /// let root = Span::root("root", SpanContext::random());
-    ///
-    /// root.add_event("event in root", || [("key".into(), "value".into())])
-    ///     .add_event("event2 in root", || [("key2".into(), "value2".into())]);
-    /// ```
-    #[inline]
-    pub fn add_event<I, F>(&self, name: impl Into<Cow<'static, str>>, properties: F) -> &Self
-    where
-        I: IntoIterator<Item = (Cow<'static, str>, Cow<'static, str>)>,
-        F: FnOnce() -> I,
-    {
-        Event::add_to_parent(name, self, properties);
-        self
-    }
-
     /// Sets the current `Span` as the local parent for the current thread.
     ///
     /// This method is used to establish a `Span` as the local parent within the current scope.
@@ -268,13 +245,14 @@ impl Span {
     /// let root = Span::root("root", SpanContext::random()).with_property(|| ("key", "value"));
     /// ```
     #[inline]
-    pub fn with_property<K, V, F>(self, property: F) -> Self
+    pub fn with_property<K, V, F>(mut self, property: F) -> Self
     where
         K: Into<Cow<'static, str>>,
         V: Into<Cow<'static, str>>,
         F: FnOnce() -> (K, V),
     {
-        self.with_properties(move || [property()])
+        self.add_properties(|| [property()]);
+        self
     }
 
     /// Add multiple properties to the `Span` and return the modified `Span`.
@@ -295,12 +273,83 @@ impl Span {
         I: IntoIterator<Item = (K, V)>,
         F: FnOnce() -> I,
     {
+        self.add_properties(properties);
+        self
+    }
+
+    /// Add a single property to the `Span` and return the modified `Span`.
+    ///
+    /// A property is an arbitrary key-value pair associated with a span.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use fastrace::prelude::*;
+    ///
+    /// let mut root = Span::root("root", SpanContext::random());
+    /// root.add_property(|| ("key", "value"));
+    /// ```
+    #[inline]
+    pub fn add_property<K, V, F>(&mut self, property: F)
+    where
+        K: Into<Cow<'static, str>>,
+        V: Into<Cow<'static, str>>,
+        F: FnOnce() -> (K, V),
+    {
+        self.add_properties(move || [property()])
+    }
+
+    /// Add multiple properties to the `Span` and return the modified `Span`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use fastrace::prelude::*;
+    ///
+    /// let mut root = Span::root("root", SpanContext::random());
+    /// root.add_properties(|| [("key1", "value1"), ("key2", "value2")]);
+    /// ```
+    #[inline]
+    pub fn add_properties<K, V, I, F>(&mut self, properties: F)
+    where
+        K: Into<Cow<'static, str>>,
+        V: Into<Cow<'static, str>>,
+        I: IntoIterator<Item = (K, V)>,
+        F: FnOnce() -> I,
+    {
         #[cfg(feature = "enable")]
         if let Some(inner) = self.inner.as_mut() {
             inner.add_properties(properties);
         }
+    }
 
-        self
+    /// Adds an event to the span with the given name and properties.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use fastrace::prelude::*;
+    ///
+    /// let root = Span::root("root", SpanContext::random());
+    ///
+    /// root.add_event("event in root", || [("key", "value")]);
+    /// ```
+    #[inline]
+    pub fn add_event<K, V, I, F>(&self, name: impl Into<Cow<'static, str>>, properties: F)
+    where
+        K: Into<Cow<'static, str>>,
+        V: Into<Cow<'static, str>>,
+        I: IntoIterator<Item = (K, V)>,
+        F: FnOnce() -> I,
+    {
+        #[cfg(feature = "enable")]
+        {
+            let mut span = Span::enter_with_parent(name, self).with_properties(properties);
+            if let Some(mut inner) = span.inner.take() {
+                inner.raw_span.raw_kind = RawKind::Event;
+                inner.submit_spans();
+            }
+        }
     }
 
     /// Attach a collection of [`LocalSpan`] instances as child spans to the current span.

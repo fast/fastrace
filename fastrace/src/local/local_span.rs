@@ -54,6 +54,55 @@ impl LocalSpan {
         }
     }
 
+    /// Add a single property to the `LocalSpan` and return the modified `LocalSpan`.
+    ///
+    /// A property is an arbitrary key-value pair associated with a span.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use fastrace::prelude::*;
+    ///
+    /// let span =
+    ///     LocalSpan::enter_with_local_parent("a child span").with_property(|| ("key", "value"));
+    /// ```
+    #[inline]
+    pub fn with_property<K, V, F>(self, property: F) -> Self
+    where
+        K: Into<Cow<'static, str>>,
+        V: Into<Cow<'static, str>>,
+        F: FnOnce() -> (K, V),
+    {
+        self.with_properties(|| [property()])
+    }
+
+    /// Add multiple properties to the `LocalSpan` and return the modified `LocalSpan`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use fastrace::prelude::*;
+    ///
+    /// let span = LocalSpan::enter_with_local_parent("a child span")
+    ///     .with_properties(|| [("key1", "value1"), ("key2", "value2")]);
+    /// ```
+    #[inline]
+    pub fn with_properties<K, V, I, F>(self, properties: F) -> Self
+    where
+        K: Into<Cow<'static, str>>,
+        V: Into<Cow<'static, str>>,
+        I: IntoIterator<Item = (K, V)>,
+        F: FnOnce() -> I,
+    {
+        #[cfg(feature = "enable")]
+        if let Some(LocalSpanInner { stack, span_handle }) = &self.inner {
+            let span_stack = &mut *stack.borrow_mut();
+            span_stack.with_properties(span_handle, properties);
+        }
+
+        self
+    }
+
     /// Add a single property to the current local parent. If the local parent is a [`Span`],
     /// the property will be added to the `Span`.
     ///
@@ -102,7 +151,7 @@ impl LocalSpan {
         {
             LOCAL_SPAN_STACK
                 .try_with(|s| {
-                    let span_stack = &mut *s.borrow_mut();
+                    let span_stack = &mut s.borrow_mut();
                     span_stack.add_properties(properties);
                     Some(())
                 })
@@ -110,40 +159,16 @@ impl LocalSpan {
         }
     }
 
-    /// Add a single property to the `LocalSpan` and return the modified `LocalSpan`.
-    ///
-    /// A property is an arbitrary key-value pair associated with a span.
+    /// Adds an event to the `LocalSpan` with the given name and properties.
     ///
     /// # Examples
     ///
     /// ```
     /// use fastrace::prelude::*;
     ///
-    /// let span =
-    ///     LocalSpan::enter_with_local_parent("a child span").with_property(|| ("key", "value"));
+    /// LocalSpan::add_event("event in local span", || [("key", "value")]);
     /// ```
-    #[inline]
-    pub fn with_property<K, V, F>(self, property: F) -> Self
-    where
-        K: Into<Cow<'static, str>>,
-        V: Into<Cow<'static, str>>,
-        F: FnOnce() -> (K, V),
-    {
-        self.with_properties(|| [property()])
-    }
-
-    /// Add multiple properties to the `LocalSpan` and return the modified `LocalSpan`.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use fastrace::prelude::*;
-    ///
-    /// let span = LocalSpan::enter_with_local_parent("a child span")
-    ///     .with_properties(|| [("key1", "value1"), ("key2", "value2")]);
-    /// ```
-    #[inline]
-    pub fn with_properties<K, V, I, F>(self, properties: F) -> Self
+    pub fn add_event<K, V, I, F>(name: impl Into<Cow<'static, str>>, properties: F)
     where
         K: Into<Cow<'static, str>>,
         V: Into<Cow<'static, str>>,
@@ -151,12 +176,11 @@ impl LocalSpan {
         F: FnOnce() -> I,
     {
         #[cfg(feature = "enable")]
-        if let Some(LocalSpanInner { stack, span_handle }) = &self.inner {
-            let span_stack = &mut *stack.borrow_mut();
-            span_stack.with_properties(span_handle, properties);
+        {
+            LOCAL_SPAN_STACK
+                .try_with(|stack| stack.borrow_mut().add_event(name, properties))
+                .ok();
         }
-
-        self
     }
 }
 

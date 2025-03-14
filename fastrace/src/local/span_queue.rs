@@ -64,10 +64,11 @@ impl SpanQueue {
     }
 
     #[inline]
-    pub fn add_event<I, F>(&mut self, name: impl Into<Cow<'static, str>>, properties: F)
+    pub fn add_event<K, V, I>(&mut self, name: impl Into<Cow<'static, str>>, properties: I)
     where
-        I: IntoIterator<Item = (Cow<'static, str>, Cow<'static, str>)>,
-        F: FnOnce() -> I,
+        K: Into<Cow<'static, str>>,
+        V: Into<Cow<'static, str>>,
+        I: IntoIterator<Item = (K, V)>,
     {
         if self.span_queue.len() >= self.capacity {
             return;
@@ -80,7 +81,8 @@ impl SpanQueue {
             name,
             RawKind::Event,
         );
-        span.properties.extend(properties());
+        span.properties
+            .extend(properties.into_iter().map(|(k, v)| (k.into(), v.into())));
 
         self.span_queue.push(span);
     }

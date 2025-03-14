@@ -8,7 +8,7 @@ use logforth::append;
 use logforth::filter::EnvFilter;
 
 /// An example of automatically logging function arguments and return values.
-#[logcall::logcall("debug", input = "a = {a:?}, b = {b:?}")]
+#[logcall::logcall("debug")]
 #[trace]
 fn plus(a: u64, b: u64) -> Result<u64, std::io::Error> {
     Ok(a + b)

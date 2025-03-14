@@ -59,16 +59,18 @@ impl SpanLine {
     }
 
     #[inline]
-    pub fn add_event<I, F>(&mut self, name: impl Into<Cow<'static, str>>, properties: F)
+    pub fn add_event<K, V, I, F>(&mut self, name: impl Into<Cow<'static, str>>, properties: F)
     where
-        I: IntoIterator<Item = (Cow<'static, str>, Cow<'static, str>)>,
+        K: Into<Cow<'static, str>>,
+        V: Into<Cow<'static, str>>,
+        I: IntoIterator<Item = (K, V)>,
         F: FnOnce() -> I,
     {
         if !self.is_sampled {
             return;
         }
 
-        self.span_queue.add_event(name, properties);
+        self.span_queue.add_event(name, properties());
     }
 
     #[inline]

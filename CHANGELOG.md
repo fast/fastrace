@@ -6,6 +6,9 @@
 
 - Add `TraceId::random()` and `SpanId::random()`.
 - Add `FromStr`, `Display`, and `serde` support for `TraceId`, `SpanId`.
+- Add `Span::add_property()` and `Span::add_properties()`.
+- Add `Span::add_event()` and `LocalSpan::add_event()`.
+- Deprecate `Event::add_to_parent()` and `Event::add_to_local_parent()`.
 
 ## v0.7.6
 

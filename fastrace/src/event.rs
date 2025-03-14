@@ -3,8 +3,7 @@
 use std::borrow::Cow;
 
 use crate::Span;
-use crate::local::local_span_stack::LOCAL_SPAN_STACK;
-use crate::local::raw_span::RawKind;
+use crate::local::LocalSpan;
 
 /// An event that represents a single point in time during the execution of a span.
 pub struct Event {
@@ -23,19 +22,13 @@ impl Event {
     ///
     /// Event::add_to_parent("event in root", &root, || [("key".into(), "value".into())]);
     /// ```
+    #[deprecated(since = "0.7.7", note = "use `Span::add_event` instead")]
     pub fn add_to_parent<I, F>(name: impl Into<Cow<'static, str>>, parent: &Span, properties: F)
     where
         I: IntoIterator<Item = (Cow<'static, str>, Cow<'static, str>)>,
         F: FnOnce() -> I,
     {
-        #[cfg(feature = "enable")]
-        {
-            let mut span = Span::enter_with_parent(name, parent).with_properties(properties);
-            if let Some(mut inner) = span.inner.take() {
-                inner.raw_span.raw_kind = RawKind::Event;
-                inner.submit_spans();
-            }
-        }
+        Span::add_event(parent, name, properties);
     }
 
     /// Adds an event to the current local parent span with the given name and properties.
@@ -50,16 +43,12 @@ impl Event {
     ///
     /// Event::add_to_local_parent("event in root", || [("key".into(), "value".into())]);
     /// ```
+    #[deprecated(since = "0.7.7", note = "use `LocalSpan::add_event` instead")]
     pub fn add_to_local_parent<I, F>(name: impl Into<Cow<'static, str>>, properties: F)
     where
         I: IntoIterator<Item = (Cow<'static, str>, Cow<'static, str>)>,
         F: FnOnce() -> I,
     {
-        #[cfg(feature = "enable")]
-        {
-            LOCAL_SPAN_STACK
-                .try_with(|stack| stack.borrow_mut().add_event(name, properties))
-                .ok();
-        }
+        LocalSpan::add_event(name, properties);
     }
 }

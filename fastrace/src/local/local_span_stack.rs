@@ -50,9 +50,11 @@ impl LocalSpanStack {
     }
 
     #[inline]
-    pub fn add_event<I, F>(&mut self, name: impl Into<Cow<'static, str>>, properties: F)
+    pub fn add_event<K, V, I, F>(&mut self, name: impl Into<Cow<'static, str>>, properties: F)
     where
-        I: IntoIterator<Item = (Cow<'static, str>, Cow<'static, str>)>,
+        K: Into<Cow<'static, str>>,
+        V: Into<Cow<'static, str>>,
+        I: IntoIterator<Item = (K, V)>,
         F: FnOnce() -> I,
     {
         if let Some(span_line) = self.current_span_line() {
