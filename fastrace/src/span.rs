@@ -292,7 +292,7 @@ impl Span {
     /// use fastrace::prelude::*;
     ///
     /// let root = Span::root("root", SpanContext::random());
-    /// 
+    ///
     /// root.add_property(|| ("key", "value"));
     /// ```
     #[inline]
@@ -313,7 +313,7 @@ impl Span {
     /// use fastrace::prelude::*;
     ///
     /// let root = Span::root("root", SpanContext::random());
-    /// 
+    ///
     /// root.add_properties(|| [("key1", "value1"), ("key2", "value2")]);
     /// ```
     #[inline]

@@ -2,12 +2,12 @@
 
 use std::borrow::Cow;
 
+use crate::Event;
 use crate::collector::CollectTokenItem;
 use crate::local::span_queue::SpanHandle;
 use crate::local::span_queue::SpanQueue;
 use crate::util::CollectToken;
 use crate::util::RawSpans;
-use crate::Event;
 
 pub struct SpanLine {
     span_queue: SpanQueue,
@@ -60,10 +60,7 @@ impl SpanLine {
     }
 
     #[inline]
-    pub fn add_event(
-        &mut self,
-        event: Event,
-    ) {
+    pub fn add_event(&mut self, event: Event) {
         if !self.is_sampled {
             return;
         }

@@ -5,11 +5,11 @@ use std::borrow::Cow;
 use fastant::Instant;
 
 use super::raw_span::RawKind;
+use crate::Event;
 use crate::collector::SpanId;
 use crate::local::raw_span::RawSpan;
 use crate::util::Properties;
 use crate::util::RawSpans;
-use crate::Event;
 
 pub struct SpanQueue {
     span_queue: RawSpans,
@@ -66,10 +66,7 @@ impl SpanQueue {
     }
 
     #[inline]
-    pub fn add_event(
-        &mut self,
-        event: Event,
-    ) {
+    pub fn add_event(&mut self, event: Event) {
         if self.span_queue.len() >= self.capacity {
             return;
         }
