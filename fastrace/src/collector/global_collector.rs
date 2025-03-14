@@ -3,20 +3,15 @@
 use std::borrow::Cow;
 use std::cell::UnsafeCell;
 use std::collections::HashMap;
+use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
-use std::sync::Arc;
 
 use fastant::Anchor;
 use fastant::Instant;
 use parking_lot::Mutex;
 
-use crate::collector::command::CollectCommand;
-use crate::collector::command::CommitCollect;
-use crate::collector::command::DropCollect;
-use crate::collector::command::StartCollect;
-use crate::collector::command::SubmitSpans;
 use crate::collector::Config;
 use crate::collector::EventRecord;
 use crate::collector::SpanContext;
@@ -24,14 +19,19 @@ use crate::collector::SpanId;
 use crate::collector::SpanRecord;
 use crate::collector::SpanSet;
 use crate::collector::TraceId;
+use crate::collector::command::CollectCommand;
+use crate::collector::command::CommitCollect;
+use crate::collector::command::DropCollect;
+use crate::collector::command::StartCollect;
+use crate::collector::command::SubmitSpans;
 use crate::local::local_collector::LocalSpansInner;
 use crate::local::raw_span::RawKind;
 use crate::local::raw_span::RawSpan;
+use crate::util::CollectToken;
 use crate::util::object_pool;
 use crate::util::spsc::Receiver;
 use crate::util::spsc::Sender;
 use crate::util::spsc::{self};
-use crate::util::CollectToken;
 
 static NEXT_COLLECT_ID: AtomicUsize = AtomicUsize::new(0);
 static GLOBAL_COLLECTOR: Mutex<Option<GlobalCollector>> = Mutex::new(None);
@@ -232,14 +232,16 @@ impl GlobalCollector {
         {
             std::thread::Builder::new()
                 .name("fastrace-global-collector".to_string())
-                .spawn(move || loop {
-                    let begin_instant = Instant::now();
-                    GLOBAL_COLLECTOR.lock().as_mut().unwrap().handle_commands();
-                    std::thread::sleep(
-                        config
-                            .report_interval
-                            .saturating_sub(begin_instant.elapsed()),
-                    );
+                .spawn(move || {
+                    loop {
+                        let begin_instant = Instant::now();
+                        GLOBAL_COLLECTOR.lock().as_mut().unwrap().handle_commands();
+                        std::thread::sleep(
+                            config
+                                .report_interval
+                                .saturating_sub(begin_instant.elapsed()),
+                        );
+                    }
                 })
                 .unwrap();
         }

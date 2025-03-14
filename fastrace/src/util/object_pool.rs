@@ -123,8 +123,7 @@ impl<'a, T> Reusable<'a, T> {
 }
 
 impl<T> fmt::Debug for Reusable<'_, T>
-where
-    T: fmt::Debug,
+where T: fmt::Debug
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.obj.fmt(f)
@@ -132,8 +131,7 @@ where
 }
 
 impl<T> std::cmp::PartialEq for Reusable<'_, T>
-where
-    T: std::cmp::PartialEq,
+where T: std::cmp::PartialEq
 {
     fn eq(&self, other: &Self) -> bool {
         T::eq(self, other)
