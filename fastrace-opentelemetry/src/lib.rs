@@ -19,32 +19,36 @@
 #![doc = include_str!("../README.md")]
 
 use std::borrow::Cow;
+use std::fmt::Debug;
+use std::future::Future;
+use std::pin::Pin;
 use std::time::Duration;
 use std::time::SystemTime;
 
 use fastrace::collector::EventRecord;
 use fastrace::collector::Reporter;
 use fastrace::prelude::*;
-use opentelemetry::InstrumentationScope;
-use opentelemetry::KeyValue;
 use opentelemetry::trace::Event;
 use opentelemetry::trace::SpanContext;
 use opentelemetry::trace::SpanKind;
 use opentelemetry::trace::Status;
 use opentelemetry::trace::TraceFlags;
 use opentelemetry::trace::TraceState;
-use opentelemetry_sdk::Resource;
+use opentelemetry::InstrumentationScope;
+use opentelemetry::KeyValue;
+use opentelemetry_sdk::error::OTelSdkResult;
 use opentelemetry_sdk::trace::SpanData;
 use opentelemetry_sdk::trace::SpanEvents;
 use opentelemetry_sdk::trace::SpanExporter;
 use opentelemetry_sdk::trace::SpanLinks;
+use opentelemetry_sdk::Resource;
 
 /// [OpenTelemetry](https://github.com/open-telemetry/opentelemetry-rust) reporter for `fastrace`.
 ///
 /// `OpenTelemetryReporter` exports trace records to remote agents that implements the
 /// OpenTelemetry protocol, such as Jaeger, Zipkin, etc.
 pub struct OpenTelemetryReporter {
-    exporter: Box<dyn SpanExporter>,
+    exporter: Box<dyn DynSpanExporter>,
     span_kind: SpanKind,
     instrumentation_scope: InstrumentationScope,
 }
@@ -74,6 +78,22 @@ fn map_events(events: Vec<EventRecord>) -> SpanEvents {
     }
 
     queue
+}
+
+trait DynSpanExporter: Send + Sync + Debug {
+    fn export(
+        &self,
+        batch: Vec<SpanData>,
+    ) -> Pin<Box<dyn Future<Output = OTelSdkResult> + Send + '_>>;
+}
+
+impl<T: SpanExporter> DynSpanExporter for T {
+    fn export(
+        &self,
+        batch: Vec<SpanData>,
+    ) -> Pin<Box<dyn Future<Output = OTelSdkResult> + Send + '_>> {
+        Box::pin(SpanExporter::export(self, batch))
+    }
 }
 
 impl OpenTelemetryReporter {
