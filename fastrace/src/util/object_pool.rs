@@ -86,7 +86,7 @@ impl<'a, T> Puller<'a, T> {
     }
 }
 
-impl<'a, T> Drop for Puller<'a, T> {
+impl<T> Drop for Puller<'_, T> {
     #[inline]
     fn drop(&mut self) {
         unsafe {

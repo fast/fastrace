@@ -1,6 +1,6 @@
 [package]
 name = "fastrace-opentelemetry"
-version = "0.9.0"
+version = "0.10.0"
 
 categories = ["development-tools::debugging"]
 description = "Opentelemetry reporter for fastrace"
@@ -16,13 +16,13 @@ rust-version.workspace = true
 [dependencies]
 fastrace = { workspace = true }
 log = { workspace = true }
-opentelemetry = { version = "0.28", default-features = false, features = [
+opentelemetry = { version = "0.29.0", default-features = false, features = [
   "trace",
 ] }
-opentelemetry_sdk = { version = "0.28", default-features = false, features = [
+opentelemetry_sdk = { version = "0.29.0", default-features = false, features = [
   "trace",
 ] }
 pollster = { version = "0.4.0" }
 
 [dev-dependencies]
-opentelemetry-otlp = { version = "0.28", features = ["trace"] }
+opentelemetry-otlp = { version = "0.29.0", features = ["trace"] }

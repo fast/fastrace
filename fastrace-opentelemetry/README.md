@@ -36,7 +36,6 @@ Zipkin UI is available on [http://127.0.0.1:9411/](http://127.0.0.1:9411/)
 
 ```rust, no_run
 use std::borrow::Cow;
-use std::time::Duration;
 use fastrace::collector::Config;
 use fastrace::prelude::*;
 use fastrace_opentelemetry::OpenTelemetryReporter;
@@ -56,9 +55,7 @@ let reporter = OpenTelemetryReporter::new(
         .with_tonic()
         .with_endpoint("http://127.0.0.1:4317".to_string())
         .with_protocol(opentelemetry_otlp::Protocol::Grpc)
-        .with_timeout(Duration::from_secs(
-            opentelemetry_otlp::OTEL_EXPORTER_OTLP_TIMEOUT_DEFAULT,
-        ))
+        .with_timeout(opentelemetry_otlp::OTEL_EXPORTER_OTLP_TIMEOUT_DEFAULT)
         .build()
         .expect("initialize oltp exporter"),
     SpanKind::Server,

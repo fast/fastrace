@@ -10,7 +10,25 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
+  check:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
+      - run: rm rust-toolchain.toml
+        shell: bash
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly
+          components: rustfmt, clippy
+      - name: Cargo version
+        run: cargo --version
+      - name: Check format
+        run: cargo fmt --all -- --check
+      - name: Check clippy
+        run: cargo clippy --all-targets --all-features -- --deny warnings
+
+  test:
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -22,30 +40,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: Swatinem/rust-cache@v2
+      - run: rm rust-toolchain.toml
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ matrix.rust }}
-          components: rustfmt, clippy
-
-      - name: Check format
-        if: ${{ matrix.rust == 'nightly' }}
-        run: cargo +${{ matrix.rust }} fmt --all -- --check
-
-      - name: Check clippy
-        if: ${{ matrix.rust == 'nightly' }}
-        run: cargo +${{ matrix.rust }} clippy --all-targets --all-features -- --deny warnings
+      - name: Cargo version
+        run: cargo --version
 
       - name: Build
-        run: cargo +${{ matrix.rust }} build --workspace --all-targets
+        run: cargo build --workspace --all-targets
 
       - name: Run tests
         run: |
-          cargo +${{ matrix.rust }} test --workspace --all-targets -- --nocapture
-          cargo +${{ matrix.rust }} test --doc
+          cargo test --workspace --all-targets -- --nocapture
+          cargo test --doc
 
       - name: Run examples
         run: |
-          cargo +${{ matrix.rust }} run --example asynchronous
-          cargo +${{ matrix.rust }} run --example synchronous
-          cargo +${{ matrix.rust }} run --example get_started
-          cargo +${{ matrix.rust }} run --package test-statically-disable
+          cargo run --example asynchronous
+          cargo run --example synchronous
+          cargo run --example get_started
+          cargo run --package test-statically-disable
