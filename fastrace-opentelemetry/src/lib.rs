@@ -25,26 +25,26 @@ use std::time::SystemTime;
 use fastrace::collector::EventRecord;
 use fastrace::collector::Reporter;
 use fastrace::prelude::*;
-use opentelemetry::InstrumentationScope;
-use opentelemetry::KeyValue;
 use opentelemetry::trace::Event;
 use opentelemetry::trace::SpanContext;
 use opentelemetry::trace::SpanKind;
 use opentelemetry::trace::Status;
 use opentelemetry::trace::TraceFlags;
 use opentelemetry::trace::TraceState;
-use opentelemetry_sdk::Resource;
+use opentelemetry::InstrumentationScope;
+use opentelemetry::KeyValue;
 use opentelemetry_sdk::trace::SpanData;
 use opentelemetry_sdk::trace::SpanEvents;
 use opentelemetry_sdk::trace::SpanExporter;
 use opentelemetry_sdk::trace::SpanLinks;
+use opentelemetry_sdk::Resource;
 
 /// [OpenTelemetry](https://github.com/open-telemetry/opentelemetry-rust) reporter for `fastrace`.
 ///
 /// `OpenTelemetryReporter` exports trace records to remote agents that implements the
 /// OpenTelemetry protocol, such as Jaeger, Zipkin, etc.
-pub struct OpenTelemetryReporter {
-    exporter: Box<dyn SpanExporter>,
+pub struct OpenTelemetryReporter<Exporter: SpanExporter + 'static> {
+    exporter: Exporter,
     span_kind: SpanKind,
     instrumentation_scope: InstrumentationScope,
 }
@@ -76,16 +76,16 @@ fn map_events(events: Vec<EventRecord>) -> SpanEvents {
     queue
 }
 
-impl OpenTelemetryReporter {
+impl<Exporter: SpanExporter + 'static> OpenTelemetryReporter<Exporter> {
     pub fn new(
-        mut exporter: impl SpanExporter + 'static,
+        mut exporter: Exporter,
         span_kind: SpanKind,
         resource: Cow<'static, Resource>,
         instrumentation_scope: InstrumentationScope,
     ) -> Self {
         exporter.set_resource(&resource);
         OpenTelemetryReporter {
-            exporter: Box::new(exporter),
+            exporter,
             span_kind,
             instrumentation_scope,
         }
@@ -147,7 +147,7 @@ impl OpenTelemetryReporter {
     }
 }
 
-impl Reporter for OpenTelemetryReporter {
+impl<Exporter: SpanExporter + 'static> Reporter for OpenTelemetryReporter<Exporter> {
     fn report(&mut self, spans: Vec<SpanRecord>) {
         if spans.is_empty() {
             return;
