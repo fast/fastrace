@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Upgrade MSRV to 1.80.
+
 ## v0.7.8
 
 - Add `TraceId::random()` and `SpanId::random()`.
