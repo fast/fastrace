@@ -78,6 +78,7 @@ impl SpanId {
         SpanId(rand::random())
     }
 
+    // TODO: consider using `random()`.
     #[inline]
     /// Create a non-zero `SpanId`
     pub(crate) fn next_id() -> SpanId {
@@ -128,7 +129,7 @@ impl<'de> serde::Deserialize<'de> for SpanId {
 ///
 /// [`TraceId`]: crate::collector::TraceId
 /// [`SpanId`]: crate::collector::SpanId
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug)]
 pub struct SpanContext {
     pub trace_id: TraceId,
     pub span_id: SpanId,
@@ -325,6 +326,12 @@ impl SpanContext {
     #[deprecated(since = "0.7.0", note = "Please use `SpanContext::sampled()` instead")]
     pub fn encode_w3c_traceparent_with_sampled(&self, sampled: bool) -> String {
         self.sampled(sampled).encode_w3c_traceparent()
+    }
+}
+
+impl Default for SpanContext {
+    fn default() -> Self {
+        Self::random()
     }
 }
 
