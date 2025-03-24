@@ -21,6 +21,7 @@ Features:
 - [Docs]
 - [Examples]
 - [FAQ](#faq)
+- [Migrating from tracing](#migrating-from-tokio-tracing)
 
 ## Getting Started
 
@@ -159,17 +160,18 @@ The concept of 'level' may not be an optimal feature for tracing systems. While 
 
 In this context, fastrace offers a more efficient solution by filtering out entire traces that are not of interest through its unique [tail-sampling](https://opentelemetry.io/blog/2022/tail-sampling/) design. Therefore, the concept of 'level', borrowed directly from logging systems, may not be suitable for fastrace.
 
-### Will fastrace support OpenTelemetry feature 'X'?
+## Migrating from tokio-tracing
 
-fastrace is focused on high performance tracing only. You can open an issue for the missing tracing features you want to have.
+If you're using the [tokio-tracing](https://github.com/tokio-rs/tracing) ecosystem and want to switch to fastrace for better performance, you can use [fastrace-tracing](https://github.com/fast/fastrace-tracing) to make the transition easier.
 
-Note that we always prioritize performance over features, so that not all tracing feature requests may be accepted.
+The `fastrace-tracing` crate provides a compatibility layer that lets you capture spans from libraries instrumented with `tokio-tracing` in two lines of code:
 
-### What's the status of this library?
+```rust
+let subscriber = tracing_subscriber::Registry::default().with(fastrace_tracing::FastraceCompatLayer::new());
+tracing::subscriber::set_global_default(subscriber).unwrap();
+```
 
-**API Unstable**: The API is not stabilized yet, may be changed in the future.
-
-**Code base Tested**: fastrace has been tested with high coverage. However, applications utilizing fastrace have not been widely deployed, so that fastrace is currently **NOT** regarded as battle-tested.
+For more details, refer to the [fastrace-tracing documentation](https://docs.rs/fastrace-tracing).
 
 [Docs]: https://docs.rs/fastrace/
 [Examples]: https://github.com/fast/fastrace/tree/main/fastrace/examples
