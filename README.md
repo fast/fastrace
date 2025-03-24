@@ -8,12 +8,12 @@
 
 fastrace is a tracing library [10~100x faster](#benchmarks) than others:
 
-![benchmark](etc/img/head-benchmark.svg)
+![benchmark](https://raw.githubusercontent.com/fast/fastrace/refs/heads/main/etc/img/head-benchmark.svg)
 
 Features:
 
 - [Extremely fast](#benchmarks)
-- [Rich features for logging](fastrace/examples/logging.rs)
+- [Rich features for logging](https://github.com/fast/fastrace/blob/main/fastrace/examples/logging.rs)
 - Compatible with [Jaeger], [Datadog], and [OpenTelemetry]
 
 ## Resources
@@ -93,7 +93,7 @@ fn main() {
 
 **By different architectures:**
 
-![Benchmark result by architecture](etc/img/benchmark-arch.svg)
+![Benchmark result by architecture](https://raw.githubusercontent.com/fast/fastrace/refs/heads/main/etc/img/benchmark-arch.svg)
 
 |                     | x86-64 (Intel Broadwell) | x86-64 (Intel Skylake) | x86-64 (AMD Zen) | ARM (AWS Graviton2) |
 |---------------------|--------------------------|------------------------|------------------|---------------------|
@@ -103,7 +103,7 @@ fn main() {
 
 **By creating different number of spans:**
 
-![Benchmark result by number of spans](etc/img/benchmark-spans.svg)
+![Benchmark result by number of spans](https://raw.githubusercontent.com/fast/fastrace/refs/heads/main/etc/img/benchmark-spans.svg)
 
 |                     | 1 span     | 10 spans   | 100 spans   | 1000 spans  |
 |---------------------|------------|------------|-------------|-------------|
@@ -111,7 +111,7 @@ fn main() {
 | rustracing          | 13x slower | 26x slower | 45x slower  | 55x slower  |
 | fastrace (baseline) | 1x (0.4us) | 1x (0.8us) | 1x (3.4us)  | 1x (27.8us) |
 
-Detailed results are available in [etc/benchmark-result](etc/benchmark-result).
+Detailed results are available in [etc/benchmark-result](https://github.com/fast/fastrace/tree/main/etc/benchmark-result).
 
 ## Supported Rust Versions (MSRV 1.75.0)
 
@@ -172,7 +172,7 @@ Note that we always prioritize performance over features, so that not all tracin
 **Code base Tested**: fastrace has been tested with high coverage. However, applications utilizing fastrace have not been widely deployed, so that fastrace is currently **NOT** regarded as battle-tested.
 
 [Docs]: https://docs.rs/fastrace/
-[Examples]: fastrace/examples
+[Examples]: https://github.com/fast/fastrace/tree/main/fastrace/examples
 [OpenTelemetry]: https://opentelemetry.io/
 [Jaeger]: https://crates.io/crates/fastrace-jaeger
 [Datadog]: https://crates.io/crates/fastrace-datadog
