@@ -1,6 +1,6 @@
 [package]
 name = "fastrace-macro"
-version = "0.7.8"
+version = "0.7.9"
 
 categories = ["development-tools::debugging"]
 description = "Attribute procedural macro for fastrace"
@@ -29,7 +29,7 @@ syn = { version = "2.0", features = [
 ] }
 
 [dev-dependencies]
-fastrace = { workspace = true }
+fastrace = { path = "../fastrace", features = ["enable"] }
 log = { workspace = true }
 logcall = "0.1"
 tokio = { version = "1.38", features = ["full"] }
