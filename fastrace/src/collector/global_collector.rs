@@ -28,7 +28,6 @@ use crate::local::local_collector::LocalSpansInner;
 use crate::local::raw_span::RawKind;
 use crate::local::raw_span::RawSpan;
 use crate::util::CollectToken;
-use crate::util::object_pool;
 use crate::util::spsc::Receiver;
 use crate::util::spsc::Sender;
 use crate::util::spsc::{self};
@@ -248,8 +247,6 @@ impl GlobalCollector {
     }
 
     fn handle_commands(&mut self) {
-        object_pool::enable_reuse_in_current_thread();
-
         debug_assert!(self.start_collects.is_empty());
         debug_assert!(self.drop_collects.is_empty());
         debug_assert!(self.commit_collects.is_empty());
@@ -510,7 +507,7 @@ fn amend_local_span(
                     properties: span
                         .properties
                         .as_ref()
-                        .map(|p| (*p).clone())
+                        .map(|p| p.to_vec())
                         .unwrap_or_default(),
                     events: vec![],
                 });
@@ -523,7 +520,7 @@ fn amend_local_span(
                     properties: span
                         .properties
                         .as_ref()
-                        .map(|p| (*p).clone())
+                        .map(|p| p.to_vec())
                         .unwrap_or_default(),
                 };
                 dangling
@@ -538,7 +535,7 @@ fn amend_local_span(
                     .push(DanglingItem::Properties(
                         span.properties
                             .as_ref()
-                            .map(|p| (*p).clone())
+                            .map(|p| p.to_vec())
                             .unwrap_or_default(),
                     ));
             }
@@ -568,7 +565,7 @@ fn amend_span(
                 properties: span
                     .properties
                     .as_ref()
-                    .map(|p| (*p).clone())
+                    .map(|p| p.to_vec())
                     .unwrap_or_default(),
                 events: vec![],
             });
@@ -581,7 +578,7 @@ fn amend_span(
                 properties: span
                     .properties
                     .as_ref()
-                    .map(|p| (*p).clone())
+                    .map(|p| p.to_vec())
                     .unwrap_or_default(),
             };
             dangling
@@ -596,7 +593,7 @@ fn amend_span(
                 .push(DanglingItem::Properties(
                     span.properties
                         .as_ref()
-                        .map(|p| (*p).clone())
+                        .map(|p| p.to_vec())
                         .unwrap_or_default(),
                 ));
         }

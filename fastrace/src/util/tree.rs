@@ -68,9 +68,8 @@ impl Tree {
     pub fn from_raw_spans(raw_spans: RawSpans) -> Vec<Tree> {
         let mut children: TreeChildren = HashMap::new();
 
-        let spans = raw_spans.into_inner();
         children.insert(SpanId::default(), ("".into(), vec![], vec![], vec![]));
-        for span in &spans {
+        for span in &raw_spans {
             children.insert(
                 span.id,
                 (
@@ -89,7 +88,7 @@ impl Tree {
                 ),
             );
         }
-        for span in &spans {
+        for span in &raw_spans {
             children
                 .get_mut(&span.parent_id)
                 .as_mut()

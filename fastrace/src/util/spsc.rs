@@ -69,7 +69,14 @@ impl<T> Receiver<T> {
     pub fn try_recv(&mut self) -> Result<Option<T>, ChannelClosed> {
         match self.rx.pop() {
             Ok(val) => Ok(Some(val)),
-            Err(_) if self.rx.is_abandoned() => Err(ChannelClosed),
+            Err(_) if self.rx.is_abandoned() => {
+                #[cfg(debug_assertions)]
+                {
+                    std::sync::atomic::fence(std::sync::atomic::Ordering::Acquire);
+                    assert!(self.rx.pop().is_err());
+                }
+                Err(ChannelClosed)
+            }
             Err(_) => Ok(None),
         }
     }

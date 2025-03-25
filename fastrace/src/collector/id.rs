@@ -78,10 +78,10 @@ impl SpanId {
         SpanId(rand::random())
     }
 
-    // TODO: consider using `random()`.
     #[inline]
+    #[doc(hidden)]
     /// Create a non-zero `SpanId`
-    pub(crate) fn next_id() -> SpanId {
+    pub fn next_id() -> SpanId {
         LOCAL_ID_GENERATOR
             .try_with(|g| {
                 let (prefix, mut suffix) = g.get();

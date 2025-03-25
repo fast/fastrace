@@ -183,7 +183,7 @@ span1 []
             is_root: false,
             is_sampled: true,
         };
-        let token = [token1, token2].iter().collect();
+        let token = [token1, token2].into_iter().collect();
         let mut span_line = SpanLine::new(16, 1, Some(token));
 
         let current_token = span_line.current_collect_token().unwrap();
@@ -234,11 +234,11 @@ span []
         span_line2.with_properties(&span, || [("k1", "v1")]);
         span_line1.finish_span(span);
 
-        let raw_spans = span_line1.collect(1).unwrap().0.into_inner();
+        let raw_spans = span_line1.collect(1).unwrap().0;
         assert_eq!(raw_spans.len(), 1);
         assert_eq!(raw_spans[0].properties, None);
 
-        let raw_spans = span_line2.collect(2).unwrap().0.into_inner();
+        let raw_spans = span_line2.collect(2).unwrap().0;
         assert!(raw_spans.is_empty());
     }
 
@@ -270,11 +270,11 @@ span []
         let (spans, collect_token) = span_line1.collect(1).unwrap();
         let collect_token = collect_token.unwrap();
         assert_eq!(collect_token.as_slice(), &[item]);
-        assert_eq!(spans.into_inner().len(), 1);
+        assert_eq!(spans.len(), 1);
 
         let (spans, collect_token) = span_line2.collect(2).unwrap();
         assert!(collect_token.is_none());
-        assert!(spans.into_inner().is_empty());
+        assert!(spans.is_empty());
     }
 
     #[test]
