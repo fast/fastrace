@@ -1,27 +1,68 @@
-// Copyright 2020 TiKV Project Authors. Licensed under Apache-2.0.
+use std::sync::OnceLock;
 
-use criterion::Criterion;
-use criterion::criterion_group;
-use criterion::criterion_main;
+use divan::Bencher;
 
-fn init_opentelemetry() {
+fn main() {
+    divan::main();
+}
+
+#[divan::bench(args = [1, 10, 100, 1000])]
+fn tokio_tracing(bencher: Bencher, n: usize) {
+    static INIT: OnceLock<()> = OnceLock::new();
+    INIT.get_or_init(init_tokio_tracing);
+
+    bencher.bench(|| opentelemetry_harness(n));
+}
+
+#[divan::bench(args = [1, 10, 100, 1000])]
+fn fastrace(bencher: Bencher, n: usize) {
+    static INIT: OnceLock<()> = OnceLock::new();
+    INIT.get_or_init(init_fastrace);
+
+    bencher.bench(|| fastrace_harness(n));
+}
+
+fn make_span_exporter() -> opentelemetry_otlp::SpanExporter {
+    let rt = tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()
+        .unwrap();
+    let exporter = rt.block_on(async {
+        opentelemetry_otlp::SpanExporter::builder()
+            .with_tonic()
+            .build()
+            .unwrap()
+    });
+    std::mem::forget(rt);
+    exporter
+}
+
+fn init_tokio_tracing() {
+    use opentelemetry::trace::TracerProvider;
     use tracing_subscriber::prelude::*;
 
-    let opentelemetry = tracing_opentelemetry::layer();
+    let exporter = make_span_exporter();
+    let provider = opentelemetry_sdk::trace::SdkTracerProvider::builder()
+        .with_batch_exporter(exporter)
+        .build();
+    let tracer = provider.tracer("tracing-otel-subscriber");
     tracing_subscriber::registry()
-        .with(opentelemetry)
-        .try_init()
-        .unwrap();
+        .with(tracing_opentelemetry::OpenTelemetryLayer::new(tracer))
+        .init();
 }
 
 fn init_fastrace() {
-    struct DummyReporter;
+    use std::borrow::Cow;
 
-    impl fastrace::collector::Reporter for DummyReporter {
-        fn report(&mut self, _spans: Vec<fastrace::prelude::SpanRecord>) {}
-    }
+    let exporter = make_span_exporter();
+    let reporter = fastrace_opentelemetry::OpenTelemetryReporter::new(
+        exporter,
+        opentelemetry::trace::SpanKind::Server,
+        Cow::Owned(opentelemetry_sdk::Resource::builder().build()),
+        opentelemetry::InstrumentationScope::builder("example-crate").build(),
+    );
 
-    fastrace::set_reporter(DummyReporter, fastrace::collector::Config::default());
+    fastrace::set_reporter(reporter, fastrace::collector::Config::default());
 }
 
 fn opentelemetry_harness(n: usize) {
@@ -38,24 +79,6 @@ fn opentelemetry_harness(n: usize) {
     dummy_opentelementry(n);
 }
 
-fn rustracing_harness(n: usize) {
-    fn dummy_rustracing(n: usize, span: &rustracing::span::Span<()>) {
-        for _ in 0..n {
-            let _child_span = span.child("child", |c| c.start_with_state(()));
-        }
-    }
-
-    let (span_tx, span_rx) = crossbeam::channel::bounded(1000);
-
-    {
-        let tracer = rustracing::Tracer::with_sender(rustracing::sampler::AllSampler, span_tx);
-        let parent_span = tracer.span("parent").start_with_state(());
-        dummy_rustracing(n, &parent_span);
-    }
-
-    let _r = span_rx.iter().collect::<Vec<_>>();
-}
-
 fn fastrace_harness(n: usize) {
     use fastrace::prelude::*;
 
@@ -70,25 +93,3 @@ fn fastrace_harness(n: usize) {
 
     dummy_fastrace(n);
 }
-
-fn tracing_comparison(c: &mut Criterion) {
-    init_opentelemetry();
-    init_fastrace();
-
-    let mut bgroup = c.benchmark_group("compare");
-
-    for n in &[1, 10, 100, 1000] {
-        bgroup.bench_function(format!("Tokio Tracing/{n}"), |b| {
-            b.iter(|| opentelemetry_harness(*n))
-        });
-        bgroup.bench_function(format!("Rustracing/{n}"), |b| {
-            b.iter(|| rustracing_harness(*n))
-        });
-        bgroup.bench_function(format!("fastrace/{n}"), |b| b.iter(|| fastrace_harness(*n)));
-    }
-
-    bgroup.finish();
-}
-
-criterion_group!(benches, tracing_comparison);
-criterion_main!(benches);

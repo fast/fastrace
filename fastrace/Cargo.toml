@@ -27,8 +27,8 @@ serde = { workspace = true }
 
 [dev-dependencies]
 async-trait = "0.1"
-criterion = { version = "0.5", features = ["html_reports"] }
 crossbeam = "0.8"
+divan = "0.1"
 fastrace = { workspace = true, features = ["enable"] }
 fastrace-datadog = { workspace = true }
 fastrace-jaeger = { workspace = true }
@@ -48,10 +48,10 @@ rustracing = "0.6"
 serial_test = "3.1"
 test-harness = "0.3"
 tokio = { version = "1.38", features = [
-    "rt",
-    "time",
-    "macros",
-    "rt-multi-thread",
+  "rt",
+  "time",
+  "macros",
+  "rt-multi-thread",
 ] }
 tracing = "0.1"
 tracing-opentelemetry = { version = "0.30.0" }
@@ -71,4 +71,8 @@ name = "spsc"
 
 [[bench]]
 harness = false
-name = "object_pool"
+name = "id"
+
+[[bench]]
+harness = false
+name = "vec"
