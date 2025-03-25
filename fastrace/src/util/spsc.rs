@@ -69,7 +69,16 @@ impl<T> Receiver<T> {
     pub fn try_recv(&mut self) -> Result<Option<T>, ChannelClosed> {
         match self.rx.pop() {
             Ok(val) => Ok(Some(val)),
-            Err(_) if self.rx.is_abandoned() => Err(ChannelClosed),
+            Err(_) if self.rx.is_abandoned() => {
+                std::sync::atomic::fence(std::sync::atomic::Ordering::Acquire);
+                match self.rx.pop() {
+                    #[cfg(debug_assertions)]
+                    Ok(_) => unreachable!("RingBuffer should be empty"),
+                    #[cfg(not(debug_assertions))]
+                    Ok(val) => Ok(Some(val)),
+                    Err(_) => Err(ChannelClosed),
+                }
+            }
             Err(_) => Ok(None),
         }
     }

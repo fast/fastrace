@@ -4,7 +4,7 @@ fn main() {
     divan::main();
 }
 
-#[divan::bench_group(name = "send and recieve")]
+#[divan::bench_group(name = "send and receive")]
 mod spsc {
     use super::*;
 
