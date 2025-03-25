@@ -278,7 +278,7 @@ span2 []
         stack.borrow_mut().exit_span(span1);
         let spans = collector1.collect();
         assert_eq!(
-            tree_str_from_raw_spans(spans.inner.spans.iter().cloned().collect()),
+            tree_str_from_raw_spans(spans.inner.spans.clone()),
             r"
 span1 []
 "
@@ -309,7 +309,7 @@ span1 []
         stack.borrow_mut().exit_span(span1);
         let spans = collector1.collect();
         assert_eq!(
-            tree_str_from_raw_spans(spans.inner.spans.iter().cloned().collect()),
+            tree_str_from_raw_spans(spans.inner.spans.clone()),
             r"
 span1 []
 "
