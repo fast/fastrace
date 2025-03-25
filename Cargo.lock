@@ -343,15 +343,31 @@ dependencies = [
 [[package]]
 name = "fastrace"
 version = "0.7.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "773324bb245e34a32d704c2256871377f9d7cdb4acff10c555e0dc068d6ddb55"
+dependencies = [
+ "fastant",
+ "fastrace-macro 0.7.8",
+ "once_cell",
+ "parking_lot",
+ "pin-project",
+ "rand 0.9.0",
+ "rtrb",
+ "serde",
+]
+
+[[package]]
+name = "fastrace"
+version = "0.7.9"
 dependencies = [
  "async-trait",
  "crossbeam",
  "divan",
  "fastant",
- "fastrace 0.7.8",
+ "fastrace 0.7.9",
  "fastrace-datadog",
  "fastrace-jaeger",
- "fastrace-macro 0.7.8",
+ "fastrace-macro 0.7.9",
  "fastrace-opentelemetry",
  "flume",
  "futures-timer",
@@ -378,26 +394,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "fastrace"
-version = "0.7.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "773324bb245e34a32d704c2256871377f9d7cdb4acff10c555e0dc068d6ddb55"
-dependencies = [
- "fastant",
- "fastrace-macro 0.7.8 (registry+https://github.com/rust-lang/crates.io-index)",
- "once_cell",
- "parking_lot",
- "pin-project",
- "rand 0.9.0",
- "rtrb",
- "serde",
-]
-
-[[package]]
 name = "fastrace-datadog"
-version = "0.7.8"
+version = "0.7.9"
 dependencies = [
- "fastrace 0.7.8",
+ "fastrace 0.7.9",
  "log",
  "reqwest",
  "rmp-serde",
@@ -406,10 +406,10 @@ dependencies = [
 
 [[package]]
 name = "fastrace-futures"
-version = "0.7.8"
+version = "0.7.9"
 dependencies = [
  "async-stream",
- "fastrace 0.7.8",
+ "fastrace 0.7.9",
  "futures",
  "futures-core",
  "futures-sink",
@@ -419,27 +419,11 @@ dependencies = [
 
 [[package]]
 name = "fastrace-jaeger"
-version = "0.7.8"
+version = "0.7.9"
 dependencies = [
- "fastrace 0.7.8",
+ "fastrace 0.7.9",
  "log",
  "thrift_codec",
-]
-
-[[package]]
-name = "fastrace-macro"
-version = "0.7.8"
-dependencies = [
- "async-trait",
- "fastrace 0.7.8",
- "log",
- "logcall",
- "proc-macro-error2",
- "proc-macro2",
- "quote",
- "syn 2.0.100",
- "tokio",
- "trybuild",
 ]
 
 [[package]]
@@ -455,10 +439,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "fastrace-macro"
+version = "0.7.9"
+dependencies = [
+ "async-trait",
+ "fastrace 0.7.9",
+ "log",
+ "logcall",
+ "proc-macro-error2",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.100",
+ "tokio",
+ "trybuild",
+]
+
+[[package]]
 name = "fastrace-opentelemetry"
 version = "0.10.0"
 dependencies = [
- "fastrace 0.7.8",
+ "fastrace 0.7.9",
  "log",
  "opentelemetry",
  "opentelemetry-otlp",
@@ -1099,7 +1099,7 @@ checksum = "f9b81df91671a0a96902d950498cc69b509291c37f6d49105d5a1b7ddacc727d"
 dependencies = [
  "anyhow",
  "env_filter",
- "fastrace 0.7.8 (registry+https://github.com/rust-lang/crates.io-index)",
+ "fastrace 0.7.8",
  "jiff",
  "log",
 ]
@@ -2168,7 +2168,7 @@ dependencies = [
 name = "test-statically-disable"
 version = "0.0.0"
 dependencies = [
- "fastrace 0.7.8",
+ "fastrace 0.7.9",
 ]
 
 [[package]]

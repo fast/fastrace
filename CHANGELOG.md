@@ -2,7 +2,10 @@
 
 ## Unreleased
 
+## v0.7.9
+
 - Upgrade MSRV to 1.80.
+- Improved performance.
 
 ## v0.7.8
 
