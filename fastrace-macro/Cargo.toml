@@ -29,7 +29,7 @@ syn = { version = "2.0", features = [
 ] }
 
 [dev-dependencies]
-fastrace = { workspace = true }
+fastrace = { path = "../fastrace", features = ["enable"] }
 log = { workspace = true }
 logcall = "0.1"
 tokio = { version = "1.38", features = ["full"] }
