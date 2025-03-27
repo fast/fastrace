@@ -128,6 +128,25 @@ Feel free to open a PR and add your projects here:
 - [foyer](https://github.com/mrcroxx/foyer): Hybrid in-memory and disk cache in Rust
 - [Sail](https://github.com/lakehq/sail): Unifying stream, batch, and AI workloads with Apache Spark compatibility
 
+## Reporters
+
+Fastrace supports multiple out-of-box reporters to export spans:
+
+- [Jaeger](https://crates.io/crates/fastrace-jaeger): Export spans to Jaeger
+- [Datadog](https://crates.io/crates/fastrace-datadog): Export spans to Datadog
+- [OpenTelemetry](https://opentelemetry.io/): Export spans to OpenTelemetry
+
+## Integrations
+
+Fastrace provides integrations with popular libraries to automatically handle context propagation:
+
+- [futures](https://crates.io/crates/fastrace-futures): Trace `Stream` from `futures`
+- [axum](https://crates.io/crates/fastrace-axum): Trace `axum` HTTP services
+- [poem](https://crates.io/crates/fastrace-poem): Trace `poem` HTTP services
+- [reqwest](https://crates.io/crates/fastrace-reqwest): Trace `reqwest` HTTP requests
+- [tonic](https://crates.io/crates/fastrace-tonic): Trace `tonic` client and server requests
+- [tokio-rs/tracing](https://crates.io/crates/fastrace-tracing): Compatibility layer for `tokio-tracing`
+
 ## FAQ
 
 ### Why is fastrace so fast?
