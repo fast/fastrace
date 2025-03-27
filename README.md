@@ -140,12 +140,12 @@ Fastrace supports multiple out-of-box reporters to export spans:
 
 Fastrace provides integrations with popular libraries to automatically handle context propagation:
 
-- [futures](https://crates.io/crates/fastrace-futures): Trace `Stream` from `futures`
-- [axum](https://crates.io/crates/fastrace-axum): Trace `axum` HTTP services
-- [poem](https://crates.io/crates/fastrace-poem): Trace `poem` HTTP services
-- [reqwest](https://crates.io/crates/fastrace-reqwest): Trace `reqwest` HTTP requests
-- [tonic](https://crates.io/crates/fastrace-tonic): Trace `tonic` client and server requests
-- [tokio-rs/tracing](https://crates.io/crates/fastrace-tracing): Compatibility layer for `tokio-tracing`
+- [fastrace-futures](https://crates.io/crates/fastrace-futures): Trace `Stream` from [`futures`](https://crates.io/crates/futures)
+- [fastrace-axum](https://crates.io/crates/fastrace-axum): Trace [`axum`](https://crates.io/crates/axum) HTTP services
+- [fastrace-poem](https://crates.io/crates/fastrace-poem): Trace [`poem`](https://crates.io/crates/poem) HTTP services
+- [fastrace-reqwest](https://crates.io/crates/fastrace-reqwest): Trace [`reqwest`](https://crates.io/crates/reqwest) HTTP requests
+- [fastrace-tonic](https://crates.io/crates/fastrace-tonic): Trace [`tonic`](https://crates.io/crates/tonic) client and server requests
+- [fastrace-tracing](https://crates.io/crates/fastrace-tracing): Compatibility layer for [`tokio-tracing`](https://crates.io/crates/tracing)
 
 ## FAQ
 
