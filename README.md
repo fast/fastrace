@@ -124,7 +124,7 @@ Fastrace supports multiple out-of-box reporters to export spans:
 
 - [`fastrace-jaeger`](https://crates.io/crates/fastrace-jaeger): Export spans to [Jaeger](https://www.jaegertracing.io/)
 - [`fastrace-datadog`](https://crates.io/crates/fastrace-datadog): Export spans to [Datadog](https://www.datadoghq.com/)
-- [`fastrace-opentelemetry`](https://crates.io/crates/fastrace-opentelemetry): Export spans to [OpenTelemetry]((https://opentelemetry.io/))
+- [`fastrace-opentelemetry`](https://crates.io/crates/fastrace-opentelemetry): Export spans to [OpenTelemetry](https://opentelemetry.io/)
 
 ## Integrations
 
