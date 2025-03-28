@@ -6,20 +6,62 @@ fn main() {
     divan::main();
 }
 
-#[divan::bench(args = [1, 10, 100, 1000])]
-fn tokio_tracing(bencher: Bencher, n: usize) {
-    static INIT: OnceLock<()> = OnceLock::new();
-    INIT.get_or_init(init_tokio_tracing);
+#[divan::bench_group(name = "single thread")]
+mod single_thread {
+    use super::*;
 
-    bencher.bench(|| opentelemetry_harness(n));
+    #[divan::bench(args = [1, 10, 100, 1000, 10000])]
+    fn tokio_tracing(bencher: Bencher, n: usize) {
+        init_tokio_tracing();
+
+        bencher.bench(|| tokio_tracing_harness(n));
+    }
+
+    #[divan::bench(args = [1, 10, 100, 1000, 10000])]
+    fn fastrace(bencher: Bencher, n: usize) {
+        init_fastrace();
+
+        bencher.bench(|| fastrace_harness(n));
+    }
 }
 
-#[divan::bench(args = [1, 10, 100, 1000])]
-fn fastrace(bencher: Bencher, n: usize) {
-    static INIT: OnceLock<()> = OnceLock::new();
-    INIT.get_or_init(init_fastrace);
+#[divan::bench_group(name = "multi threads")]
+mod multi_thread {
+    use super::*;
 
-    bencher.bench(|| fastrace_harness(n));
+    #[divan::bench(args = [1, 10, 100, 1000, 10000])]
+    fn tokio_tracing(bencher: Bencher, n: usize) {
+        init_tokio_tracing();
+
+        let parallelism = std::thread::available_parallelism().unwrap().get() - 1;
+
+        bencher.bench(|| {
+            let handles: Vec<_> = (0..parallelism)
+                .map(|_| std::thread::spawn(move || tokio_tracing_harness(n)))
+                .collect();
+
+            for handle in handles {
+                handle.join().unwrap();
+            }
+        });
+    }
+
+    #[divan::bench(args = [1, 10, 100, 1000, 10000])]
+    fn fastrace(bencher: Bencher, n: usize) {
+        init_fastrace();
+
+        let parallelism = std::thread::available_parallelism().unwrap().get() - 1;
+
+        bencher.bench(|| {
+            let handles: Vec<_> = (0..parallelism)
+                .map(|_| std::thread::spawn(move || fastrace_harness(n)))
+                .collect();
+
+            for handle in handles {
+                handle.join().unwrap();
+            }
+        });
+    }
 }
 
 fn make_span_exporter() -> opentelemetry_otlp::SpanExporter {
@@ -41,32 +83,38 @@ fn init_tokio_tracing() {
     use opentelemetry::trace::TracerProvider;
     use tracing_subscriber::prelude::*;
 
-    let exporter = make_span_exporter();
-    let provider = opentelemetry_sdk::trace::SdkTracerProvider::builder()
-        .with_batch_exporter(exporter)
-        .build();
-    let tracer = provider.tracer("tracing-otel-subscriber");
-    tracing_subscriber::registry()
-        .with(tracing_opentelemetry::OpenTelemetryLayer::new(tracer))
-        .init();
+    static INIT: OnceLock<()> = OnceLock::new();
+    INIT.get_or_init(|| {
+        let exporter = make_span_exporter();
+        let provider = opentelemetry_sdk::trace::SdkTracerProvider::builder()
+            .with_batch_exporter(exporter)
+            .build();
+        let tracer = provider.tracer("tracing-otel-subscriber");
+        tracing_subscriber::registry()
+            .with(tracing_opentelemetry::OpenTelemetryLayer::new(tracer))
+            .init();
+    });
 }
 
 fn init_fastrace() {
     use std::borrow::Cow;
 
-    let exporter = make_span_exporter();
-    let reporter = fastrace_opentelemetry::OpenTelemetryReporter::new(
-        exporter,
-        opentelemetry::trace::SpanKind::Server,
-        Cow::Owned(opentelemetry_sdk::Resource::builder().build()),
-        opentelemetry::InstrumentationScope::builder("example-crate").build(),
-    );
+    static INIT: OnceLock<()> = OnceLock::new();
+    INIT.get_or_init(|| {
+        let exporter = make_span_exporter();
+        let reporter = fastrace_opentelemetry::OpenTelemetryReporter::new(
+            exporter,
+            opentelemetry::trace::SpanKind::Server,
+            Cow::Owned(opentelemetry_sdk::Resource::builder().build()),
+            opentelemetry::InstrumentationScope::builder("example-crate").build(),
+        );
 
-    fastrace::set_reporter(reporter, fastrace::collector::Config::default());
+        fastrace::set_reporter(reporter, fastrace::collector::Config::default());
+    });
 }
 
-fn opentelemetry_harness(n: usize) {
-    fn dummy_opentelementry(n: usize) {
+fn tokio_tracing_harness(n: usize) {
+    fn dummy_tokio_tracing(n: usize) {
         for _ in 0..n {
             let child = tracing::span!(tracing::Level::TRACE, "child");
             let _enter = child.enter();
@@ -76,7 +124,7 @@ fn opentelemetry_harness(n: usize) {
     let root = tracing::span!(tracing::Level::TRACE, "parent");
     let _enter = root.enter();
 
-    dummy_opentelementry(n);
+    dummy_tokio_tracing(n);
 }
 
 fn fastrace_harness(n: usize) {
