@@ -44,6 +44,10 @@ jobs:
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ matrix.rust }}
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: nextest,cargo-nextest
+
       - name: Cargo version
         run: cargo --version
 
@@ -52,7 +56,7 @@ jobs:
 
       - name: Run tests
         run: |
-          cargo test --workspace --all-targets -- --nocapture
+          cargo nextest run --workspace
           cargo test --doc
 
       - name: Run examples
