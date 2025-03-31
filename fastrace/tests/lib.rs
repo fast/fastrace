@@ -528,7 +528,7 @@ root []
     do_something_async_short_name []
     do_something_short_name []
     lib::macro_example::{{closure}}::do_something []
-    lib::macro_example::{{closure}}::do_something_async []
+    lib::macro_example::{{closure}}::do_something_async::{{closure}} []
 "#;
     assert_eq!(
         tree_str_from_span_records(collected_spans.lock().clone()),

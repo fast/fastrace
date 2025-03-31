@@ -46,8 +46,7 @@ macro_rules! func_path {
             std::any::type_name::<T>()
         }
         let name = type_name_of(f);
-        let name = &name[..name.len() - 3];
-        name.trim_end_matches("::{{closure}}")
+        &name[..name.len() - 3]
     }};
 }
 
