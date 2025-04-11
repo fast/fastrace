@@ -431,6 +431,8 @@ impl Span {
     ///
     /// # Note
     ///
+    /// To enable this feature, the `cancelable` configuration option must be set to `true`.
+    ///
     /// This method only dismisses the entire trace when called on the root span.
     /// If called on a non-root span, it will do nothing.
     ///

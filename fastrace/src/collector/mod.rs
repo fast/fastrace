@@ -76,35 +76,20 @@ pub struct CollectTokenItem {
 #[must_use]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct Config {
-    pub(crate) max_spans_per_trace: Option<usize>,
     pub(crate) report_interval: Duration,
-    pub(crate) report_before_root_finish: bool,
+    pub(crate) cancelable: bool,
 }
 
 impl Config {
     /// Sets a soft limit for the total number of spans and events in a trace, typically
     /// used to prevent out-of-memory issues.
     ///
-    /// The default value is `None`.
-    ///
     /// # Note
     ///
-    /// The root span will always be collected, so the actual number of collected spans
-    /// may exceed the specified limit.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use fastrace::collector::Config;
-    ///
-    /// let config = Config::default().max_spans_per_trace(Some(100));
-    /// fastrace::set_reporter(fastrace::collector::ConsoleReporter, config);
-    /// ```
-    pub fn max_spans_per_trace(self, max_spans_per_trace: Option<usize>) -> Self {
-        Self {
-            max_spans_per_trace,
-            ..self
-        }
+    /// This is a no-op since it was deprecated.
+    #[deprecated(since = "0.7.10")]
+    pub fn max_spans_per_trace(self, _max_spans_per_trace: Option<usize>) -> Self {
+        self
     }
 
     /// Sets the time duration between two reports. The reporter will be invoked when the specified
@@ -133,34 +118,34 @@ impl Config {
     }
 
     /// Configures whether to report spans before the root span finishes.
+    #[deprecated(since = "0.7.10", note = "Use Config::cancelable() instead.")]
+    pub fn report_before_root_finish(self, report_before_root_finish: bool) -> Self {
+        self.cancelable(report_before_root_finish)
+    }
+
+    /// Configures whether to report spans on the root span finish.
     ///
-    /// If set to `true`, some spans may be reported before they are canceled, making it
-    /// difficult to cancel all spans in a trace.
-    ///
-    /// The default value is `false`.
+    /// This is useful for holding the child spans until the root span is finished to
+    /// allow for trace cancellation.
     ///
     /// # Examples
     ///
     /// ```
     /// use fastrace::collector::Config;
     ///
-    /// let config = Config::default().report_before_root_finish(true);
+    /// let config = Config::default().cancelable(true);
     /// fastrace::set_reporter(fastrace::collector::ConsoleReporter, config);
     /// ```
-    pub fn report_before_root_finish(self, report_before_root_finish: bool) -> Self {
-        Self {
-            report_before_root_finish,
-            ..self
-        }
+    pub fn cancelable(self, cancelable: bool) -> Self {
+        Self { cancelable, ..self }
     }
 }
 
 impl Default for Config {
     fn default() -> Self {
         Self {
-            max_spans_per_trace: None,
             report_interval: Duration::from_millis(10),
-            report_before_root_finish: false,
+            cancelable: false,
         }
     }
 }

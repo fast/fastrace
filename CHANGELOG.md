@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Add `Config::cancelable()`, which defaults to `false`.
+- Deprecate `Config::max_spans_per_trace()` and `Config::report_before_root_finish()`.
+
 ## v0.7.9
 
 - Upgrade MSRV to 1.80.

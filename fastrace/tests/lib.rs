@@ -336,7 +336,7 @@ root2 []
 #[serial]
 fn multiple_spans_without_local_spans() {
     let (reporter, collected_spans) = TestReporter::new();
-    fastrace::set_reporter(reporter, Config::default());
+    fastrace::set_reporter(reporter, Config::default().cancelable(true));
 
     {
         let root1 = Span::root("root1", SpanContext::new(TraceId(12), SpanId::default()));
@@ -592,57 +592,6 @@ fn early_local_collect() {
 root []
     span1 []
         span2 []
-"#;
-    assert_eq!(
-        tree_str_from_span_records(collected_spans.lock().clone()),
-        expected_graph
-    );
-}
-
-#[test]
-#[serial]
-fn max_spans_per_trace() {
-    #[trace(short_name = true)]
-    fn recursive(n: usize) {
-        if n > 1 {
-            recursive(n - 1);
-        }
-    }
-
-    let (reporter, collected_spans) = TestReporter::new();
-    fastrace::set_reporter(reporter, Config::default().max_spans_per_trace(Some(5)));
-
-    {
-        let root = Span::root("root", SpanContext::random());
-
-        {
-            let _g = root.set_local_parent();
-            recursive(3);
-        }
-        {
-            let _g = root.set_local_parent();
-            recursive(3);
-        }
-        {
-            let _g = root.set_local_parent();
-            recursive(3);
-        }
-        {
-            let _g = root.set_local_parent();
-            recursive(3);
-        }
-    }
-
-    fastrace::flush();
-
-    let expected_graph = r#"
-root []
-    recursive []
-        recursive []
-            recursive []
-    recursive []
-        recursive []
-            recursive []
 "#;
     assert_eq!(
         tree_str_from_span_records(collected_spans.lock().clone()),
