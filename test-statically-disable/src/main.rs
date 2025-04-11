@@ -19,9 +19,8 @@ fn main() {
     fastrace::set_reporter(
         ConsoleReporter,
         Config::default()
-            .max_spans_per_trace(Some(100))
             .report_interval(Duration::from_millis(10))
-            .report_before_root_finish(true),
+            .cancelable(false),
     );
 
     let root = Span::root("root", SpanContext::new(TraceId(0), SpanId(0)))

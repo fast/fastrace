@@ -69,11 +69,6 @@
 //! Span records generated before the reporter is initialized will be ignored. Before
 //! terminating, [`flush()`] should be called to ensure all collected span records are reported.
 //!
-//! When the root span is dropped, all of its children spans and itself will be reported at once.
-//! Since that, it's recommended to create root spans for short tasks, such as handling a request,
-//! just like the example below. Otherwise, an endingless trace will never be reported. To override
-//! this behavior, set the `report_before_root_finish` option to `true` in the [`Config`].
-//!
 //! ```
 //! use fastrace::collector::Config;
 //! use fastrace::collector::ConsoleReporter;
