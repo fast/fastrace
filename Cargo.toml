@@ -4,6 +4,7 @@ members = [
   "fastrace-macro",
   "fastrace-jaeger",
   "fastrace-datadog",
+  "fastrace-google-cloud",
   "fastrace-opentelemetry",
   "fastrace-futures",
   "test-statically-disable",
