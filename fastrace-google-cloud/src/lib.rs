@@ -192,10 +192,15 @@ impl GoogleCloudReporter {
     }
 
     fn try_report(&self, spans: Vec<SpanRecord>) -> google_cloud_trace_v2::Result<()> {
+        let spans = spans
+            .into_iter()
+            .map(|s| self.convert_span(s))
+            .collect::<Vec<_>>();
+        log::error!(spans:serde; "Reporting these spans");
         self.tokio_runtime.block_on(
             self.client
                 .batch_write_spans(format!("projects/{}", self.trace_project_id))
-                .set_spans(spans.into_iter().map(|s| self.convert_span(s)))
+                .set_spans(spans)
                 .send(),
         )
     }
