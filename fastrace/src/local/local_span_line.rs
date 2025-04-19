@@ -113,8 +113,8 @@ impl SpanLine {
                         .current_parent_id()
                         .unwrap_or(item.parent_id),
                     collect_id: item.collect_id,
-                    is_root: false,
-                    is_sampled: true,
+                    is_root: item.is_root,
+                    is_sampled: item.is_sampled,
                 })
                 .collect()
         })
