@@ -1,13 +1,16 @@
 [workspace]
 members = [
-    "fastrace",
-    "fastrace-macro",
-    "fastrace-jaeger",
-    "fastrace-datadog",
-    "fastrace-opentelemetry",
-    "fastrace-futures",
-    "examples",
-    "test-statically-disable",
+  "fastrace",
+  "fastrace-macro",
+  "fastrace-jaeger",
+  "fastrace-datadog",
+  "fastrace-opentelemetry",
+  "fastrace-futures",
+
+  # non-publish crates
+  "examples",
+  "tests/macros",
+  "tests/statically-disable",
 ]
 resolver = "2"
 

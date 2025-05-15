@@ -1,11 +1,28 @@
-// Copyright 2020 TiKV Project Authors. Licensed under Apache-2.0.
-
-// The libraries may have tracing instrument embedded in the code for tracing purposes. However,
-// if the executable does not enable fastrace, it will be statically disabled. This results in
-// zero overhead to the libraries, achieved through conditional compilation with the "enable"
-// feature.
+// Copyright 2024 FastLabs Developers
 //
-// The following test is designed to confirm that fastrace do compile when it's statically disabled.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// This file is derived from [1] under the original license header:
+// Copyright 2020 TiKV Project Authors. Licensed under Apache-2.0.
+// [1]: https://github.com/tikv/minitrace-rust/blob/v0.6.4/test-statically-disable/src/main.rs
+
+//! The libraries may have tracing instrument embedded in the code for tracing purposes.
+//!
+//! However, if the executable does not enable fastrace, it will be statically disabled.
+//! This results in zero overhead to libraries, achieved through conditional compilation with
+//! the "enable" feature.
+//!
+//! The following test is designed to confirm that fastrace do compile when it's statically disabled.
 
 use std::time::Duration;
 

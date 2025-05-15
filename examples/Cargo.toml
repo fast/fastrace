@@ -12,6 +12,7 @@ rust-version.workspace = true
 release = false
 
 [dev-dependencies]
+anyhow = { version = "1.0.98" }
 fastrace = { workspace = true }
 fastrace-datadog = { workspace = true }
 fastrace-jaeger = { workspace = true }

@@ -14,21 +14,16 @@
 
 //! This example shows how to write a test harness to set up fastrace.
 
-use fastrace::prelude::*;
-use test_harness::test;
-
-type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
-
-#[test(harness = test_util::setup_fastrace)]
-#[trace]
-fn test_sync() -> Result<()> {
+#[test_harness::test(harness = test_util::setup_fastrace)]
+#[fastrace::trace]
+fn test_sync() -> anyhow::Result<()> {
     std::thread::sleep(std::time::Duration::from_millis(50));
     Ok(())
 }
 
-#[test(harness = test_util::setup_fastrace_async)]
-#[trace]
-async fn test_async() -> Result<()> {
+#[test_harness::test(harness = test_util::setup_fastrace_async)]
+#[fastrace::trace]
+async fn test_async() -> anyhow::Result<()> {
     tokio::time::sleep(std::time::Duration::from_millis(50)).await;
     Ok(())
 }
@@ -39,10 +34,10 @@ mod test_util {
     use fastrace::collector::ConsoleReporter;
     use fastrace::prelude::*;
 
-    use super::*;
-
     pub fn setup_fastrace<F>(test: F)
-    where F: FnOnce() -> Result<()> + 'static {
+    where
+        F: FnOnce() -> anyhow::Result<()> + 'static,
+    {
         fastrace::set_reporter(ConsoleReporter, Config::default());
         {
             let root = Span::root(closure_name::<F>(), SpanContext::random());
@@ -55,7 +50,7 @@ mod test_util {
     pub fn setup_fastrace_async<F, Fut>(test: F)
     where
         F: FnOnce() -> Fut + 'static,
-        Fut: std::future::Future<Output = Result<()>> + Send + 'static,
+        Fut: std::future::Future<Output = anyhow::Result<()>> + Send + 'static,
     {
         fastrace::set_reporter(ConsoleReporter, Config::default());
         let rt = tokio::runtime::Builder::new_multi_thread()
