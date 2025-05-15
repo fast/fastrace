@@ -1,5 +1,5 @@
-use divan::Bencher;
 use divan::black_box;
+use divan::Bencher;
 use fastrace::local::LocalCollector;
 use fastrace::prelude::*;
 
@@ -88,7 +88,7 @@ fn init_fastrace() {
     struct DummyReporter;
 
     impl fastrace::collector::Reporter for DummyReporter {
-        fn report(&mut self, _spans: Vec<fastrace::prelude::SpanRecord>) {}
+        fn report(&mut self, _spans: Vec<SpanRecord>) {}
     }
 
     fastrace::set_reporter(DummyReporter, fastrace::collector::Config::default());

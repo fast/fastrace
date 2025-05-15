@@ -1,0 +1,50 @@
+[package]
+name = "example"
+publish = false
+version = "0.0.0"
+
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[package.metadata.release]
+release = false
+
+[dev-dependencies]
+fastrace = { workspace = true }
+fastrace-datadog = { workspace = true }
+fastrace-jaeger = { workspace = true }
+fastrace-opentelemetry = { workspace = true }
+log = { workspace = true }
+logcall = { version = "0.1.11" }
+logforth = { version = "0.24.0", features = ["fastrace"] }
+opentelemetry = { workspace = true }
+opentelemetry-otlp = { workspace = true }
+opentelemetry_sdk = { workspace = true }
+test-harness = { version = "0.3.0" }
+tokio = { workspace = true }
+
+[[example]]
+name = "asynchronous"
+path = "asynchronous.rs"
+
+[[example]]
+name = "basic"
+path = "basic.rs"
+
+[[example]]
+name = "harness"
+path = "harness.rs"
+
+[[example]]
+name = "logging"
+path = "logging.rs"
+
+[[example]]
+name = "synchronous"
+path = "synchronous.rs"
+
+[[example]]
+name = "sampling"
+path = "sampling.rs"

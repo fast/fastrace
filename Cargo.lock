@@ -331,6 +331,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "example"
+version = "0.0.0"
+dependencies = [
+ "fastrace 0.7.9",
+ "fastrace-datadog",
+ "fastrace-jaeger",
+ "fastrace-opentelemetry",
+ "log",
+ "logcall",
+ "logforth",
+ "opentelemetry",
+ "opentelemetry-otlp",
+ "opentelemetry_sdk",
+ "test-harness",
+ "tokio",
+]
+
+[[package]]
 name = "fastant"
 version = "0.1.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -342,22 +360,6 @@ dependencies = [
 
 [[package]]
 name = "fastrace"
-version = "0.7.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "773324bb245e34a32d704c2256871377f9d7cdb4acff10c555e0dc068d6ddb55"
-dependencies = [
- "fastant",
- "fastrace-macro 0.7.8",
- "once_cell",
- "parking_lot",
- "pin-project",
- "rand 0.9.0",
- "rtrb",
- "serde",
-]
-
-[[package]]
-name = "fastrace"
 version = "0.7.9"
 dependencies = [
  "async-trait",
@@ -365,15 +367,10 @@ dependencies = [
  "divan",
  "fastant",
  "fastrace 0.7.9",
- "fastrace-datadog",
- "fastrace-jaeger",
  "fastrace-macro 0.7.9",
  "fastrace-opentelemetry",
  "flume",
  "futures-timer",
- "log",
- "logcall",
- "logforth",
  "mockall",
  "opentelemetry",
  "opentelemetry-otlp",
@@ -383,14 +380,27 @@ dependencies = [
  "pollster",
  "rand 0.9.0",
  "rtrb",
- "rustracing",
  "serde",
  "serial_test",
- "test-harness",
  "tokio",
  "tracing",
  "tracing-opentelemetry",
  "tracing-subscriber",
+]
+
+[[package]]
+name = "fastrace"
+version = "0.7.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0c5a9b2e56fac2bf32bca26fdc509f674d0f2bdd15404b629ccee9c642453bb7"
+dependencies = [
+ "fastant",
+ "fastrace-macro 0.7.9 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parking_lot",
+ "pin-project",
+ "rand 0.9.0",
+ "rtrb",
+ "serde",
 ]
 
 [[package]]
@@ -428,18 +438,6 @@ dependencies = [
 
 [[package]]
 name = "fastrace-macro"
-version = "0.7.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fce8ba9d9d06711bc0c3fb287689e41550d8501a0c3ac5a61c60693644e0f059"
-dependencies = [
- "proc-macro-error2",
- "proc-macro2",
- "quote",
- "syn 2.0.100",
-]
-
-[[package]]
-name = "fastrace-macro"
 version = "0.7.9"
 dependencies = [
  "async-trait",
@@ -452,6 +450,18 @@ dependencies = [
  "syn 2.0.100",
  "tokio",
  "trybuild",
+]
+
+[[package]]
+name = "fastrace-macro"
+version = "0.7.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a9cdabd2b113942d0f771c11a7baf0edd24098b923ac546fd39b9811c82b4220"
+dependencies = [
+ "proc-macro-error2",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.100",
 ]
 
 [[package]]
@@ -990,9 +1000,9 @@ checksum = "4a5f13b858c8d314ee3e8f639011f7ccefe71f97f96e50151fb991f267928e2c"
 
 [[package]]
 name = "jiff"
-version = "0.2.5"
+version = "0.2.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c102670231191d07d37a35af3eb77f1f0dbf7a71be51a962dcd57ea607be7260"
+checksum = "f02000660d30638906021176af16b17498bd0d12813dbfe7b276d8bc7f3c0806"
 dependencies = [
  "jiff-static",
  "jiff-tzdb-platform",
@@ -1005,9 +1015,9 @@ dependencies = [
 
 [[package]]
 name = "jiff-static"
-version = "0.2.5"
+version = "0.2.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4cdde31a9d349f1b1f51a0b3714a5940ac022976f4b49485fc04be052b183b4c"
+checksum = "f3c30758ddd7188629c6713fc45d1188af4f44c90582311d0c8d8c9907f60c48"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1075,9 +1085,9 @@ dependencies = [
 
 [[package]]
 name = "log"
-version = "0.4.26"
+version = "0.4.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "30bde2b3dc3671ae49d8e2e9f044c7c005836e7a023ee57cffa25ab82764bb9e"
+checksum = "13dc2df351e3202783a1fe0d44375f7295ffb4049267b0f3018346dc122a1d94"
 
 [[package]]
 name = "logcall"
@@ -1093,13 +1103,13 @@ dependencies = [
 
 [[package]]
 name = "logforth"
-version = "0.23.1"
+version = "0.24.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f9b81df91671a0a96902d950498cc69b509291c37f6d49105d5a1b7ddacc727d"
+checksum = "e7d12336d4771854b6fdbf75bab8257e62d4221d1f9d7187fc254b29aa3bd23b"
 dependencies = [
  "anyhow",
  "env_filter",
- "fastrace 0.7.8",
+ "fastrace 0.7.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "jiff",
  "log",
 ]
@@ -1281,20 +1291,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "opentelemetry-http"
-version = "0.29.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "46d7ab32b827b5b495bd90fa95a6cb65ccc293555dcc3199ae2937d2d237c8ed"
-dependencies = [
- "async-trait",
- "bytes",
- "http",
- "opentelemetry",
- "reqwest",
- "tracing",
-]
-
-[[package]]
 name = "opentelemetry-otlp"
 version = "0.29.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1303,15 +1299,12 @@ dependencies = [
  "futures-core",
  "http",
  "opentelemetry",
- "opentelemetry-http",
  "opentelemetry-proto",
  "opentelemetry_sdk",
  "prost",
- "reqwest",
  "thiserror",
  "tokio",
  "tonic",
- "tracing",
 ]
 
 [[package]]
@@ -1339,9 +1332,7 @@ dependencies = [
  "opentelemetry",
  "percent-encoding",
  "rand 0.9.0",
- "serde_json",
  "thiserror",
- "tracing",
 ]
 
 [[package]]
@@ -1816,18 +1807,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rustracing"
-version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1793f5d37fb8afc11f5dae9216eeb45265e5231149c3a22966f4f800bad3fc00"
-dependencies = [
- "backtrace",
- "crossbeam-channel",
- "rand 0.8.5",
- "trackable",
-]
-
-[[package]]
 name = "rustversion"
 version = "1.0.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2223,9 +2202,9 @@ dependencies = [
 
 [[package]]
 name = "tokio"
-version = "1.44.1"
+version = "1.45.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f382da615b842244d4b8738c82ed1275e6c5dd90c459a30941cd07080b06c91a"
+checksum = "2513ca694ef9ede0fb23fe71a4ee4107cb102b9dc1930f6d0fd77aae068ae165"
 dependencies = [
  "backtrace",
  "bytes",

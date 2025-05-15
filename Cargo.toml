@@ -1,12 +1,13 @@
 [workspace]
 members = [
-  "fastrace",
-  "fastrace-macro",
-  "fastrace-jaeger",
-  "fastrace-datadog",
-  "fastrace-opentelemetry",
-  "fastrace-futures",
-  "test-statically-disable",
+    "fastrace",
+    "fastrace-macro",
+    "fastrace-jaeger",
+    "fastrace-datadog",
+    "fastrace-opentelemetry",
+    "fastrace-futures",
+    "examples",
+    "test-statically-disable",
 ]
 resolver = "2"
 
@@ -28,8 +29,14 @@ fastrace-jaeger = { path = "fastrace-jaeger" }
 fastrace-opentelemetry = { path = "fastrace-opentelemetry" }
 
 # crates.io dependencies
-log = { version = "0.4" }
+log = { version = "0.4.27" }
+opentelemetry = { version = "0.29.0", default-features = false, features = ["trace"] }
+opentelemetry-otlp = { version = "0.29.0", default-features = false, features = ["trace", "grpc-tonic"] }
+opentelemetry_sdk = { version = "0.29.0", default-features = false, features = ["trace"] }
 serde = { version = "1.0", features = ["derive"] }
+
+# test dependencies
+tokio = { version = "1.45.0", features = ["full"] }
 
 [profile.bench]
 lto = true

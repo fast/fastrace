@@ -66,5 +66,5 @@ jobs:
         run: |
           cargo run --example asynchronous
           cargo run --example synchronous
-          cargo run --example get_started
+          cargo run --example basic
           cargo run --package test-statically-disable
