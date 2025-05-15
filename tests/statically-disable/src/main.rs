@@ -22,7 +22,8 @@
 //! This results in zero overhead to libraries, achieved through conditional compilation with
 //! the "enable" feature.
 //!
-//! The following test is designed to confirm that fastrace do compile when it's statically disabled.
+//! The following test is designed to confirm that fastrace do compile when it's statically
+//! disabled.
 
 use std::time::Duration;
 

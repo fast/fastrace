@@ -139,7 +139,7 @@ impl Reporter for JaegerReporter {
         }
 
         if let Err(err) = self.try_report(&spans) {
-            log::error!("report to jaeger failed: {}", err);
+            log::error!("report to jaeger failed: {err}");
         }
     }
 }

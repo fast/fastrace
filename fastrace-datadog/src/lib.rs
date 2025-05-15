@@ -88,7 +88,7 @@ impl Reporter for DatadogReporter {
         }
 
         if let Err(err) = self.try_report(spans) {
-            log::error!("report to datadog failed: {}", err);
+            log::error!("report to datadog failed: {err}");
         }
     }
 }
