@@ -12,8 +12,11 @@ env:
 jobs:
   check:
     runs-on: ubuntu-24.04
+    env:
+      FORCE_COLOR: 1
     steps:
       - uses: actions/checkout@v4
+      - uses: crate-ci/typos@master
       - uses: Swatinem/rust-cache@v2
       - run: rm rust-toolchain.toml
         shell: bash
