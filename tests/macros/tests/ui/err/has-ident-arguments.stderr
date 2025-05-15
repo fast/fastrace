@@ -1,0 +1,5 @@
+error: expected `=`
+ --> tests/ui/err/has-ident-arguments.rs:3:10
+  |
+3 | #[trace(a, b)]
+  |          ^

@@ -1,5 +1,0 @@
-error: expected identifier
- --> tests/ui/err/item-is-not-a-function.rs:5:9
-  |
-5 | #[trace("test-span")]
-  |         ^^^^^^^^^^^

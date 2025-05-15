@@ -322,7 +322,7 @@ impl Tree {
 pub fn tree_str_from_raw_spans(raw_spans: RawSpans) -> String {
     Tree::from_raw_spans(raw_spans)
         .iter()
-        .map(|t| format!("\n{}", t))
+        .map(|t| format!("\n{t}"))
         .collect::<Vec<_>>()
         .join("")
 }
@@ -330,7 +330,7 @@ pub fn tree_str_from_raw_spans(raw_spans: RawSpans) -> String {
 pub fn tree_str_from_span_sets(span_sets: &[(SpanSet, CollectToken)]) -> String {
     Tree::from_span_sets(span_sets)
         .iter()
-        .map(|(id, t)| format!("\n#{}\n{}", id, t))
+        .map(|(id, t)| format!("\n#{id}\n{t}"))
         .collect::<Vec<_>>()
         .join("")
 }

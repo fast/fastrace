@@ -22,4 +22,4 @@ pin-project = { version = "1.1.8" }
 [dev-dependencies]
 async-stream = { version = "0.3" }
 futures = { version = "0.3" }
-tokio = { version = "1.38", features = ["rt", "time", "macros"] }
+tokio = { workspace = true }

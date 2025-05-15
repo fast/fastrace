@@ -11,7 +11,7 @@
 ```toml
 [dependencies]
 fastrace = "0.7"
-fastrace-opentelemetry = "0.9"
+fastrace-opentelemetry = "0.10"
 ```
 
 ## Setup OpenTelemetry Collector
@@ -19,7 +19,7 @@ fastrace-opentelemetry = "0.9"
 Start OpenTelemetry Collector with Jaeger and Zipkin receivers:
 
 ```shell
-docker compose -f examples/docker-compose.yaml up
+docker compose -f dev/docker-compose.yaml up
 ```
 
 Then, run the synchronous example:

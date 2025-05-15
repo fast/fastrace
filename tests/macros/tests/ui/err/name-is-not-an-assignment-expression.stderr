@@ -1,0 +1,5 @@
+error: expected identifier
+ --> tests/ui/err/name-is-not-an-assignment-expression.rs:3:9
+  |
+3 | #[trace("b")]
+  |         ^^^

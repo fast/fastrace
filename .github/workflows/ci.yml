@@ -12,8 +12,11 @@ env:
 jobs:
   check:
     runs-on: ubuntu-24.04
+    env:
+      FORCE_COLOR: 1
     steps:
       - uses: actions/checkout@v4
+      - uses: crate-ci/typos@master
       - uses: Swatinem/rust-cache@v2
       - run: rm rust-toolchain.toml
         shell: bash
@@ -63,5 +66,5 @@ jobs:
         run: |
           cargo run --example asynchronous
           cargo run --example synchronous
-          cargo run --example get_started
+          cargo run --example basic
           cargo run --package test-statically-disable

@@ -422,7 +422,7 @@ fn test_macro() {
     }
 
     #[trace(short_name = true)]
-    async fn work3<'a>(millis1: &'a u64, millis2: &u64) {
+    async fn work3(millis1: &u64, millis2: &u64) {
         let _g = Span::enter_with_local_parent("work-inner");
         tokio::time::sleep(Duration::from_millis(*millis1))
             .enter_on_poll("sleep")

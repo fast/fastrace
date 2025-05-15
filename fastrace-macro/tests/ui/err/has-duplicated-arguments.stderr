@@ -1,5 +1,0 @@
-error: duplicate argument
- --> tests/ui/err/has-duplicated-arguments.rs:5:24
-  |
-5 | #[trace(name = "Name", name = "Name")]
-  |                        ^^^^

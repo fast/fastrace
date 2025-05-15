@@ -1,0 +1,5 @@
+error: expected identifier, found keyword `true`
+ --> tests/ui/err/has-expr-argument.rs:3:9
+  |
+3 | #[trace(true)]
+  |         ^^^^
