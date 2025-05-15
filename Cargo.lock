@@ -441,6 +441,7 @@ dependencies = [
 name = "fastrace-macro"
 version = "0.7.9"
 dependencies = [
+ "fastrace 0.7.9",
  "proc-macro-error2",
  "proc-macro2",
  "quote",

@@ -27,3 +27,6 @@ syn = { version = "2.0", features = [
   "proc-macro",
   "visit-mut",
 ] }
+
+[dev-dependencies]
+fastrace = { workspace = true }
