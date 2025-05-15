@@ -1,5 +1,5 @@
 error: expected string literal
- --> tests/ui/err/properties-non-string.rs:5:24
+ --> tests/ui/err/properties-non-string.rs:3:24
   |
-5 | #[trace(properties = { a: "b" })]
+3 | #[trace(properties = { a: "b" })]
   |                        ^

@@ -1,5 +1,5 @@
 error: expected identifier, found keyword `struct`
- --> tests/ui/err/trace-interleaved.rs:6:9
+ --> tests/ui/err/trace-interleaved.rs:4:9
   |
-6 | #[trace(struct)]
+4 | #[trace(struct)]
   |         ^^^^^^

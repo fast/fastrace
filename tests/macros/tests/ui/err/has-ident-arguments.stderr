@@ -1,5 +1,5 @@
 error: expected `=`
- --> tests/ui/err/has-ident-arguments.rs:5:10
+ --> tests/ui/err/has-ident-arguments.rs:3:10
   |
-5 | #[trace(a, b)]
+3 | #[trace(a, b)]
   |          ^

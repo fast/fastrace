@@ -1,5 +1,3 @@
-// Copyright 2020 TiKV Project Authors. Licensed under Apache-2.0.
-
 use fastrace::trace;
 
 #[trace(short_name = true, properties = { "k1": "v1", "a": "argument a is {a:?}", "b": "{b:?}", "escaped1": "{c:?}{{}}", "escaped2": "{{ \"a\": \"b\"}}" })]
