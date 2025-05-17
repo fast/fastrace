@@ -81,29 +81,32 @@ fn single_thread_multiple_spans() {
     fastrace::flush();
 
     let graph1 = tree_str_from_span_records(
-        collected_spans.lock()
+        collected_spans
+            .lock()
             .iter()
             .filter(|s| s.trace_id == TraceId(12))
             .cloned()
-            .collect()
+            .collect(),
     );
     insta::assert_snapshot!("single_thread_multiple_spans_expected_graph1", graph1);
 
     let graph2 = tree_str_from_span_records(
-        collected_spans.lock()
+        collected_spans
+            .lock()
             .iter()
             .filter(|s| s.trace_id == TraceId(13))
             .cloned()
-            .collect()
+            .collect(),
     );
     insta::assert_snapshot!("single_thread_multiple_spans_expected_graph2", graph2);
 
     let graph3 = tree_str_from_span_records(
-        collected_spans.lock()
+        collected_spans
+            .lock()
             .iter()
             .filter(|s| s.trace_id == TraceId(14))
             .cloned()
-            .collect()
+            .collect(),
     );
     insta::assert_snapshot!("single_thread_multiple_spans_expected_graph3", graph3);
 }
@@ -182,28 +185,25 @@ fn multiple_threads_multiple_spans() {
 
     fastrace::flush();
 
-    let graph1 =
-        tree_str_from_span_records(
-            collected_spans
-                .lock()
-                .iter()
-                .filter(|s| s.trace_id == TraceId(12))
-                .cloned()
-                .collect()
-        );
+    let graph1 = tree_str_from_span_records(
+        collected_spans
+            .lock()
+            .iter()
+            .filter(|s| s.trace_id == TraceId(12))
+            .cloned()
+            .collect(),
+    );
     insta::assert_snapshot!("multiple_threads_multiple_spans_expected_graph1", graph1);
 
-    let graph2 =
-        tree_str_from_span_records(
-            collected_spans
-                .lock()
-                .iter()
-                .filter(|s| s.trace_id == TraceId(13))
-                .cloned()
-                .collect()
-        );
+    let graph2 = tree_str_from_span_records(
+        collected_spans
+            .lock()
+            .iter()
+            .filter(|s| s.trace_id == TraceId(13))
+            .cloned()
+            .collect(),
+    );
     insta::assert_snapshot!("multiple_threads_multiple_spans_expected_graph2", graph2);
-
 }
 
 #[test]
@@ -421,7 +421,6 @@ fn early_local_collect() {
 
     fastrace::flush();
 
-
     let graph = tree_str_from_span_records(collected_spans.lock().clone());
     insta::assert_snapshot!(graph);
 }
@@ -555,7 +554,7 @@ fn test_macro_properties() {
     }
 
     fastrace::flush();
-    
+
     let graph = tree_str_from_span_records(collected_spans.lock().clone());
     insta::assert_snapshot!(graph);
 }
