@@ -10,6 +10,7 @@ This is a pure rust project, so only `cargo` is needed.
 - `cargo build` to compile the current package.
 - `cargo clippy` to catch common mistakes and improve code.
 - `cargo test` to run unit tests.
+    - Note: Run `cargo test --features snapshots` to run tests against `Insta` snapshots
 - `cargo bench` to run benchmark tests.
 
 Useful tips:
