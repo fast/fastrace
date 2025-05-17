@@ -1,9 +1,0 @@
----
-source: fastrace/tests/lib.rs
-expression: graph
----
-root []
-    do_something_async_short_name []
-    do_something_short_name []
-    lib::macro_example::{{closure}}::do_something []
-    lib::macro_example::{{closure}}::do_something_async::{{closure}} []

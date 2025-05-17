@@ -1,6 +1,0 @@
----
-source: fastrace/tests/lib.rs
-expression: graph
----
-root []
-    span []

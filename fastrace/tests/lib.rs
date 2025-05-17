@@ -52,7 +52,13 @@ fn single_thread_single_span() {
     fastrace::flush();
 
     let graph = tree_str_from_span_records(collected_spans.lock().clone());
-    insta::assert_snapshot!(graph);
+    insta::assert_snapshot!(graph, @r###"
+    root []
+        iter-span-0 [("tmp_property", "tmp_value")]
+        iter-span-1 [("tmp_property", "tmp_value")]
+        rec-span []
+            rec-span []
+    "###);
 }
 
 #[cfg_attr(not(feature = "snapshots"), ignore)]
@@ -88,7 +94,13 @@ fn single_thread_multiple_spans() {
             .cloned()
             .collect(),
     );
-    insta::assert_snapshot!("single_thread_multiple_spans_expected_graph1", graph1);
+    insta::assert_snapshot!(graph1, @r###"
+    root1 []
+        iter-span-0 [("tmp_property", "tmp_value")]
+        iter-span-1 [("tmp_property", "tmp_value")]
+        rec-span []
+            rec-span []
+    "###);
 
     let graph2 = tree_str_from_span_records(
         collected_spans
@@ -98,7 +110,13 @@ fn single_thread_multiple_spans() {
             .cloned()
             .collect(),
     );
-    insta::assert_snapshot!("single_thread_multiple_spans_expected_graph2", graph2);
+    insta::assert_snapshot!(graph2, @r###"
+    root2 []
+        iter-span-0 [("tmp_property", "tmp_value")]
+        iter-span-1 [("tmp_property", "tmp_value")]
+        rec-span []
+            rec-span []
+    "###);
 
     let graph3 = tree_str_from_span_records(
         collected_spans
@@ -108,7 +126,13 @@ fn single_thread_multiple_spans() {
             .cloned()
             .collect(),
     );
-    insta::assert_snapshot!("single_thread_multiple_spans_expected_graph3", graph3);
+    insta::assert_snapshot!(graph3, @r###"
+    root3 []
+        iter-span-0 [("tmp_property", "tmp_value")]
+        iter-span-1 [("tmp_property", "tmp_value")]
+        rec-span []
+            rec-span []
+    "###);
 }
 
 #[test]
@@ -141,7 +165,33 @@ fn multiple_threads_single_span() {
     fastrace::flush();
 
     let graph = tree_str_from_span_records(collected_spans.lock().clone());
-    insta::assert_snapshot!(graph);
+    insta::assert_snapshot!(graph, @r###"
+    root []
+        cross-thread []
+            iter-span-0 [("tmp_property", "tmp_value")]
+            iter-span-1 [("tmp_property", "tmp_value")]
+            rec-span []
+                rec-span []
+        cross-thread []
+            iter-span-0 [("tmp_property", "tmp_value")]
+            iter-span-1 [("tmp_property", "tmp_value")]
+            rec-span []
+                rec-span []
+        cross-thread []
+            iter-span-0 [("tmp_property", "tmp_value")]
+            iter-span-1 [("tmp_property", "tmp_value")]
+            rec-span []
+                rec-span []
+        cross-thread []
+            iter-span-0 [("tmp_property", "tmp_value")]
+            iter-span-1 [("tmp_property", "tmp_value")]
+            rec-span []
+                rec-span []
+        iter-span-0 [("tmp_property", "tmp_value")]
+        iter-span-1 [("tmp_property", "tmp_value")]
+        rec-span []
+            rec-span []
+    "###);
 }
 
 #[test]
@@ -193,7 +243,37 @@ fn multiple_threads_multiple_spans() {
             .cloned()
             .collect(),
     );
-    insta::assert_snapshot!("multiple_threads_multiple_spans_expected_graph1", graph1);
+    insta::assert_snapshot!(graph1, @r###"
+    root1 []
+        iter-span-0 [("tmp_property", "tmp_value")]
+        iter-span-1 [("tmp_property", "tmp_value")]
+        merged []
+            iter-span-0 [("tmp_property", "tmp_value")]
+            iter-span-1 [("tmp_property", "tmp_value")]
+            local []
+            rec-span []
+                rec-span []
+        merged []
+            iter-span-0 [("tmp_property", "tmp_value")]
+            iter-span-1 [("tmp_property", "tmp_value")]
+            local []
+            rec-span []
+                rec-span []
+        merged []
+            iter-span-0 [("tmp_property", "tmp_value")]
+            iter-span-1 [("tmp_property", "tmp_value")]
+            local []
+            rec-span []
+                rec-span []
+        merged []
+            iter-span-0 [("tmp_property", "tmp_value")]
+            iter-span-1 [("tmp_property", "tmp_value")]
+            local []
+            rec-span []
+                rec-span []
+        rec-span []
+            rec-span []
+    "###);
 
     let graph2 = tree_str_from_span_records(
         collected_spans
@@ -203,7 +283,37 @@ fn multiple_threads_multiple_spans() {
             .cloned()
             .collect(),
     );
-    insta::assert_snapshot!("multiple_threads_multiple_spans_expected_graph2", graph2);
+    insta::assert_snapshot!(graph2, @r###"
+    root2 []
+        iter-span-0 [("tmp_property", "tmp_value")]
+        iter-span-1 [("tmp_property", "tmp_value")]
+        merged []
+            iter-span-0 [("tmp_property", "tmp_value")]
+            iter-span-1 [("tmp_property", "tmp_value")]
+            local []
+            rec-span []
+                rec-span []
+        merged []
+            iter-span-0 [("tmp_property", "tmp_value")]
+            iter-span-1 [("tmp_property", "tmp_value")]
+            local []
+            rec-span []
+                rec-span []
+        merged []
+            iter-span-0 [("tmp_property", "tmp_value")]
+            iter-span-1 [("tmp_property", "tmp_value")]
+            local []
+            rec-span []
+                rec-span []
+        merged []
+            iter-span-0 [("tmp_property", "tmp_value")]
+            iter-span-1 [("tmp_property", "tmp_value")]
+            local []
+            rec-span []
+                rec-span []
+        rec-span []
+            rec-span []
+    "###);
 }
 
 #[test]
@@ -334,7 +444,27 @@ fn test_macro() {
     fastrace::flush();
 
     let graph = tree_str_from_span_records(collected_spans.lock().clone());
-    insta::assert_snapshot!(graph);
+    insta::assert_snapshot!(graph, @r###"
+    root []
+        run []
+            local-span []
+            run-inner []
+            work []
+                sleep []
+            work []
+                sleep []
+                work-inner []
+        work2 []
+            sleep []
+            sleep []
+            work-inner []
+        work3 []
+            sleep []
+            sleep []
+            sleep []
+            sleep []
+            work-inner []
+    "###);
 }
 
 #[test]
@@ -375,7 +505,13 @@ fn macro_example() {
     fastrace::flush();
 
     let graph = tree_str_from_span_records(collected_spans.lock().clone());
-    insta::assert_snapshot!(graph);
+    insta::assert_snapshot!(graph,@r###"
+    root []
+        do_something_async_short_name []
+        do_something_short_name []
+        lib::macro_example::{{closure}}::do_something []
+        lib::macro_example::{{closure}}::do_something_async::{{closure}} []
+    "###);
 }
 
 #[test]
@@ -399,7 +535,13 @@ fn multiple_local_parent() {
     fastrace::flush();
 
     let graph = tree_str_from_span_records(collected_spans.lock().clone());
-    insta::assert_snapshot!(graph);
+    insta::assert_snapshot!(graph, @r###"
+    root []
+        span1 []
+            span2 []
+                span3 []
+            span4 []
+    "###);
 }
 
 #[test]
@@ -422,7 +564,11 @@ fn early_local_collect() {
     fastrace::flush();
 
     let graph = tree_str_from_span_records(collected_spans.lock().clone());
-    insta::assert_snapshot!(graph);
+    insta::assert_snapshot!(graph, @r###"
+    root []
+        span1 []
+            span2 []
+    "###);
 }
 
 #[test]
@@ -466,7 +612,10 @@ fn test_property() {
     fastrace::flush();
 
     let graph = tree_str_from_span_records(collected_spans.lock().clone());
-    insta::assert_snapshot!(graph);
+    insta::assert_snapshot!(graph, @r###"
+    root [("k1", "v1"), ("k2", "v2"), ("k3", "v3"), ("k4", "v4"), ("k5", "v5"), ("k6", "v6"), ("k7", "v7"), ("k8", "v8"), ("k9", "v9")]
+        span [("k10", "v10"), ("k11", "v11"), ("k12", "v12"), ("k13", "v13"), ("k14", "v14"), ("k15", "v15")]
+    "###);
 }
 
 #[test]
@@ -499,7 +648,10 @@ fn test_event() {
     fastrace::flush();
 
     let graph = tree_str_from_span_records(collected_spans.lock().clone());
-    insta::assert_snapshot!(graph);
+    insta::assert_snapshot!(graph, @r###"
+    root [] [("event1 in root", [("k1", "v1"), ("k2", "v2"), ("k3", "v3")]), ("event2 in root", [("k4", "v4"), ("k5", "v5"), ("k6", "v6")])]
+        span [] [("event3 in span", [("k7", "v7"), ("k8", "v8"), ("k9", "v9")])]
+    "###);
 }
 
 #[test]
@@ -556,7 +708,13 @@ fn test_macro_properties() {
     fastrace::flush();
 
     let graph = tree_str_from_span_records(collected_spans.lock().clone());
-    insta::assert_snapshot!(graph);
+    insta::assert_snapshot!(graph, @r###"
+    root []
+        bar []
+        bar_async []
+        foo [("k1", "v1"), ("a", "argument a is 1"), ("b", "Bar"), ("escaped1", "Bar{}"), ("escaped2", "{ \"a\": \"b\"}")]
+        foo_async [("k1", "v1"), ("a", "argument a is 1"), ("b", "Bar"), ("escaped1", "Bar{}"), ("escaped2", "{ \"a\": \"b\"}")]
+    "###);
 }
 
 #[test]
@@ -572,7 +730,10 @@ fn test_not_sampled() {
     fastrace::flush();
 
     let graph = tree_str_from_span_records(collected_spans.lock().clone());
-    insta::assert_snapshot!(graph);
+    insta::assert_snapshot!(graph,@r###"
+    root []
+        span []
+    "###);
 
     let (reporter, collected_spans) = TestReporter::new();
     fastrace::set_reporter(reporter, Config::default());

@@ -1,9 +1,0 @@
----
-source: fastrace/tests/lib.rs
-expression: graph
----
-root []
-    bar []
-    bar_async []
-    foo [("k1", "v1"), ("a", "argument a is 1"), ("b", "Bar"), ("escaped1", "Bar{}"), ("escaped2", "{ \"a\": \"b\"}")]
-    foo_async [("k1", "v1"), ("a", "argument a is 1"), ("b", "Bar"), ("escaped1", "Bar{}"), ("escaped2", "{ \"a\": \"b\"}")]
