@@ -1,0 +1,9 @@
+---
+source: fastrace/tests/lib.rs
+expression: graph
+---
+root []
+    iter-span-0 [("tmp_property", "tmp_value")]
+    iter-span-1 [("tmp_property", "tmp_value")]
+    rec-span []
+        rec-span []

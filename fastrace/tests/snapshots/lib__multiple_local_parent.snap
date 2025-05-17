@@ -1,0 +1,9 @@
+---
+source: fastrace/tests/lib.rs
+expression: graph
+---
+root []
+    span1 []
+        span2 []
+            span3 []
+        span4 []

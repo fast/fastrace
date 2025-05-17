@@ -1,0 +1,6 @@
+---
+source: fastrace/tests/lib.rs
+expression: graph
+---
+root [] [("event1 in root", [("k1", "v1"), ("k2", "v2"), ("k3", "v3")]), ("event2 in root", [("k4", "v4"), ("k5", "v5"), ("k6", "v6")])]
+    span [] [("event3 in span", [("k7", "v7"), ("k8", "v8"), ("k9", "v9")])]

@@ -1,0 +1,23 @@
+---
+source: fastrace/tests/lib.rs
+expression: graph
+---
+root []
+    run []
+        local-span []
+        run-inner []
+        work []
+            sleep []
+        work []
+            sleep []
+            work-inner []
+    work2 []
+        sleep []
+        sleep []
+        work-inner []
+    work3 []
+        sleep []
+        sleep []
+        sleep []
+        sleep []
+        work-inner []
