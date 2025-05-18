@@ -15,7 +15,6 @@ rust-version.workspace = true
 
 [features]
 enable = []
-snapshots = []
 
 [dependencies]
 fastant = "0.1"

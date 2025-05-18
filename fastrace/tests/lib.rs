@@ -35,7 +35,6 @@ fn four_spans() {
     }
 }
 
-#[cfg_attr(not(feature = "snapshots"), ignore)]
 #[test]
 #[serial]
 fn single_thread_single_span() {
@@ -61,7 +60,6 @@ fn single_thread_single_span() {
     "###);
 }
 
-#[cfg_attr(not(feature = "snapshots"), ignore)]
 #[test]
 #[serial]
 fn single_thread_multiple_spans() {
