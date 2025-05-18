@@ -33,6 +33,7 @@ fastrace = { path = ".", features = ["enable"] }
 fastrace-opentelemetry = { workspace = true }
 flume = "0.11"
 futures-timer = "3"
+insta = "1.43.1"
 mockall = "0.13"
 pollster = { version = "0.4.0" }
 rand = "0.9"
