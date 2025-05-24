@@ -14,7 +14,7 @@ fastrace is a tracing library [10~100x faster](#benchmarks) than others:
 Features:
 
 - [Extremely fast](#benchmarks)
-- [Rich features for logging](https://github.com/fast/fastrace/blob/main/fastrace/examples/logging.rs)
+- [Rich features for logging](https://github.com/fast/fastrace/blob/main/examples/logging.rs)
 - Compatible with [Jaeger], [Datadog], and [OpenTelemetry]
 
 ## Resources
@@ -194,7 +194,7 @@ tracing::subscriber::set_global_default(subscriber).unwrap();
 For more details, refer to the [fastrace-tracing documentation](https://docs.rs/fastrace-tracing).
 
 [Docs]: https://docs.rs/fastrace/
-[Examples]: https://github.com/fast/fastrace/tree/main/fastrace/examples
+[Examples]: https://github.com/fast/fastrace/tree/main/examples
 [OpenTelemetry]: https://opentelemetry.io/
 [Jaeger]: https://crates.io/crates/fastrace-jaeger
 [Datadog]: https://crates.io/crates/fastrace-datadog
