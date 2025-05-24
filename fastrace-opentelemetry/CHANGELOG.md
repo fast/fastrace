@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## v0.11.0
+
+- Upgrade opentelemtry to 0.30.0.
+
 ## v0.10.0
 
 - Upgrade opentelemtry to 0.29.0.
