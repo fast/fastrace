@@ -42,8 +42,8 @@ opentelemetry = { workspace = true }
 opentelemetry-otlp = { workspace = true }
 opentelemetry_sdk = { workspace = true }
 tokio = { workspace = true }
-tracing = "0.1"
-tracing-opentelemetry = { version = "0.30.0" }
+tracing = { version = "0.1" }
+tracing-opentelemetry = { version = "0.31.0" }
 tracing-subscriber = { version = "0.3.19" }
 
 [[bench]]
