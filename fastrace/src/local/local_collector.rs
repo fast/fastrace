@@ -326,7 +326,7 @@ span1 []
 
         let local_spans: LocalSpans = collector.collect();
 
-        let parent_context = SpanContext::random();
+        let parent_context = SpanContext::new(TraceId::random(), SpanId::default());
         let span_records = local_spans.to_span_records(parent_context);
 
         assert_eq!(
