@@ -42,7 +42,7 @@ fn single_thread_single_span() {
     fastrace::set_reporter(reporter, Config::default());
 
     {
-        let root = Span::root("root", SpanContext::random());
+        let root = Span::root("root", SpanContext::new(TraceId(42), SpanId(0)));
         let _g = root.set_local_parent();
 
         four_spans();
@@ -140,7 +140,7 @@ fn multiple_threads_single_span() {
     fastrace::set_reporter(reporter, Config::default());
 
     crossbeam::scope(|scope| {
-        let root = Span::root("root", SpanContext::random());
+        let root = Span::root("root", SpanContext::new(TraceId(42), SpanId(0)));
         let _g = root.set_local_parent();
 
         let mut handles = vec![];
@@ -418,7 +418,7 @@ fn test_macro() {
     fastrace::set_reporter(reporter, Config::default());
 
     {
-        let root = Span::root("root", SpanContext::random());
+        let root = Span::root("root", SpanContext::new(TraceId(42), SpanId(0)));
 
         let runtime = Builder::new_multi_thread()
             .worker_threads(4)
@@ -492,7 +492,7 @@ fn macro_example() {
     fastrace::set_reporter(reporter, Config::default());
 
     {
-        let root = Span::root("root", SpanContext::random());
+        let root = Span::root("root", SpanContext::new(TraceId(42), SpanId(0)));
         let _g = root.set_local_parent();
         do_something(100);
         pollster::block_on(do_something_async(100));
@@ -519,7 +519,7 @@ fn multiple_local_parent() {
     fastrace::set_reporter(reporter, Config::default());
 
     {
-        let root = Span::root("root", SpanContext::random());
+        let root = Span::root("root", SpanContext::new(TraceId(42), SpanId(0)));
         let _g = root.set_local_parent();
         let _g = LocalSpan::enter_with_local_parent("span1");
         let span2 = Span::enter_with_local_parent("span2");
@@ -555,7 +555,7 @@ fn early_local_collect() {
         drop(_g2);
         let local_spans = local_collector.collect();
 
-        let root = Span::root("root", SpanContext::random());
+        let root = Span::root("root", SpanContext::new(TraceId(42), SpanId(0)));
         root.push_child_spans(local_spans);
     }
 
@@ -575,7 +575,7 @@ fn test_elapsed() {
     fastrace::set_reporter(ConsoleReporter, Config::default());
 
     {
-        let root = Span::root("root", SpanContext::random());
+        let root = Span::root("root", SpanContext::new(TraceId(42), SpanId(0)));
 
         std::thread::sleep(Duration::from_millis(50));
 
@@ -592,7 +592,7 @@ fn test_property() {
     fastrace::set_reporter(reporter, Config::default());
 
     {
-        let root = Span::root("root", SpanContext::random())
+        let root = Span::root("root", SpanContext::new(TraceId(42), SpanId(0)))
             .with_property(|| ("k1", "v1"))
             .with_properties(|| [("k2", "v2"), ("k3", "v3")]);
         root.add_property(|| ("k4", "v4"));
@@ -623,7 +623,7 @@ fn test_event() {
     fastrace::set_reporter(reporter, Config::default());
 
     {
-        let root = Span::root("root", SpanContext::random());
+        let root = Span::root("root", SpanContext::new(TraceId(42), SpanId(0)));
         root.add_event(
             Event::new("event1 in root")
                 .with_property(|| ("k1", "v1"))
@@ -680,7 +680,7 @@ fn test_macro_properties() {
     fastrace::set_reporter(reporter, Config::default());
 
     {
-        let root = Span::root("root", SpanContext::random());
+        let root = Span::root("root", SpanContext::new(TraceId(42), SpanId(0)));
         let _g = root.set_local_parent();
         foo(1, &Bar, Bar);
         bar();
@@ -721,7 +721,10 @@ fn test_not_sampled() {
     let (reporter, collected_spans) = TestReporter::new();
     fastrace::set_reporter(reporter, Config::default());
     {
-        let root = Span::root("root", SpanContext::random().sampled(true));
+        let root = Span::root(
+            "root",
+            SpanContext::new(TraceId(42), SpanId(0)).sampled(true),
+        );
         let _g = root.set_local_parent();
         let _span = LocalSpan::enter_with_local_parent("span");
     }
@@ -736,7 +739,10 @@ fn test_not_sampled() {
     let (reporter, collected_spans) = TestReporter::new();
     fastrace::set_reporter(reporter, Config::default());
     {
-        let root = Span::root("root", SpanContext::random().sampled(false));
+        let root = Span::root(
+            "root",
+            SpanContext::new(TraceId(42), SpanId(0)).sampled(false),
+        );
         let _g = root.set_local_parent();
         let _span = LocalSpan::enter_with_local_parent("span");
     }

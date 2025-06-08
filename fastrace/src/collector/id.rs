@@ -169,7 +169,7 @@ impl SpanContext {
     pub fn random() -> Self {
         Self {
             trace_id: TraceId::random(),
-            span_id: SpanId::default(),
+            span_id: SpanId::random(),
             sampled: true,
         }
     }
@@ -292,6 +292,9 @@ impl SpanContext {
                 let trace_id = u128::from_str_radix(trace_id, 16).ok()?;
                 let span_id = u64::from_str_radix(span_id, 16).ok()?;
                 let sampled = u8::from_str_radix(sampled, 16).ok()? & 1 == 1;
+                if trace_id == 0 || span_id == 0 {
+                    return None;
+                }
                 Some(Self::new(TraceId(trace_id), SpanId(span_id)).sampled(sampled))
             }
             _ => None,
