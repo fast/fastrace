@@ -132,11 +132,12 @@ impl Config {
     ///
     /// ```
     /// use fastrace::collector::Config;
+    /// use fastrace::collector::SpanContext;
     ///
     /// let config = Config::default().tail_sampled(true);
     /// fastrace::set_reporter(fastrace::collector::ConsoleReporter, config);
     ///
-    /// let root = fastrace::Span::root("root", fastrace::SpanContext::random());
+    /// let root = fastrace::Span::root("root", SpanContext::random());
     ///
     /// root.cancel();
     /// ```
