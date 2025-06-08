@@ -2,7 +2,8 @@
 
 ## Unreleased
 
-- Add `Config::cancelable()`, which defaults to `false`.
+- `TraceContext::random()` now returns a `TraceContext` with random `TraceId` and `SpanId`.
+- Add `Config::tail_sampled()`, which defaults to `false`.
 - Deprecate `Config::max_spans_per_trace()` and `Config::report_before_root_finish()`.
 
 ## v0.7.9

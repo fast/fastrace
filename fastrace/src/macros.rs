@@ -17,7 +17,7 @@ macro_rules! func_name {
     () => {{
         fn f() {}
         fn type_name_of<T>(_: T) -> &'static str {
-            std::any::type_name::<T>()
+            core::any::type_name::<T>()
         }
         let name = type_name_of(f);
         let name = &name[..name.len() - 3];
@@ -43,7 +43,7 @@ macro_rules! func_path {
     () => {{
         fn f() {}
         fn type_name_of<T>(_: T) -> &'static str {
-            std::any::type_name::<T>()
+            core::any::type_name::<T>()
         }
         let name = type_name_of(f);
         &name[..name.len() - 3]
@@ -57,7 +57,7 @@ macro_rules! full_name {
     () => {{
         fn f() {}
         fn type_name_of<T>(_: T) -> &'static str {
-            std::any::type_name::<T>()
+            core::any::type_name::<T>()
         }
         let name = type_name_of(f);
         let name = &name[..name.len() - 3];
@@ -80,6 +80,6 @@ macro_rules! full_name {
 #[macro_export]
 macro_rules! file_location {
     () => {
-        std::concat!(file!(), ":", line!(), ":", column!())
+        core::concat!(file!(), ":", line!(), ":", column!())
     };
 }
