@@ -293,7 +293,7 @@ impl SpanContext {
                 let span_id = u64::from_str_radix(span_id, 16).ok()?;
                 let sampled = u8::from_str_radix(sampled, 16).ok()? & 1 == 1;
                 if trace_id == 0 || span_id == 0 {
-                    return None; // Invalid trace or span ID
+                    return None;
                 }
                 Some(Self::new(TraceId(trace_id), SpanId(span_id)).sampled(sampled))
             }
