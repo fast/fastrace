@@ -720,7 +720,7 @@ mod tests {
         crate::set_reporter(ConsoleReporter, crate::collector::Config::default());
 
         let routine = || {
-            let root = Span::root("root", SpanContext::random());
+            let root = Span::root("root", SpanContext::new(TraceId(42), SpanId(0)));
             root.cancel();
 
             fastrace::flush();
@@ -772,7 +772,7 @@ root []
         crate::set_reporter(ConsoleReporter, crate::collector::Config::default());
 
         let routine = || {
-            let parent_ctx = SpanContext::random();
+            let parent_ctx = SpanContext::new(TraceId(42), SpanId(0));
             let root = Span::root("root", parent_ctx);
             let child1 =
                 Span::enter_with_parent("child1", &root).with_properties(|| [("k1", "v1")]);
@@ -837,7 +837,7 @@ root []
         crate::set_reporter(ConsoleReporter, crate::collector::Config::default());
 
         let routine = || {
-            let parent_ctx = SpanContext::random();
+            let parent_ctx = SpanContext::new(TraceId(42), SpanId(0));
             let parent1 = Span::root("parent1", parent_ctx);
             let parent2 = Span::root("parent2", parent_ctx);
             let parent3 = Span::root("parent3", parent_ctx);
@@ -933,7 +933,7 @@ parent5 []
         crate::set_reporter(ConsoleReporter, crate::collector::Config::default());
 
         let routine = || {
-            let parent_ctx = SpanContext::random();
+            let parent_ctx = SpanContext::new(TraceId(42), SpanId(0));
             let parent1 = Span::root("parent1", parent_ctx);
             let parent2 = Span::root("parent2", parent_ctx);
             let parent3 = Span::root("parent3", parent_ctx);
@@ -1027,7 +1027,7 @@ parent5 []
             let stack = Rc::new(RefCell::new(LocalSpanStack::with_capacity(16)));
 
             {
-                let parent_ctx = SpanContext::random();
+                let parent_ctx = SpanContext::new(TraceId(42), SpanId(0));
                 let root = Span::root("root", parent_ctx);
                 let _g = root.attach_into_stack(&stack);
                 let child = Span::enter_with_stack("child", &mut stack.borrow_mut());
