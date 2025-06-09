@@ -9,7 +9,6 @@
 #[macro_use]
 extern crate proc_macro_error2;
 
-use std::collections::HashMap;
 use std::collections::HashSet;
 
 use proc_macro2::Span;
