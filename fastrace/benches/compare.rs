@@ -104,7 +104,6 @@ fn init_fastrace() {
         let exporter = make_span_exporter();
         let reporter = fastrace_opentelemetry::OpenTelemetryReporter::new(
             exporter,
-            opentelemetry::trace::SpanKind::Server,
             Cow::Owned(opentelemetry_sdk::Resource::builder().build()),
             opentelemetry::InstrumentationScope::builder("example-crate").build(),
         );
