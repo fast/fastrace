@@ -81,17 +81,6 @@ pub struct Config {
 }
 
 impl Config {
-    /// Sets a soft limit for the total number of spans and events in a trace, typically
-    /// used to prevent out-of-memory issues.
-    ///
-    /// # Note
-    ///
-    /// This is a no-op since it was deprecated.
-    #[deprecated(since = "0.7.10")]
-    pub fn max_spans_per_trace(self, _max_spans_per_trace: Option<usize>) -> Self {
-        self
-    }
-
     /// Sets the time duration between two reports. The reporter will be invoked when the specified
     /// duration elapses, even if no spans have been collected. This allows for batching in the
     /// reporter.
@@ -100,7 +89,7 @@ impl Config {
     /// likely due to the channel being full during the reporting interval. To mitigate this issue,
     /// consider reducing the report interval, potentially down to zero, to prevent losing spans.
     ///
-    /// The default value is 10 milliseconds.
+    /// Defaults to 10 milliseconds.
     ///
     /// # Examples
     ///
@@ -117,16 +106,12 @@ impl Config {
         }
     }
 
-    /// Configures whether to report spans before the root span finishes.
-    #[deprecated(since = "0.7.10", note = "Use Config::tail_sampled() instead.")]
-    pub fn report_before_root_finish(self, report_before_root_finish: bool) -> Self {
-        self.tail_sampled(report_before_root_finish)
-    }
-
     /// Configures whether to hold spans before the root span finishes.
     ///
     /// This is useful for tail sampling, where child spans are held and allow the entire trace to
     /// be cancelled before the root span finishes.
+    /// 
+    /// Defaults to `false`.
     ///
     /// # Examples
     ///
@@ -146,6 +131,23 @@ impl Config {
             tail_sampled,
             ..self
         }
+    }
+    
+    /// Sets a soft limit for the total number of spans and events in a trace, typically
+    /// used to prevent out-of-memory issues.
+    ///
+    /// # Note
+    ///
+    /// This is a no-op since it was deprecated.
+    #[deprecated(since = "0.7.10")]
+    pub fn max_spans_per_trace(self, _max_spans_per_trace: Option<usize>) -> Self {
+        self
+    }
+
+    /// Configures whether to report spans before the root span finishes.
+    #[deprecated(since = "0.7.10", note = "Use Config::tail_sampled() instead.")]
+    pub fn report_before_root_finish(self, report_before_root_finish: bool) -> Self {
+        self.tail_sampled(!report_before_root_finish)
     }
 }
 
