@@ -9,7 +9,7 @@
 #[macro_use]
 extern crate proc_macro_error2;
 
-use std::collections::HashMap;
+use std::collections::HashSet;
 
 use proc_macro2::Span;
 use quote::quote_spanned;
@@ -18,85 +18,6 @@ use syn::parse::ParseStream;
 use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;
 use syn::*;
-
-struct Args {
-    name: Option<String>,
-    short_name: bool,
-    enter_on_poll: bool,
-    properties: Vec<(String, String)>,
-}
-
-struct Property {
-    key: String,
-    value: String,
-}
-
-impl Parse for Property {
-    fn parse(input: ParseStream) -> Result<Self> {
-        let key: LitStr = input.parse()?;
-        input.parse::<Token![:]>()?;
-        let value: LitStr = input.parse()?;
-        Ok(Property {
-            key: key.value(),
-            value: value.value(),
-        })
-    }
-}
-
-impl Parse for Args {
-    fn parse(input: ParseStream) -> Result<Self> {
-        let mut name = None;
-        let mut short_name = false;
-        let mut enter_on_poll = false;
-        let mut properties = Vec::new();
-        let mut seen = HashMap::new();
-
-        while !input.is_empty() {
-            let ident: Ident = input.parse()?;
-            if seen.contains_key(&ident.to_string()) {
-                return Err(Error::new(ident.span(), "duplicate argument"));
-            }
-            seen.insert(ident.to_string(), ());
-            input.parse::<Token![=]>()?;
-            match ident.to_string().as_str() {
-                "name" => {
-                    let parsed_name: LitStr = input.parse()?;
-                    name = Some(parsed_name.value());
-                }
-                "short_name" => {
-                    let parsed_short_name: LitBool = input.parse()?;
-                    short_name = parsed_short_name.value;
-                }
-                "enter_on_poll" => {
-                    let parsed_enter_on_poll: LitBool = input.parse()?;
-                    enter_on_poll = parsed_enter_on_poll.value;
-                }
-                "properties" => {
-                    let content;
-                    let _brace_token = braced!(content in input);
-                    let property_list = content.parse_terminated(Property::parse, Token![,])?;
-                    for property in property_list {
-                        if properties.iter().any(|(k, _)| k == &property.key) {
-                            return Err(Error::new(Span::call_site(), "duplicate property key"));
-                        }
-                        properties.push((property.key, property.value));
-                    }
-                }
-                _ => return Err(Error::new(Span::call_site(), "unexpected identifier")),
-            }
-            if !input.is_empty() {
-                let _ = input.parse::<Token![,]>();
-            }
-        }
-
-        Ok(Args {
-            name,
-            short_name,
-            enter_on_poll,
-            properties,
-        })
-    }
-}
 
 /// An attribute macro designed to eliminate boilerplate code.
 ///
@@ -117,6 +38,7 @@ impl Parse for Args {
 ///   used. Only available for `async fn`. Defaults to `false`.
 /// * `properties` - A list of key-value pairs to be added as properties to the span. The value can
 ///   be a format string, where the function arguments are accessible. Defaults to `{}`.
+/// * `crate` - The path to the fastrace crate. Defaults to `::fastrace`.
 ///
 /// # Examples
 ///
@@ -271,7 +193,109 @@ pub fn trace(
     .into()
 }
 
+struct Args {
+    name: Option<String>,
+    short_name: bool,
+    enter_on_poll: bool,
+    properties: Vec<(String, String)>,
+    crate_path: Path,
+}
+
+impl Default for Args {
+    fn default() -> Self {
+        Self {
+            name: None,
+            short_name: false,
+            enter_on_poll: false,
+            properties: Vec::new(),
+            crate_path: parse_quote!(::fastrace),
+        }
+    }
+}
+
+struct Property {
+    key: String,
+    value: String,
+}
+
+impl Parse for Property {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let key: LitStr = input.parse()?;
+        input.parse::<Token![:]>()?;
+        let value: LitStr = input.parse()?;
+        Ok(Property {
+            key: key.value(),
+            value: value.value(),
+        })
+    }
+}
+
+impl Parse for Args {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let mut name = None;
+        let mut short_name = false;
+        let mut enter_on_poll = false;
+        let mut properties = Vec::new();
+        let mut crate_path = parse_quote!(::fastrace);
+        let mut seen = HashSet::new();
+
+        while !input.is_empty() {
+            let key: Path = input.parse()?;
+            let key = key
+                .get_ident()
+                .ok_or_else(|| Error::new(key.span(), "expected identifier"))?;
+            if seen.contains(key) {
+                return Err(Error::new(key.span(), "duplicate argument"));
+            }
+            seen.insert(key.clone());
+            input.parse::<Token![=]>()?;
+            match key.to_string().as_str() {
+                "name" => {
+                    let parsed_name: LitStr = input.parse()?;
+                    name = Some(parsed_name.value());
+                }
+                "short_name" => {
+                    let parsed_short_name: LitBool = input.parse()?;
+                    short_name = parsed_short_name.value;
+                }
+                "enter_on_poll" => {
+                    let parsed_enter_on_poll: LitBool = input.parse()?;
+                    enter_on_poll = parsed_enter_on_poll.value;
+                }
+                "properties" => {
+                    let content;
+                    let _brace_token = braced!(content in input);
+                    let property_list = content.parse_terminated(Property::parse, Token![,])?;
+                    for property in property_list {
+                        if properties.iter().any(|(k, _)| k == &property.key) {
+                            return Err(Error::new(Span::call_site(), "duplicate property key"));
+                        }
+                        properties.push((property.key, property.value));
+                    }
+                }
+                "crate" => {
+                    let parsed_crate_path: Path = input.parse()?;
+                    crate_path = parsed_crate_path;
+                }
+                _ => return Err(Error::new(Span::call_site(), "unexpected identifier")),
+            }
+            if !input.is_empty() {
+                let _ = input.parse::<Token![,]>();
+            }
+        }
+
+        Ok(Args {
+            name,
+            short_name,
+            enter_on_poll,
+            properties,
+            crate_path,
+        })
+    }
+}
+
 fn gen_name(span: Span, func_name: &str, args: &Args) -> proc_macro2::TokenStream {
+    let crate_path = &args.crate_path;
     match &args.name {
         Some(name) if name.is_empty() => {
             abort_call_site!("`name` can not be empty")
@@ -291,7 +315,7 @@ fn gen_name(span: Span, func_name: &str, args: &Args) -> proc_macro2::TokenStrea
         }
         None => {
             quote_spanned!(span=>
-                fastrace::func_path!()
+                #crate_path::func_path!()
             )
         }
     }
@@ -350,6 +374,7 @@ fn gen_block(
 ) -> proc_macro2::TokenStream {
     let name = gen_name(block.span(), func_name, args);
     let properties = gen_properties(block.span(), args);
+    let crate_path = &args.crate_path;
 
     // Generate the instrumented function body.
     // If the function is an `async fn`, this will wrap it in an async block.
@@ -357,7 +382,7 @@ fn gen_block(
     if async_context {
         let block = if args.enter_on_poll {
             quote_spanned!(block.span()=>
-                fastrace::future::FutureExt::enter_on_poll(
+                #crate_path::future::FutureExt::enter_on_poll(
                     async move { #block },
                     #name
                 )
@@ -365,8 +390,8 @@ fn gen_block(
         } else {
             quote_spanned!(block.span()=>
                 {
-                    let __span__ = fastrace::Span::enter_with_local_parent( #name ) #properties;
-                    fastrace::future::FutureExt::in_span(
+                    let __span__ = #crate_path::Span::enter_with_local_parent( #name ) #properties;
+                    #crate_path::future::FutureExt::in_span(
                         async move { #block },
                         __span__,
                     )
@@ -387,7 +412,7 @@ fn gen_block(
         }
 
         quote_spanned!(block.span()=>
-            let __guard__ = fastrace::local::LocalSpan::enter_with_local_parent( #name ) #properties;
+            let __guard__ = #crate_path::local::LocalSpan::enter_with_local_parent( #name ) #properties;
             #block
         )
     }
