@@ -38,7 +38,7 @@ fn main() {
         ConsoleReporter,
         Config::default()
             .report_interval(Duration::from_millis(10))
-            .cancelable(false),
+            .tail_sampled(false),
     );
 
     let root = Span::root("root", SpanContext::new(TraceId(0), SpanId(0)))

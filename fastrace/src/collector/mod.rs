@@ -77,7 +77,7 @@ pub struct CollectTokenItem {
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct Config {
     pub(crate) report_interval: Duration,
-    pub(crate) cancelable: bool,
+    pub(crate) tail_sampled: bool,
 }
 
 impl Config {
@@ -118,26 +118,34 @@ impl Config {
     }
 
     /// Configures whether to report spans before the root span finishes.
-    #[deprecated(since = "0.7.10", note = "Use Config::cancelable() instead.")]
+    #[deprecated(since = "0.7.10", note = "Use Config::tail_sampled() instead.")]
     pub fn report_before_root_finish(self, report_before_root_finish: bool) -> Self {
-        self.cancelable(report_before_root_finish)
+        self.tail_sampled(report_before_root_finish)
     }
 
-    /// Configures whether to report spans on the root span finish.
+    /// Configures whether to hold spans before the root span finishes.
     ///
-    /// This is useful for holding the child spans until the root span is finished to
-    /// allow for trace cancellation.
+    /// This is useful for tail sampling, where child spans are held and allow the entire trace to
+    /// be cancelled before the root span finishes.
     ///
     /// # Examples
     ///
     /// ```
     /// use fastrace::collector::Config;
+    /// use fastrace::collector::SpanContext;
     ///
-    /// let config = Config::default().cancelable(true);
+    /// let config = Config::default().tail_sampled(true);
     /// fastrace::set_reporter(fastrace::collector::ConsoleReporter, config);
+    ///
+    /// let root = fastrace::Span::root("root", SpanContext::random());
+    ///
+    /// root.cancel();
     /// ```
-    pub fn cancelable(self, cancelable: bool) -> Self {
-        Self { cancelable, ..self }
+    pub fn tail_sampled(self, tail_sampled: bool) -> Self {
+        Self {
+            tail_sampled,
+            ..self
+        }
     }
 }
 
@@ -145,7 +153,7 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             report_interval: Duration::from_millis(10),
-            cancelable: false,
+            tail_sampled: false,
         }
     }
 }

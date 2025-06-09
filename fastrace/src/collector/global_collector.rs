@@ -320,7 +320,7 @@ impl GlobalCollector {
                             trace_id: item.trace_id,
                             parent_id: item.parent_id,
                         });
-                } else if !self.config.cancelable {
+                } else if !self.config.tail_sampled {
                     stale_spans.push(SpanCollection::Owned {
                         spans,
                         trace_id: item.trace_id,
@@ -339,7 +339,7 @@ impl GlobalCollector {
                                 trace_id: item.trace_id,
                                 parent_id: item.parent_id,
                             });
-                    } else if !self.config.cancelable {
+                    } else if !self.config.tail_sampled {
                         stale_spans.push(SpanCollection::Shared {
                             spans: spans.clone(),
                             trace_id: item.trace_id,
@@ -364,7 +364,7 @@ impl GlobalCollector {
             }
         }
 
-        if !self.config.cancelable {
+        if !self.config.tail_sampled {
             for active_collector in self.active_collectors.values_mut() {
                 postprocess_span_collection(
                     active_collector.span_collections.drain(..),
