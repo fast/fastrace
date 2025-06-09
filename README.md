@@ -91,30 +91,6 @@ fn main() {
 }
 ```
 
-## Benchmarks
-
-**By different architectures:**
-
-![Benchmark result by architecture](https://raw.githubusercontent.com/fast/fastrace/refs/heads/main/etc/img/benchmark-arch.svg)
-
-|                     | x86-64 (Intel Broadwell) | x86-64 (Intel Skylake) | x86-64 (AMD Zen) | ARM (AWS Graviton2) |
-|---------------------|--------------------------|------------------------|------------------|---------------------|
-| tokio-tracing       | 124x slower              | 33x slower             | 36x slower       | 29x slower          |
-| rustracing          | 45x slower               | 10x slower             | 11x slower       | 9x slower           |
-| fastrace (baseline) | 1x (3.4us)               | 1x (3.2us)             | 1x (3.8us)       | 1x (4.2us)          |
-
-**By creating different number of spans:**
-
-![Benchmark result by number of spans](https://raw.githubusercontent.com/fast/fastrace/refs/heads/main/etc/img/benchmark-spans.svg)
-
-|                     | 1 span     | 10 spans   | 100 spans   | 1000 spans  |
-|---------------------|------------|------------|-------------|-------------|
-| tokio-tracing       | 19x slower | 61x slower | 124x slower | 151x slower |
-| rustracing          | 13x slower | 26x slower | 45x slower  | 55x slower  |
-| fastrace (baseline) | 1x (0.4us) | 1x (0.8us) | 1x (3.4us)  | 1x (27.8us) |
-
-Detailed results are available in [etc/benchmark-result](https://github.com/fast/fastrace/tree/main/etc/benchmark-result).
-
 ## Supported Rust Versions (MSRV 1.80.0)
 
 Fastrace is built against the latest stable release. The minimum supported version is 1.80.0. The current Fastrace version is not guaranteed to build on Rust versions earlier than the minimum supported version.
@@ -149,6 +125,19 @@ Feel free to open a PR and add your projects here:
 - [foyer](https://github.com/mrcroxx/foyer): Hybrid in-memory and disk cache in Rust
 - [Sail](https://github.com/lakehq/sail): Unifying stream, batch, and AI workloads with Apache Spark compatibility
 
+## Migrating from tokio-tracing
+
+If you're using the [tokio-tracing](https://github.com/tokio-rs/tracing) ecosystem and want to switch to fastrace for better performance, you can use [fastrace-tracing](https://github.com/fast/fastrace-tracing) to make the transition easier.
+
+The `fastrace-tracing` crate provides a compatibility layer that lets you capture spans from libraries instrumented with `tokio-tracing` in two lines of code:
+
+```rust
+let subscriber = tracing_subscriber::Registry::default().with(fastrace_tracing::FastraceCompatLayer::new());
+tracing::subscriber::set_global_default(subscriber).unwrap();
+```
+
+For more details, refer to the [fastrace-tracing documentation](https://docs.rs/fastrace-tracing).
+
 ## FAQ
 
 ### Why is fastrace so fast?
@@ -181,24 +170,35 @@ The concept of 'level' may not be an optimal feature for tracing systems. While 
 
 In this context, fastrace offers a more efficient solution by filtering out entire traces that are not of interest through its unique [tail-sampling](https://opentelemetry.io/blog/2022/tail-sampling/) design. Therefore, the concept of 'level', borrowed directly from logging systems, may not be suitable for fastrace.
 
-## Migrating from tokio-tracing
-
-If you're using the [tokio-tracing](https://github.com/tokio-rs/tracing) ecosystem and want to switch to fastrace for better performance, you can use [fastrace-tracing](https://github.com/fast/fastrace-tracing) to make the transition easier.
-
-The `fastrace-tracing` crate provides a compatibility layer that lets you capture spans from libraries instrumented with `tokio-tracing` in two lines of code:
-
-```rust
-let subscriber = tracing_subscriber::Registry::default().with(fastrace_tracing::FastraceCompatLayer::new());
-tracing::subscriber::set_global_default(subscriber).unwrap();
-```
-
-For more details, refer to the [fastrace-tracing documentation](https://docs.rs/fastrace-tracing).
-
 [Docs]: https://docs.rs/fastrace/
 [Examples]: https://github.com/fast/fastrace/tree/main/examples
 [OpenTelemetry]: https://opentelemetry.io/
 [Jaeger]: https://crates.io/crates/fastrace-jaeger
 [Datadog]: https://crates.io/crates/fastrace-datadog
+
+## Benchmarks
+
+**By different architectures:**
+
+![Benchmark result by architecture](https://raw.githubusercontent.com/fast/fastrace/refs/heads/main/etc/img/benchmark-arch.svg)
+
+|                     | x86-64 (Intel Broadwell) | x86-64 (Intel Skylake) | x86-64 (AMD Zen) | ARM (AWS Graviton2) |
+|---------------------|--------------------------|------------------------|------------------|---------------------|
+| tokio-tracing       | 124x slower              | 33x slower             | 36x slower       | 29x slower          |
+| rustracing          | 45x slower               | 10x slower             | 11x slower       | 9x slower           |
+| fastrace (baseline) | 1x (3.4us)               | 1x (3.2us)             | 1x (3.8us)       | 1x (4.2us)          |
+
+**By creating different number of spans:**
+
+![Benchmark result by number of spans](https://raw.githubusercontent.com/fast/fastrace/refs/heads/main/etc/img/benchmark-spans.svg)
+
+|                     | 1 span     | 10 spans   | 100 spans   | 1000 spans  |
+|---------------------|------------|------------|-------------|-------------|
+| tokio-tracing       | 19x slower | 61x slower | 124x slower | 151x slower |
+| rustracing          | 13x slower | 26x slower | 45x slower  | 55x slower  |
+| fastrace (baseline) | 1x (0.4us) | 1x (0.8us) | 1x (3.4us)  | 1x (27.8us) |
+
+Detailed results are available in [etc/benchmark-result](https://github.com/fast/fastrace/tree/main/etc/benchmark-result).
 
 ## License
 
