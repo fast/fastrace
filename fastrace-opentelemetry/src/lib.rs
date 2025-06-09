@@ -47,6 +47,12 @@ use opentelemetry_sdk::trace::SpanLinks;
 ///
 /// `OpenTelemetryReporter` exports trace records to remote agents that implements the
 /// OpenTelemetry protocol, such as Jaeger, Zipkin, etc.
+/// 
+/// ## Span Kind
+/// 
+/// The reporter automatically maps the `span.kind` property from fastrace spans to OpenTelemetry
+/// span kinds. Supported values are: "client", "server", "producer", "consumer", and "internal"
+/// (case-insensitive). If no `span.kind` property is provided, spans default to `SpanKind::Internal`.
 pub struct OpenTelemetryReporter {
     exporter: Box<dyn DynSpanExporter>,
     instrumentation_scope: InstrumentationScope,

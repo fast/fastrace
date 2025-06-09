@@ -43,7 +43,6 @@ use opentelemetry_otlp::ExportConfig;
 use opentelemetry_otlp::Protocol;
 use opentelemetry_otlp::SpanExporter;
 use opentelemetry_otlp::TonicConfig;
-use opentelemetry::trace::SpanKind;
 use opentelemetry_sdk::Resource;
 use opentelemetry::KeyValue;
 use opentelemetry::InstrumentationScope;
@@ -58,7 +57,6 @@ let reporter = OpenTelemetryReporter::new(
         .with_timeout(opentelemetry_otlp::OTEL_EXPORTER_OTLP_TIMEOUT_DEFAULT)
         .build()
         .expect("initialize oltp exporter"),
-    SpanKind::Server,
     Cow::Owned(
         Resource::builder()
             .with_attributes([KeyValue::new("service.name", "asynchronous")])
