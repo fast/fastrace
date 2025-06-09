@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## v0.12.0
+
+- Remove `SpanKind` argument from `OpenTelemetryReporter::new()`.
+- Automatically detect `SpanKind` from the `span.kind` property on spans.
+
 ## v0.11.0
 
 - Upgrade opentelemtry to 0.30.0.
