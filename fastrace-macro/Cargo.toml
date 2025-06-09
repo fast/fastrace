@@ -16,6 +16,9 @@ rust-version.workspace = true
 [lib]
 proc-macro = true
 
+[features]
+enable = []
+
 [dependencies]
 proc-macro-error2 = "2.0.1"
 proc-macro2 = "1.0"

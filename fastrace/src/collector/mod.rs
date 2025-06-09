@@ -110,7 +110,7 @@ impl Config {
     ///
     /// This is useful for tail sampling, where child spans are held and allow the entire trace to
     /// be cancelled before the root span finishes.
-    /// 
+    ///
     /// Defaults to `false`.
     ///
     /// # Examples
@@ -132,7 +132,7 @@ impl Config {
             ..self
         }
     }
-    
+
     /// Sets a soft limit for the total number of spans and events in a trace, typically
     /// used to prevent out-of-memory issues.
     ///

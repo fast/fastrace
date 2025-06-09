@@ -3,9 +3,8 @@
 //! An attribute macro designed to eliminate boilerplate code for [`fastrace`](https://crates.io/crates/fastrace).
 
 #![recursion_limit = "256"]
-// Instrumenting the async fn is not as straight forward as expected because `async_trait` rewrites
-// `async fn` into a normal fn which returns `Box<impl Future>`, and this stops the macro from
-// distinguishing `async fn` from `fn`. The following code reused the `async_trait` probes from [tokio-tracing](https://github.com/tokio-rs/tracing/blob/6a61897a5e834988ad9ac709e28c93c4dbf29116/tracing-attributes/src/expand.rs).
+#![cfg_attr(not(feature = "enable"), allow(dead_code))]
+#![cfg_attr(not(feature = "enable"), allow(unreachable_code))]
 
 #[macro_use]
 extern crate proc_macro_error2;
@@ -195,6 +194,12 @@ pub fn trace(
     args: proc_macro::TokenStream,
     item: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
+    #[cfg(not(feature = "enable"))]
+    {
+        parse_macro_input!(args as Args);
+        return item;
+    }
+
     let args = parse_macro_input!(args as Args);
     let input = parse_macro_input!(item as ItemFn);
 
