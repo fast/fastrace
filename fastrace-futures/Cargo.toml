@@ -1,6 +1,6 @@
 [package]
 name = "fastrace-futures"
-version = "0.7.9"
+version = "0.7.10"
 
 categories = ["development-tools::debugging"]
 description = "Utilities for tracing `futures` with fastrace"
