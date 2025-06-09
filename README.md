@@ -136,6 +136,7 @@ Fastrace provides integrations with popular libraries to automatically handle co
 - [fastrace-poem](https://crates.io/crates/fastrace-poem): Trace [`poem`](https://crates.io/crates/poem) HTTP services
 - [fastrace-reqwest](https://crates.io/crates/fastrace-reqwest): Trace [`reqwest`](https://crates.io/crates/reqwest) HTTP requests
 - [fastrace-tonic](https://crates.io/crates/fastrace-tonic): Trace [`tonic`](https://crates.io/crates/tonic) client and server requests
+- [fastrace-tower](https://crates.io/crates/fastrace-tower): Trace [`tower`](https://crates.io/crates/tower) client and server requests
 - [fastrace-tracing](https://crates.io/crates/fastrace-tracing): Compatibility layer for [`tracing`](https://crates.io/crates/tracing)
 
 ## Projects using fastrace

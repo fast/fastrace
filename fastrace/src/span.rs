@@ -568,15 +568,17 @@ impl Drop for Span {
     fn drop(&mut self) {
         #[cfg(feature = "enable")]
         if let Some(mut inner) = self.inner.take() {
-            let collect_id = inner.collect_id.take();
-            let collect = inner.collect.clone();
+            if inner.collect_token.iter().any(|token| token.is_sampled) {
+                let collect_id = inner.collect_id.take();
+                let collect = inner.collect.clone();
 
-            let end_instant = Instant::now();
-            inner.raw_span.end_with(end_instant);
-            inner.submit_spans();
+                let end_instant = Instant::now();
+                inner.raw_span.end_with(end_instant);
+                inner.submit_spans();
 
-            if let Some(collect_id) = collect_id {
-                collect.commit_collect(collect_id);
+                if let Some(collect_id) = collect_id {
+                    collect.commit_collect(collect_id);
+                }
             }
         }
     }
@@ -617,9 +619,11 @@ impl Drop for LocalParentGuard {
             let (spans, token) = inner.collector.collect_spans_and_token();
             debug_assert!(token.is_some());
             if let Some(token) = token {
-                inner
-                    .collect
-                    .submit_spans(SpanSet::LocalSpansInner(spans), token);
+                if token.iter().any(|token| token.is_sampled) {
+                    inner
+                        .collect
+                        .submit_spans(SpanSet::LocalSpansInner(spans), token);
+                }
             }
         }
     }
