@@ -14,7 +14,7 @@ repository.workspace = true
 rust-version.workspace = true
 
 [features]
-enable = []
+enable = ["fastrace-macro/enable"]
 
 [dependencies]
 fastant = "0.1"
