@@ -108,7 +108,6 @@ impl ReportAll {
                     .with_timeout(opentelemetry_otlp::OTEL_EXPORTER_OTLP_TIMEOUT_DEFAULT)
                     .build()
                     .expect("initialize oltp exporter"),
-                opentelemetry::trace::SpanKind::Server,
                 Cow::Owned(
                     opentelemetry_sdk::Resource::builder()
                         .with_attributes([opentelemetry::KeyValue::new(

@@ -47,9 +47,15 @@ use opentelemetry_sdk::trace::SpanLinks;
 ///
 /// `OpenTelemetryReporter` exports trace records to remote agents that implements the
 /// OpenTelemetry protocol, such as Jaeger, Zipkin, etc.
+///
+/// ## Span Kind
+///
+/// The reporter automatically maps the `span.kind` property from fastrace spans to OpenTelemetry
+/// span kinds. Supported values are: "client", "server", "producer", "consumer", and "internal"
+/// (case-insensitive). If no `span.kind` property is provided, spans default to
+/// `SpanKind::Internal`.
 pub struct OpenTelemetryReporter {
     exporter: Box<dyn DynSpanExporter>,
-    span_kind: SpanKind,
     instrumentation_scope: InstrumentationScope,
 }
 
@@ -99,14 +105,12 @@ impl<T: SpanExporter> DynSpanExporter for T {
 impl OpenTelemetryReporter {
     pub fn new(
         mut exporter: impl SpanExporter + 'static,
-        span_kind: SpanKind,
         resource: Cow<'static, Resource>,
         instrumentation_scope: InstrumentationScope,
     ) -> Self {
         exporter.set_resource(&resource);
         OpenTelemetryReporter {
             exporter: Box::new(exporter),
-            span_kind,
             instrumentation_scope,
         }
     }
@@ -133,7 +137,7 @@ impl OpenTelemetryReporter {
                         TraceState::default(),
                     );
                     let parent_span_id = parent_id.0.into();
-                    let span_kind = self.span_kind.clone();
+                    let span_kind = span_kind(&properties);
                     let instrumentation_scope = self.instrumentation_scope.clone();
                     let start_time =
                         SystemTime::UNIX_EPOCH + Duration::from_nanos(begin_time_unix_ns);
@@ -177,4 +181,19 @@ impl Reporter for OpenTelemetryReporter {
             log::error!("failed to report to opentelemetry: {err}");
         }
     }
+}
+
+fn span_kind(properties: &[(Cow<'static, str>, Cow<'static, str>)]) -> SpanKind {
+    properties
+        .iter()
+        .find(|(k, _)| k == "span.kind")
+        .and_then(|(_, v)| match v.to_lowercase().as_str() {
+            "client" => Some(SpanKind::Client),
+            "server" => Some(SpanKind::Server),
+            "producer" => Some(SpanKind::Producer),
+            "consumer" => Some(SpanKind::Consumer),
+            "internal" => Some(SpanKind::Internal),
+            _ => None,
+        })
+        .unwrap_or(SpanKind::Internal)
 }
