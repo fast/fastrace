@@ -496,12 +496,7 @@ fn amend_local_span(
     anchor: &Anchor,
 ) {
     for span in local_spans.spans.iter() {
-        let parent_id = if span.parent_id == SpanId::default() {
-            parent_id
-        } else {
-            span.parent_id
-        };
-
+        let parent_id = span.parent_id.unwrap_or(parent_id);
         match span.raw_kind {
             RawKind::Span => {
                 let begin_time_unix_ns = span.begin_instant.as_unix_nanos(anchor);

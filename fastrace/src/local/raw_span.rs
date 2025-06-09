@@ -17,7 +17,7 @@ pub enum RawKind {
 #[derive(Debug)]
 pub struct RawSpan {
     pub id: SpanId,
-    pub parent_id: SpanId,
+    pub parent_id: Option<SpanId>,
     pub begin_instant: Instant,
     pub name: Cow<'static, str>,
     pub properties: Option<Properties>,
@@ -31,7 +31,7 @@ impl RawSpan {
     #[inline]
     pub(crate) fn begin_with(
         id: SpanId,
-        parent_id: SpanId,
+        parent_id: Option<SpanId>,
         begin_instant: Instant,
         name: impl Into<Cow<'static, str>>,
         raw_kind: RawKind,

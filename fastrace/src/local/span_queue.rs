@@ -38,7 +38,7 @@ impl SpanQueue {
 
         let span = RawSpan::begin_with(
             SpanId::next_id(),
-            self.next_parent_id.unwrap_or_default(),
+            self.next_parent_id,
             Instant::now(),
             name,
             RawKind::Span,
@@ -62,7 +62,7 @@ impl SpanQueue {
         let span = &mut self.span_queue[span_handle.index];
         span.end_with(Instant::now());
 
-        self.next_parent_id = Some(span.parent_id).filter(|id| *id != SpanId::default());
+        self.next_parent_id = span.parent_id;
     }
 
     #[inline]
@@ -73,7 +73,7 @@ impl SpanQueue {
 
         let mut span = RawSpan::begin_with(
             SpanId::next_id(),
-            self.next_parent_id.unwrap_or_default(),
+            self.next_parent_id,
             Instant::now(),
             event.name,
             RawKind::Event,
@@ -96,7 +96,7 @@ impl SpanQueue {
 
         let mut span = RawSpan::begin_with(
             SpanId::next_id(),
-            self.next_parent_id.unwrap_or_default(),
+            self.next_parent_id,
             Instant::ZERO,
             Cow::Borrowed(""),
             RawKind::Properties,
