@@ -103,10 +103,7 @@ impl Tree {
     }
 
     /// Return a vector of collect id -> Tree
-    pub fn from_span_sets(
-        span_sets: &[(SpanSet, CollectToken)],
-        root: SpanId,
-    ) -> Vec<(usize, Tree)> {
+    pub fn from_span_sets(span_sets: &[(SpanSet, CollectToken)]) -> Vec<(usize, Tree)> {
         let mut collect = HashMap::<
             usize,
             HashMap<
@@ -125,7 +122,7 @@ impl Tree {
                 collect
                     .entry(item.collect_id)
                     .or_default()
-                    .insert(Some(root), ("".into(), vec![], vec![], vec![]));
+                    .insert(Some(SpanId(0)), ("".into(), vec![], vec![], vec![]));
                 match span_set {
                     SpanSet::Span(span) => {
                         collect.entry(item.collect_id).or_default().insert(
@@ -242,7 +239,7 @@ impl Tree {
         let mut res = collect
             .into_iter()
             .map(|(id, mut children)| {
-                let mut tree = Self::build_tree(Some(root), &mut children);
+                let mut tree = Self::build_tree(Some(SpanId(0)), &mut children);
                 tree.sort();
                 assert_eq!(tree.children.len(), 1);
                 (id, tree.children.pop().unwrap())
@@ -252,10 +249,10 @@ impl Tree {
         res
     }
 
-    pub fn from_span_records(span_records: Vec<SpanRecord>, root: SpanId) -> Tree {
+    pub fn from_span_records(span_records: Vec<SpanRecord>) -> Tree {
         let mut children: TreeChildren = HashMap::new();
 
-        children.insert(Some(root), ("".into(), vec![], vec![], vec![]));
+        children.insert(Some(SpanId(0)), ("".into(), vec![], vec![], vec![]));
         for span in &span_records {
             children.insert(
                 Some(span.span_id),
@@ -290,7 +287,7 @@ impl Tree {
                 .push(span.span_id);
         }
 
-        let mut t = Self::build_tree(Some(root), &mut children);
+        let mut t = Self::build_tree(Some(SpanId(0)), &mut children);
         t.sort();
         assert_eq!(t.children.len(), 1);
         t.children.remove(0)
@@ -318,14 +315,14 @@ pub fn tree_str_from_raw_spans(raw_spans: RawSpans) -> String {
         .join("")
 }
 
-pub fn tree_str_from_span_sets(span_sets: &[(SpanSet, CollectToken)], root: SpanId) -> String {
-    Tree::from_span_sets(span_sets, root)
+pub fn tree_str_from_span_sets(span_sets: &[(SpanSet, CollectToken)]) -> String {
+    Tree::from_span_sets(span_sets)
         .iter()
         .map(|(id, t)| format!("\n#{id}\n{t}"))
         .collect::<Vec<_>>()
         .join("")
 }
 
-pub fn tree_str_from_span_records(span_records: Vec<SpanRecord>, root: SpanId) -> String {
-    format!("\n{}", Tree::from_span_records(span_records, root))
+pub fn tree_str_from_span_records(span_records: Vec<SpanRecord>) -> String {
+    format!("\n{}", Tree::from_span_records(span_records))
 }

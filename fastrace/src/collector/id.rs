@@ -169,7 +169,7 @@ impl SpanContext {
     pub fn random() -> Self {
         Self {
             trace_id: TraceId::random(),
-            span_id: SpanId::random(),
+            span_id: SpanId(0),
             sampled: true,
         }
     }

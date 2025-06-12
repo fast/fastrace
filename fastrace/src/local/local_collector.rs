@@ -326,11 +326,11 @@ span1 []
 
         let local_spans: LocalSpans = collector.collect();
 
-        let parent_context = SpanContext::new(TraceId(12), SpanId(34));
+        let parent_context = SpanContext::random();
         let span_records = local_spans.to_span_records(parent_context);
 
         assert_eq!(
-            tree_str_from_span_records(span_records, SpanId(34)),
+            tree_str_from_span_records(span_records),
             r#"
 span1 [("k1", "v1")]
     span2 [("k2", "v2")]
