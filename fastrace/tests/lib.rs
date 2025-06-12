@@ -42,7 +42,7 @@ fn single_thread_single_span() {
     fastrace::set_reporter(reporter, Config::default());
 
     {
-        let root = Span::root("root", SpanContext::new(TraceId(12), SpanId(34)));
+        let root = Span::root("root", SpanContext::random());
         let _g = root.set_local_parent();
 
         four_spans();
@@ -50,7 +50,7 @@ fn single_thread_single_span() {
 
     fastrace::flush();
 
-    let graph = tree_str_from_span_records(collected_spans.lock().clone(), SpanId(34));
+    let graph = tree_str_from_span_records(collected_spans.lock().clone());
     insta::assert_snapshot!(graph, @r###"
     root []
         iter-span-0 [("tmp_property", "tmp_value")]
@@ -67,9 +67,9 @@ fn single_thread_multiple_spans() {
     fastrace::set_reporter(reporter, Config::default());
 
     {
-        let root1 = Span::root("root1", SpanContext::new(TraceId(12), SpanId(42)));
-        let root2 = Span::root("root2", SpanContext::new(TraceId(13), SpanId(42)));
-        let root3 = Span::root("root3", SpanContext::new(TraceId(14), SpanId(42)));
+        let root1 = Span::root("root1", SpanContext::new(TraceId(12), SpanId(0)));
+        let root2 = Span::root("root2", SpanContext::new(TraceId(13), SpanId(0)));
+        let root3 = Span::root("root3", SpanContext::new(TraceId(14), SpanId(0)));
 
         let local_collector = LocalCollector::start();
 
@@ -91,7 +91,6 @@ fn single_thread_multiple_spans() {
             .filter(|s| s.trace_id == TraceId(12))
             .cloned()
             .collect(),
-        SpanId(42),
     );
     insta::assert_snapshot!(graph1, @r###"
     root1 []
@@ -108,7 +107,6 @@ fn single_thread_multiple_spans() {
             .filter(|s| s.trace_id == TraceId(13))
             .cloned()
             .collect(),
-        SpanId(42),
     );
     insta::assert_snapshot!(graph2, @r###"
     root2 []
@@ -125,7 +123,6 @@ fn single_thread_multiple_spans() {
             .filter(|s| s.trace_id == TraceId(14))
             .cloned()
             .collect(),
-        SpanId(42),
     );
     insta::assert_snapshot!(graph3, @r###"
     root3 []
@@ -143,7 +140,7 @@ fn multiple_threads_single_span() {
     fastrace::set_reporter(reporter, Config::default());
 
     crossbeam::scope(|scope| {
-        let root = Span::root("root", SpanContext::new(TraceId(12), SpanId(34)));
+        let root = Span::root("root", SpanContext::random());
         let _g = root.set_local_parent();
 
         let mut handles = vec![];
@@ -165,7 +162,7 @@ fn multiple_threads_single_span() {
 
     fastrace::flush();
 
-    let graph = tree_str_from_span_records(collected_spans.lock().clone(), SpanId(34));
+    let graph = tree_str_from_span_records(collected_spans.lock().clone());
     insta::assert_snapshot!(graph, @r###"
     root []
         cross-thread []
@@ -202,8 +199,8 @@ fn multiple_threads_multiple_spans() {
     fastrace::set_reporter(reporter, Config::default());
 
     crossbeam::scope(|scope| {
-        let root1 = Span::root("root1", SpanContext::new(TraceId(12), SpanId(42)));
-        let root2 = Span::root("root2", SpanContext::new(TraceId(13), SpanId(42)));
+        let root1 = Span::root("root1", SpanContext::new(TraceId(12), SpanId(0)));
+        let root2 = Span::root("root2", SpanContext::new(TraceId(13), SpanId(0)));
         let local_collector = LocalCollector::start();
 
         let mut handles = vec![];
@@ -243,7 +240,6 @@ fn multiple_threads_multiple_spans() {
             .filter(|s| s.trace_id == TraceId(12))
             .cloned()
             .collect(),
-        SpanId(42),
     );
     insta::assert_snapshot!(graph1, @r###"
     root1 []
@@ -284,7 +280,6 @@ fn multiple_threads_multiple_spans() {
             .filter(|s| s.trace_id == TraceId(13))
             .cloned()
             .collect(),
-        SpanId(42),
     );
     insta::assert_snapshot!(graph2, @r###"
     root2 []
@@ -423,7 +418,7 @@ fn test_macro() {
     fastrace::set_reporter(reporter, Config::default());
 
     {
-        let root = Span::root("root", SpanContext::new(TraceId(12), SpanId(34)));
+        let root = Span::root("root", SpanContext::random());
 
         let runtime = Builder::new_multi_thread()
             .worker_threads(4)
@@ -446,7 +441,7 @@ fn test_macro() {
 
     fastrace::flush();
 
-    let graph = tree_str_from_span_records(collected_spans.lock().clone(), SpanId(34));
+    let graph = tree_str_from_span_records(collected_spans.lock().clone());
     insta::assert_snapshot!(graph, @r###"
     root []
         run []
@@ -497,7 +492,7 @@ fn macro_example() {
     fastrace::set_reporter(reporter, Config::default());
 
     {
-        let root = Span::root("root", SpanContext::new(TraceId(12), SpanId(34)));
+        let root = Span::root("root", SpanContext::random());
         let _g = root.set_local_parent();
         do_something(100);
         pollster::block_on(do_something_async(100));
@@ -507,7 +502,7 @@ fn macro_example() {
 
     fastrace::flush();
 
-    let graph = tree_str_from_span_records(collected_spans.lock().clone(), SpanId(34));
+    let graph = tree_str_from_span_records(collected_spans.lock().clone());
     insta::assert_snapshot!(graph,@r###"
     root []
         do_something_async_short_name []
@@ -524,7 +519,7 @@ fn multiple_local_parent() {
     fastrace::set_reporter(reporter, Config::default());
 
     {
-        let root = Span::root("root", SpanContext::new(TraceId(12), SpanId(34)));
+        let root = Span::root("root", SpanContext::random());
         let _g = root.set_local_parent();
         let _g = LocalSpan::enter_with_local_parent("span1");
         let span2 = Span::enter_with_local_parent("span2");
@@ -537,7 +532,7 @@ fn multiple_local_parent() {
 
     fastrace::flush();
 
-    let graph = tree_str_from_span_records(collected_spans.lock().clone(), SpanId(34));
+    let graph = tree_str_from_span_records(collected_spans.lock().clone());
     insta::assert_snapshot!(graph, @r###"
     root []
         span1 []
@@ -560,13 +555,13 @@ fn early_local_collect() {
         drop(_g2);
         let local_spans = local_collector.collect();
 
-        let root = Span::root("root", SpanContext::new(TraceId(12), SpanId(34)));
+        let root = Span::root("root", SpanContext::random());
         root.push_child_spans(local_spans);
     }
 
     fastrace::flush();
 
-    let graph = tree_str_from_span_records(collected_spans.lock().clone(), SpanId(34));
+    let graph = tree_str_from_span_records(collected_spans.lock().clone());
     insta::assert_snapshot!(graph, @r###"
     root []
         span1 []
@@ -580,7 +575,7 @@ fn test_elapsed() {
     fastrace::set_reporter(ConsoleReporter, Config::default());
 
     {
-        let root = Span::root("root", SpanContext::new(TraceId(12), SpanId(34)));
+        let root = Span::root("root", SpanContext::random());
 
         std::thread::sleep(Duration::from_millis(50));
 
@@ -597,7 +592,7 @@ fn test_property() {
     fastrace::set_reporter(reporter, Config::default());
 
     {
-        let root = Span::root("root", SpanContext::new(TraceId(12), SpanId(34)))
+        let root = Span::root("root", SpanContext::random())
             .with_property(|| ("k1", "v1"))
             .with_properties(|| [("k2", "v2"), ("k3", "v3")]);
         root.add_property(|| ("k4", "v4"));
@@ -614,7 +609,7 @@ fn test_property() {
 
     fastrace::flush();
 
-    let graph = tree_str_from_span_records(collected_spans.lock().clone(), SpanId(34));
+    let graph = tree_str_from_span_records(collected_spans.lock().clone());
     insta::assert_snapshot!(graph, @r###"
     root [("k1", "v1"), ("k2", "v2"), ("k3", "v3"), ("k4", "v4"), ("k5", "v5"), ("k6", "v6"), ("k7", "v7"), ("k8", "v8"), ("k9", "v9")]
         span [("k10", "v10"), ("k11", "v11"), ("k12", "v12"), ("k13", "v13"), ("k14", "v14"), ("k15", "v15")]
@@ -628,7 +623,7 @@ fn test_event() {
     fastrace::set_reporter(reporter, Config::default());
 
     {
-        let root = Span::root("root", SpanContext::new(TraceId(12), SpanId(34)));
+        let root = Span::root("root", SpanContext::random());
         root.add_event(
             Event::new("event1 in root")
                 .with_property(|| ("k1", "v1"))
@@ -650,7 +645,7 @@ fn test_event() {
 
     fastrace::flush();
 
-    let graph = tree_str_from_span_records(collected_spans.lock().clone(), SpanId(34));
+    let graph = tree_str_from_span_records(collected_spans.lock().clone());
     insta::assert_snapshot!(graph, @r###"
     root [] [("event1 in root", [("k1", "v1"), ("k2", "v2"), ("k3", "v3")]), ("event2 in root", [("k4", "v4"), ("k5", "v5"), ("k6", "v6")])]
         span [] [("event3 in span", [("k7", "v7"), ("k8", "v8"), ("k9", "v9")])]
@@ -685,7 +680,7 @@ fn test_macro_properties() {
     fastrace::set_reporter(reporter, Config::default());
 
     {
-        let root = Span::root("root", SpanContext::new(TraceId(12), SpanId(34)));
+        let root = Span::root("root", SpanContext::random());
         let _g = root.set_local_parent();
         foo(1, &Bar, Bar);
         bar();
@@ -710,7 +705,7 @@ fn test_macro_properties() {
 
     fastrace::flush();
 
-    let graph = tree_str_from_span_records(collected_spans.lock().clone(), SpanId(34));
+    let graph = tree_str_from_span_records(collected_spans.lock().clone());
     insta::assert_snapshot!(graph, @r###"
     root []
         bar []
@@ -726,16 +721,13 @@ fn test_not_sampled() {
     let (reporter, collected_spans) = TestReporter::new();
     fastrace::set_reporter(reporter, Config::default());
     {
-        let root = Span::root(
-            "root",
-            SpanContext::new(TraceId(12), SpanId(34)).sampled(true),
-        );
+        let root = Span::root("root", SpanContext::random().sampled(true));
         let _g = root.set_local_parent();
         let _span = LocalSpan::enter_with_local_parent("span");
     }
     fastrace::flush();
 
-    let graph = tree_str_from_span_records(collected_spans.lock().clone(), SpanId(34));
+    let graph = tree_str_from_span_records(collected_spans.lock().clone());
     insta::assert_snapshot!(graph,@r###"
     root []
         span []
@@ -744,10 +736,7 @@ fn test_not_sampled() {
     let (reporter, collected_spans) = TestReporter::new();
     fastrace::set_reporter(reporter, Config::default());
     {
-        let root = Span::root(
-            "root",
-            SpanContext::new(TraceId(12), SpanId(34)).sampled(false),
-        );
+        let root = Span::root("root", SpanContext::random().sampled(false));
         let _g = root.set_local_parent();
         let _span = LocalSpan::enter_with_local_parent("span");
     }

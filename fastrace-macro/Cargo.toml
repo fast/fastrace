@@ -1,6 +1,6 @@
 [package]
 name = "fastrace-macro"
-version = "0.7.10"
+version = "0.7.11"
 
 categories = ["development-tools::debugging"]
 description = "Attribute procedural macro for fastrace"
