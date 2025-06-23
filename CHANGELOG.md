@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Span propagate trace context no matter the reporter is set or not.
+- Propagate trace context no matter the reporter is set or not.
 
 ## v0.7.10
 
