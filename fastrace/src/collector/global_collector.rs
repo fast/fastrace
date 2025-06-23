@@ -4,7 +4,6 @@ use std::borrow::Cow;
 use std::cell::UnsafeCell;
 use std::collections::HashMap;
 use std::sync::Arc;
-use std::sync::atomic::AtomicBool;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
 
@@ -35,7 +34,6 @@ use crate::util::spsc::{self};
 static NEXT_COLLECT_ID: AtomicUsize = AtomicUsize::new(0);
 static GLOBAL_COLLECTOR: Mutex<Option<GlobalCollector>> = Mutex::new(None);
 static SPSC_RXS: Mutex<Vec<Receiver<CollectCommand>>> = Mutex::new(Vec::new());
-static REPORTER_READY: AtomicBool = AtomicBool::new(false);
 
 pub const NOT_SAMPLED_COLLECT_ID: usize = usize::MAX;
 
@@ -77,12 +75,7 @@ pub fn set_reporter(reporter: impl Reporter, config: Config) {
     #[cfg(feature = "enable")]
     {
         GlobalCollector::start(reporter, config);
-        REPORTER_READY.store(true, Ordering::Relaxed);
     }
-}
-
-pub(crate) fn reporter_ready() -> bool {
-    REPORTER_READY.load(Ordering::Relaxed)
 }
 
 /// Flushes all pending span records to the reporter immediately.
