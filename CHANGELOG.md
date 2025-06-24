@@ -2,7 +2,13 @@
 
 ## Unreleased
 
+## v0.7.12
+
 - Propagate trace context no matter the reporter is set or not.
+
+## v0.7.12
+
+- Fix the issue that`SpanContext::random()` returns a non-zero parent id.
 
 ## v0.7.10
 
