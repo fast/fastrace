@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Propagate trace context no matter the reporter is set or not.
+
 ## v0.7.10
 
 - `TraceContext::random()` now returns a `TraceContext` with random `TraceId` and `SpanId`.

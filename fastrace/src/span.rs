@@ -15,7 +15,6 @@ use crate::collector::SpanContext;
 use crate::collector::SpanId;
 use crate::collector::SpanSet;
 use crate::collector::global_collector::NOT_SAMPLED_COLLECT_ID;
-use crate::collector::global_collector::reporter_ready;
 use crate::local::LocalCollector;
 use crate::local::LocalSpans;
 use crate::local::local_collector::LocalSpansInner;
@@ -81,10 +80,6 @@ impl Span {
 
         #[cfg(feature = "enable")]
         {
-            if !reporter_ready() {
-                return Self::noop();
-            }
-
             let collect_id = if parent.sampled {
                 current_collect().start_collect()
             } else {
