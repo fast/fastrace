@@ -41,11 +41,11 @@ static REPORT_INTERVAL: AtomicU64 = AtomicU64::new(0);
 static REPORTER_READY: AtomicBool = AtomicBool::new(false);
 
 pub const NOT_SAMPLED_COLLECT_ID: usize = usize::MAX;
-const CHANNLE_SIZE: usize = 10240;
+const CHANNEL_SIZE: usize = 10240;
 
 thread_local! {
     static COMMAND_SENDER: UnsafeCell<Sender<CollectCommand>> = {
-        let (tx, rx) = spsc::bounded(CHANNLE_SIZE);
+        let (tx, rx) = spsc::bounded(CHANNEL_SIZE);
         register_receiver(rx);
         UnsafeCell::new(tx)
     };
