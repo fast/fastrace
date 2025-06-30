@@ -458,7 +458,7 @@ fn postprocess_span_collection<'a>(
                 parent_id,
             } => match spans {
                 SpanSet::Span(raw_span) => amend_span(
-                    &raw_span,
+                    raw_span,
                     *trace_id,
                     *parent_id,
                     committed_records,
@@ -466,7 +466,7 @@ fn postprocess_span_collection<'a>(
                     anchor,
                 ),
                 SpanSet::LocalSpansInner(local_spans) => amend_local_span(
-                    &local_spans,
+                    local_spans,
                     *trace_id,
                     *parent_id,
                     committed_records,
@@ -474,7 +474,7 @@ fn postprocess_span_collection<'a>(
                     anchor,
                 ),
                 SpanSet::SharedLocalSpans(local_spans) => amend_local_span(
-                    &local_spans,
+                    local_spans,
                     *trace_id,
                     *parent_id,
                     committed_records,
