@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Fix memory leak when reporter is not set.
+
 ## v0.7.12
 
 - Propagate trace context no matter the reporter is set or not.
