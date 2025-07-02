@@ -4,8 +4,11 @@ use std::borrow::Cow;
 use std::cell::UnsafeCell;
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::AtomicU64;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
+use std::time::Duration;
 
 use fastant::Anchor;
 use fastant::Instant;
@@ -34,12 +37,15 @@ use crate::util::spsc::{self};
 static NEXT_COLLECT_ID: AtomicUsize = AtomicUsize::new(0);
 static GLOBAL_COLLECTOR: Mutex<Option<GlobalCollector>> = Mutex::new(None);
 static SPSC_RXS: Mutex<Vec<Receiver<CollectCommand>>> = Mutex::new(Vec::new());
+static REPORT_INTERVAL: AtomicU64 = AtomicU64::new(0);
+static REPORTER_READY: AtomicBool = AtomicBool::new(false);
 
 pub const NOT_SAMPLED_COLLECT_ID: usize = usize::MAX;
+const CHANNEL_SIZE: usize = 10240;
 
 thread_local! {
     static COMMAND_SENDER: UnsafeCell<Sender<CollectCommand>> = {
-        let (tx, rx) = spsc::bounded(10240);
+        let (tx, rx) = spsc::bounded(CHANNEL_SIZE);
         register_receiver(rx);
         UnsafeCell::new(tx)
     };
@@ -50,15 +56,27 @@ fn register_receiver(rx: Receiver<CollectCommand>) {
 }
 
 fn send_command(cmd: CollectCommand) {
+    if !reporter_ready() {
+        return;
+    }
+
     COMMAND_SENDER
         .try_with(|sender| unsafe { (*sender.get()).send(cmd).ok() })
         .ok();
 }
 
 fn force_send_command(cmd: CollectCommand) {
+    if !reporter_ready() {
+        return;
+    }
+
     COMMAND_SENDER
         .try_with(|sender| unsafe { (*sender.get()).force_send(cmd) })
         .ok();
+}
+
+fn reporter_ready() -> bool {
+    REPORTER_READY.load(Ordering::Relaxed)
 }
 
 /// Sets the reporter and its configuration for the current application.
@@ -186,6 +204,15 @@ enum SpanCollection {
     },
 }
 
+impl SpanCollection {
+    fn trace_id(&self) -> TraceId {
+        match self {
+            SpanCollection::Owned { trace_id, .. } => *trace_id,
+            SpanCollection::Shared { trace_id, .. } => *trace_id,
+        }
+    }
+}
+
 #[derive(Default)]
 struct ActiveCollector {
     span_collections: Vec<SpanCollection>,
@@ -209,37 +236,45 @@ pub(crate) struct GlobalCollector {
 
 impl GlobalCollector {
     fn start(reporter: impl Reporter, config: Config) {
-        let global_collector = GlobalCollector {
-            config,
-            reporter: Some(Box::new(reporter)),
+        REPORT_INTERVAL.store(config.report_interval.as_nanos() as u64, Ordering::Relaxed);
+        REPORTER_READY.store(true, Ordering::Relaxed);
 
-            active_collectors: HashMap::new(),
+        let mut global_collector = GLOBAL_COLLECTOR.lock();
 
-            start_collects: vec![],
-            drop_collects: vec![],
-            commit_collects: vec![],
-            submit_spans: vec![],
-            stale_spans: vec![],
-        };
+        if let Some(collector) = global_collector.as_mut() {
+            collector.reporter = Some(Box::new(reporter));
+            collector.config = config;
+        } else {
+            *global_collector = Some(GlobalCollector {
+                config,
+                reporter: Some(Box::new(reporter)),
 
-        *GLOBAL_COLLECTOR.lock() = Some(global_collector);
+                active_collectors: HashMap::new(),
 
-        #[cfg(not(target_family = "wasm"))]
-        {
-            std::thread::Builder::new()
-                .name("fastrace-global-collector".to_string())
-                .spawn(move || {
-                    loop {
-                        let begin_instant = Instant::now();
-                        GLOBAL_COLLECTOR.lock().as_mut().unwrap().handle_commands();
-                        std::thread::sleep(
-                            config
-                                .report_interval
-                                .saturating_sub(begin_instant.elapsed()),
-                        );
-                    }
-                })
-                .unwrap();
+                start_collects: vec![],
+                drop_collects: vec![],
+                commit_collects: vec![],
+                submit_spans: vec![],
+                stale_spans: vec![],
+            });
+
+            #[cfg(not(target_family = "wasm"))]
+            {
+                std::thread::Builder::new()
+                    .name("fastrace-global-collector".to_string())
+                    .spawn(move || {
+                        loop {
+                            let begin_instant = Instant::now();
+                            GLOBAL_COLLECTOR.lock().as_mut().unwrap().handle_commands();
+                            let report_interval =
+                                Duration::from_nanos(REPORT_INTERVAL.load(Ordering::Relaxed));
+                            std::thread::sleep(
+                                report_interval.saturating_sub(begin_instant.elapsed()),
+                            );
+                        }
+                    })
+                    .unwrap();
+            }
         }
     }
 
@@ -349,7 +384,7 @@ impl GlobalCollector {
         for CommitCollect { collect_id } in commit_collects.drain(..) {
             if let Some(mut active_collector) = self.active_collectors.remove(&collect_id) {
                 postprocess_span_collection(
-                    active_collector.span_collections,
+                    &active_collector.span_collections,
                     &anchor,
                     &mut committed_records,
                     &mut active_collector.danglings,
@@ -360,17 +395,20 @@ impl GlobalCollector {
         if !self.config.tail_sampled {
             for active_collector in self.active_collectors.values_mut() {
                 postprocess_span_collection(
-                    active_collector.span_collections.drain(..),
+                    &active_collector.span_collections,
                     &anchor,
                     &mut committed_records,
                     &mut active_collector.danglings,
                 );
+                active_collector.span_collections.clear();
             }
         }
 
-        for spans in stale_spans.drain(..) {
+        stale_spans.sort_by_key(|spans| spans.trace_id());
+
+        for spans in stale_spans.chunk_by(|a, b| a.trace_id() == b.trace_id()) {
             postprocess_span_collection(
-                [spans],
+                spans,
                 &anchor,
                 &mut committed_records,
                 &mut HashMap::new(),
@@ -404,8 +442,8 @@ enum DanglingItem {
     Properties(Vec<(Cow<'static, str>, Cow<'static, str>)>),
 }
 
-fn postprocess_span_collection(
-    span_collections: impl IntoIterator<Item = SpanCollection>,
+fn postprocess_span_collection<'a>(
+    span_collections: impl IntoIterator<Item = &'a SpanCollection>,
     anchor: &Anchor,
     committed_records: &mut Vec<SpanRecord>,
     danglings: &mut HashMap<SpanId, Vec<DanglingItem>>,
@@ -420,25 +458,25 @@ fn postprocess_span_collection(
                 parent_id,
             } => match spans {
                 SpanSet::Span(raw_span) => amend_span(
-                    &raw_span,
-                    trace_id,
-                    parent_id,
+                    raw_span,
+                    *trace_id,
+                    *parent_id,
                     committed_records,
                     danglings,
                     anchor,
                 ),
                 SpanSet::LocalSpansInner(local_spans) => amend_local_span(
-                    &local_spans,
-                    trace_id,
-                    parent_id,
+                    local_spans,
+                    *trace_id,
+                    *parent_id,
                     committed_records,
                     danglings,
                     anchor,
                 ),
                 SpanSet::SharedLocalSpans(local_spans) => amend_local_span(
-                    &local_spans,
-                    trace_id,
-                    parent_id,
+                    local_spans,
+                    *trace_id,
+                    *parent_id,
                     committed_records,
                     danglings,
                     anchor,
@@ -448,27 +486,27 @@ fn postprocess_span_collection(
                 spans,
                 trace_id,
                 parent_id,
-            } => match &*spans {
+            } => match &**spans {
                 SpanSet::Span(raw_span) => amend_span(
                     raw_span,
-                    trace_id,
-                    parent_id,
+                    *trace_id,
+                    *parent_id,
                     committed_records,
                     danglings,
                     anchor,
                 ),
                 SpanSet::LocalSpansInner(local_spans) => amend_local_span(
                     local_spans,
-                    trace_id,
-                    parent_id,
+                    *trace_id,
+                    *parent_id,
                     committed_records,
                     danglings,
                     anchor,
                 ),
                 SpanSet::SharedLocalSpans(local_spans) => amend_local_span(
                     local_spans,
-                    trace_id,
-                    parent_id,
+                    *trace_id,
+                    *parent_id,
                     committed_records,
                     danglings,
                     anchor,

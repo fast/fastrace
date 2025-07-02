@@ -13,7 +13,7 @@ thread_local! {
 }
 
 /// An identifier for a trace, which groups a set of related spans together.
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, Default)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct TraceId(pub u128);
 
 impl TraceId {
@@ -61,7 +61,7 @@ impl<'de> serde::Deserialize<'de> for TraceId {
 }
 
 /// An identifier for a span within a trace.
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, Default)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct SpanId(pub u64);
 
 impl SpanId {
