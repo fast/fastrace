@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## v0.7.13
+
 - Fix memory leak when reporter is not set.
 
 ## v0.7.12

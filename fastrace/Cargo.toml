@@ -1,6 +1,6 @@
 [package]
 name = "fastrace"
-version = "0.7.12"
+version = "0.7.13"
 
 categories = ["development-tools::debugging"]
 description = "A high-performance timeline tracing library for Rust"

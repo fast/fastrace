@@ -353,7 +353,7 @@ name = "example"
 version = "0.0.0"
 dependencies = [
  "anyhow",
- "fastrace 0.7.12",
+ "fastrace 0.7.13",
  "fastrace-datadog",
  "fastrace-jaeger",
  "fastrace-opentelemetry",
@@ -394,14 +394,14 @@ dependencies = [
 
 [[package]]
 name = "fastrace"
-version = "0.7.12"
+version = "0.7.13"
 dependencies = [
  "async-trait",
  "crossbeam",
  "divan",
  "fastant",
- "fastrace 0.7.12",
- "fastrace-macro 0.7.12",
+ "fastrace 0.7.13",
+ "fastrace-macro 0.7.13",
  "fastrace-opentelemetry",
  "flume",
  "futures-timer",
@@ -425,9 +425,9 @@ dependencies = [
 
 [[package]]
 name = "fastrace-datadog"
-version = "0.7.12"
+version = "0.7.13"
 dependencies = [
- "fastrace 0.7.12",
+ "fastrace 0.7.13",
  "log",
  "reqwest",
  "rmp-serde",
@@ -436,10 +436,10 @@ dependencies = [
 
 [[package]]
 name = "fastrace-futures"
-version = "0.7.12"
+version = "0.7.13"
 dependencies = [
  "async-stream",
- "fastrace 0.7.12",
+ "fastrace 0.7.13",
  "futures",
  "futures-core",
  "futures-sink",
@@ -449,9 +449,9 @@ dependencies = [
 
 [[package]]
 name = "fastrace-jaeger"
-version = "0.7.12"
+version = "0.7.13"
 dependencies = [
- "fastrace 0.7.12",
+ "fastrace 0.7.13",
  "log",
  "thrift_codec",
 ]
@@ -470,9 +470,9 @@ dependencies = [
 
 [[package]]
 name = "fastrace-macro"
-version = "0.7.12"
+version = "0.7.13"
 dependencies = [
- "fastrace 0.7.12",
+ "fastrace 0.7.13",
  "proc-macro-error2",
  "proc-macro2",
  "quote",
@@ -483,7 +483,7 @@ dependencies = [
 name = "fastrace-opentelemetry"
 version = "0.12.0"
 dependencies = [
- "fastrace 0.7.12",
+ "fastrace 0.7.13",
  "log",
  "opentelemetry",
  "opentelemetry-otlp",
@@ -2132,7 +2132,7 @@ name = "test-macros-ui"
 version = "0.0.0"
 dependencies = [
  "async-trait",
- "fastrace 0.7.12",
+ "fastrace 0.7.13",
  "log",
  "logcall",
  "tokio",
@@ -2143,7 +2143,7 @@ dependencies = [
 name = "test-statically-disable"
 version = "0.0.0"
 dependencies = [
- "fastrace 0.7.12",
+ "fastrace 0.7.13",
 ]
 
 [[package]]
