@@ -415,6 +415,8 @@ impl GlobalCollector {
             );
         }
 
+        stale_spans.clear();
+
         self.reporter.as_mut().unwrap().report(committed_records);
     }
 }
