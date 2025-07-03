@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## v0.7.14
+
+- Fix stale spans not being cleared after reporting.
+
 ## v0.7.13
 
 - Fix memory leak when reporter is not set.
