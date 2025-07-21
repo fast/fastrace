@@ -11,7 +11,7 @@
 ```toml
 [dependencies]
 fastrace = "0.7"
-fastrace-opentelemetry = "0.10"
+fastrace-opentelemetry = "0.13"
 ```
 
 ## Setup OpenTelemetry Collector

@@ -54,6 +54,14 @@ use opentelemetry_sdk::trace::SpanLinks;
 /// span kinds. Supported values are: "client", "server", "producer", "consumer", and "internal"
 /// (case-insensitive). If no `span.kind` property is provided, spans default to
 /// `SpanKind::Internal`.
+///
+/// ## Span Status
+///
+/// The reporter maps the `span.status_code` and `span.status_description` properties from fastrace
+/// spans to OpenTelemetry span status. Supported codes are: "unset", "ok", and "error"
+/// (case-insensitive). If no `span.status_code` property is provided, spans default to
+/// `Status::Unset`. If the code is "error", the `span.status_description` property is used as the
+/// error description.
 pub struct OpenTelemetryReporter {
     exporter: Box<dyn DynSpanExporter>,
     instrumentation_scope: InstrumentationScope,
@@ -138,6 +146,7 @@ impl OpenTelemetryReporter {
                     );
                     let parent_span_id = parent_id.0.into();
                     let span_kind = span_kind(&properties);
+                    let status = span_status(&properties);
                     let instrumentation_scope = self.instrumentation_scope.clone();
                     let start_time =
                         SystemTime::UNIX_EPOCH + Duration::from_nanos(begin_time_unix_ns);
@@ -156,7 +165,7 @@ impl OpenTelemetryReporter {
                         dropped_attributes_count: 0,
                         events,
                         links: SpanLinks::default(),
-                        status: Status::default(),
+                        status,
                         instrumentation_scope,
                     }
                 },
@@ -196,4 +205,24 @@ fn span_kind(properties: &[(Cow<'static, str>, Cow<'static, str>)]) -> SpanKind 
             _ => None,
         })
         .unwrap_or(SpanKind::Internal)
+}
+
+fn span_status(properties: &[(Cow<'static, str>, Cow<'static, str>)]) -> Status {
+    let status_description = properties
+        .iter()
+        .find(|(k, _)| k == "span.status_description")
+        .map(|(_, v)| v.to_string())
+        .unwrap_or_default();
+    properties
+        .iter()
+        .find(|(k, _)| k == "span.status_code")
+        .and_then(|(_, v)| match v.to_lowercase().as_str() {
+            "unset" => Some(Status::Unset),
+            "ok" => Some(Status::Ok),
+            "error" => Some(Status::Error {
+                description: status_description.into(),
+            }),
+            _ => None,
+        })
+        .unwrap_or(Status::Unset)
 }
