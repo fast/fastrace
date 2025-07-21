@@ -2,10 +2,14 @@
 
 ## Unreleased
 
+## v0.13.0
+
+- Recognise `Status` from the `span.status_code` and `span.status_description` properties on spans.
+
 ## v0.12.0
 
 - Remove `SpanKind` argument from `OpenTelemetryReporter::new()`.
-- Automatically detect `SpanKind` from the `span.kind` property on spans.
+- Recognise `SpanKind` from the `span.kind` property on spans.
 
 ## v0.11.0
 
