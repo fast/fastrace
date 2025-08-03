@@ -13,7 +13,7 @@ release = false
 
 [dev-dependencies]
 anyhow = { version = "1.0.98" }
-fastrace = { workspace = true }
+fastrace = { workspace = true, features = ["enable"] }
 fastrace-datadog = { workspace = true }
 fastrace-jaeger = { workspace = true }
 fastrace-opentelemetry = { workspace = true }
