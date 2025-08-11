@@ -126,6 +126,12 @@ pub fn trace(
     let input = parse_macro_input!(item as ItemFn);
 
     let func_name = input.sig.ident.to_string();
+
+    let output_ty = match input.sig.output {
+        ReturnType::Type(_, ref ty) => (**ty).clone(),
+        ReturnType::Default => parse_quote! { () },
+    };
+
     // check for async_trait-like patterns in the block, and instrument
     // the future instead of the wrapper
     let func_body = if let Some(internal_fun) =
@@ -143,8 +149,15 @@ pub fn trace(
             AsyncTraitKind::Async(async_expr) => {
                 // fallback if we couldn't find the '__async_trait' binding, might be
                 // useful for crates exhibiting the same behaviors as async-trait
-                let instrumented_block =
-                    gen_block(&func_name, &async_expr.block, true, false, &args);
+                let instrumented_block = gen_block(
+                    &func_name,
+                    &async_expr.block,
+                    true,
+                    false,
+                    &args,
+                    &output_ty,
+                    false,
+                );
                 let async_attrs = &async_expr.attrs;
                 quote::quote! {
                     Box::pin(#(#async_attrs) * #instrumented_block)
@@ -158,6 +171,8 @@ pub fn trace(
             input.sig.asyncness.is_some(),
             input.sig.asyncness.is_some(),
             &args,
+            &output_ty,
+            true,
         )
     };
 
@@ -371,6 +386,8 @@ fn gen_block(
     async_context: bool,
     async_keyword: bool,
     args: &Args,
+    output_ty: &Type,
+    include_fake_return: bool,
 ) -> proc_macro2::TokenStream {
     let name = gen_name(block.span(), func_name, args);
     let properties = gen_properties(block.span(), args);
@@ -380,10 +397,22 @@ fn gen_block(
     // If the function is an `async fn`, this will wrap it in an async block.
     // Otherwise, this will enter the span and then perform the rest of the body.
     if async_context {
+        let fake_return = if include_fake_return {
+            gen_fake_return(output_ty)
+        } else {
+            quote::quote!()
+        };
+        let async_move_block = quote_spanned!(block.span()=>
+            async move {
+                #fake_return
+                #block
+            }
+        );
+
         let block = if args.enter_on_poll {
             quote_spanned!(block.span()=>
                 #crate_path::future::FutureExt::enter_on_poll(
-                    async move { #block },
+                    #async_move_block,
                     #name
                 )
             )
@@ -392,7 +421,7 @@ fn gen_block(
                 {
                     let __span__ = #crate_path::Span::enter_with_local_parent( #name ) #properties;
                     #crate_path::future::FutureExt::in_span(
-                        async move { #block },
+                        #async_move_block,
                         __span__,
                     )
                 }
@@ -546,4 +575,25 @@ fn path_to_string(path: &Path) -> String {
         }
     }
     res
+}
+
+/// Trick borrowed from `tracing::instrument`. This helps prevent certain
+/// compiler errors when applying the `#[trace]` macro.
+fn gen_fake_return(output_ty: &Type) -> proc_macro2::TokenStream {
+    quote::quote! {
+        #[allow(
+            unknown_lints,
+            unreachable_code,
+            clippy::diverging_sub_expression,
+            clippy::empty_loop,
+            clippy::let_unit_value,
+            clippy::let_with_type_underscore,
+            clippy::needless_return,
+            clippy::unreachable
+        )]
+        if false {
+            let __fake_return__: #output_ty = loop {};
+            return __fake_return__;
+        }
+    }
 }
