@@ -2131,8 +2131,10 @@ dependencies = [
 name = "test-macros-ui"
 version = "0.0.0"
 dependencies = [
+ "async-stream",
  "async-trait",
  "fastrace 0.7.14",
+ "futures",
  "log",
  "logcall",
  "tokio",

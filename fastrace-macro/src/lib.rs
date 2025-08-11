@@ -17,6 +17,7 @@ use syn::parse::Parse;
 use syn::parse::ParseStream;
 use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;
+use syn::visit_mut::VisitMut;
 use syn::*;
 
 /// An attribute macro designed to eliminate boilerplate code.
@@ -127,10 +128,10 @@ pub fn trace(
 
     let func_name = input.sig.ident.to_string();
 
-    let output_ty = match input.sig.output {
+    let output_ty = erase_impl_trait(match input.sig.output {
         ReturnType::Type(_, ref ty) => (**ty).clone(),
         ReturnType::Default => parse_quote! { () },
-    };
+    });
 
     // check for async_trait-like patterns in the block, and instrument
     // the future instead of the wrapper
@@ -596,4 +597,27 @@ fn gen_fake_return(output_ty: &Type) -> proc_macro2::TokenStream {
             return __fake_return__;
         }
     }
+}
+
+
+/// Replaces any `impl Trait` with `_` so it can be used as the type in
+/// a `let` statement's LHS.
+struct ImplTraitEraser;
+
+impl VisitMut for ImplTraitEraser {
+    fn visit_type_mut(&mut self, t: &mut Type) {
+        if let Type::ImplTrait(..) = t {
+            *t = syn::TypeInfer {
+                underscore_token: Token![_](t.span()),
+            }
+            .into();
+        } else {
+            syn::visit_mut::visit_type_mut(self, t);
+        }
+    }
+}
+
+fn erase_impl_trait(mut ty: Type) -> Type {
+    ImplTraitEraser.visit_type_mut(&mut ty);
+    ty
 }
