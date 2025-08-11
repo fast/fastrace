@@ -599,7 +599,6 @@ fn gen_fake_return(output_ty: &Type) -> proc_macro2::TokenStream {
     }
 }
 
-
 /// Replaces any `impl Trait` with `_` so it can be used as the type in
 /// a `let` statement's LHS.
 struct ImplTraitEraser;
