@@ -17,6 +17,8 @@ log = { workspace = true }
 logcall = { version = "0.1" }
 tokio = { workspace = true }
 trybuild = { version = "1.0" }
+futures = { version = "0.3" }
+async-stream = { version = "0.3" }
 
 # The procedural macro `trace` only supports async-trait higher than or equal to 0.1.52
 async-trait = { version = "0.1.52" }
