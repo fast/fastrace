@@ -1,4 +1,4 @@
-# fastrace
+# Fastrace
 
 [![Crates.io](https://img.shields.io/crates/v/fastrace.svg?style=flat-square&logo=rust)](https://crates.io/crates/fastrace)
 [![Documentation](https://img.shields.io/docsrs/fastrace?style=flat-square&logo=rust)](https://docs.rs/fastrace/)
@@ -7,7 +7,7 @@
 [![License](https://img.shields.io/crates/l/fastrace?style=flat-square)](https://github.com/fast/fastrace/blob/main/LICENSE)
 [![libs.tech recommends](https://libs.tech/project/829370199/badge.svg)](https://libs.tech/project/829370199/fastrace)
 
-fastrace is a tracing library [10~100x faster](#benchmarks) than others:
+Fastrace is a tracing library [100x faster](#benchmarks) than others:
 
 ![benchmark](https://raw.githubusercontent.com/fast/fastrace/refs/heads/main/etc/img/head-benchmark.svg)
 
@@ -35,7 +35,7 @@ Libraries should include `fastrace` as a dependency without enabling any extra f
 fastrace = "0.7"
 ```
 
-Add a `trace` attribute to the function you want to trace. In this example, a `SpanRecord` will be collected every time the function is called, if a tracing context is set up by the caller.
+Add a `trace` attribute to the function you want to trace. In this example, a `SpanRecord` will be collected every time the function is called, if the caller sets up a tracing context.
 
 ```rust
 #[fastrace::trace]
@@ -44,7 +44,7 @@ pub fn send_request(req: HttpRequest) -> Result<(), Error> {
 }
 ```
 
-Libraries are able to set up an individual tracing context, regardless of whether the caller has set up a tracing context or not. This can be achieved by using `Span::root()` to start a new trace and `Span::set_local_parent()` to set up a local context for the current thread.
+Libraries can set up an individual tracing context, regardless of whether the caller has already set up a tracing context or not. This can be achieved by using `Span::root()` to start a new trace and `Span::set_local_parent()` to set up a local context for the current thread.
 
 The `func_path!()` macro can detect the function's full name, which is used as the name of the root span.
 
@@ -61,7 +61,7 @@ pub fn send_request(req: HttpRequest) -> Result<(), Error> {
 
 ## In Applications
 
-Applications should include `fastrace` as a dependency with the `enable` feature set. To disable `fastrace` statically, simply remove the `enable` feature.
+Applications should include `fastrace` as a dependency with the `enable` feature set. To disable `fastrace` statically, remove the `enable` feature.
 
 ```toml
 [dependencies]
@@ -70,7 +70,7 @@ fastrace = { version = "0.7", features = ["enable"] }
 
 Applications should initialize a `Reporter` implementation early in the program's runtime. Span records generated before the reporter is initialized will be ignored. Before terminating, `flush()` should be called to ensure all collected span records are reported.
 
-When the root span is dropped, all of its children spans and itself will be reported at once. Since that, it's recommended to create root spans for short tasks, such as handling a request, just like the example below. Otherwise, an endingless trace will never be reported.
+When the root span is dropped, all of its children spans and itself will be reported at once. Since then, it's recommended to create root spans for short tasks, such as handling a request, as shown in the example below. Otherwise, an endless trace will never be reported.
 
 ```rust
 use fastrace::collector::Config;
@@ -105,7 +105,7 @@ Fastrace supports multiple out-of-box reporters to export spans:
 
 ## Integrations
 
-Fastrace provides integrations with popular libraries to automatically handle context propagation:
+Fastrace provides integrations with popular libraries to handle context propagation automatically:
 
 - [fastrace-futures](https://crates.io/crates/fastrace-futures): Trace Stream from [`futures`](https://crates.io/crates/futures)
 - [fastrace-axum](https://crates.io/crates/fastrace-axum): Trace [`axum`](https://crates.io/crates/axum) HTTP services
@@ -140,9 +140,9 @@ For more details, refer to the [fastrace-tracing documentation](https://docs.rs/
 
 ## FAQ
 
-### Why is fastrace so fast?
+### Why is Fastrace so fast?
 
-There are some articles posted by the maintainer of fastrace:
+The maintainer of fastrace posts articles describing the details:
 
 - [The Design of A High-performance Tracing Library in Rust (Chinese)](https://www.youtube.com/watch?v=8xTaxC1RcXE)
 - [How We Trace a KV Database with Less than 5% Performance Impact](https://en.pingcap.com/blog/how-we-trace-a-kv-database-with-less-than-5-percent-performance-impact/)
@@ -153,13 +153,13 @@ Library-level tracing refers to the capability of incorporating tracing capabili
 
 Tracing can introduce overhead to a program's execution. While this is generally acceptable at the application level, where the added overhead is often insignificant compared to the overall execution time, it can be more problematic at the library level. Here, functions may be invoked frequently or performance may be critical, and the overhead from tracing can become substantial. As a result, tracing libraries not designed with speed and efficiency in mind may not be suitable for library-level tracing.
 
-In the realm of the fastrace library, library-level tracing is engineered to be fast and lightweight, resulting in zero overhead when it's not activated. This makes fastrace an excellent choice for use in performance-sensitive applications, and it can be seamlessly integrated into libraries in a similar fashion to the log crate, something other tracing libraries may not offer.
+In the realm of the Fastrace library, library-level tracing is engineered to be fast and lightweight, resulting in zero overhead when it's not activated. This makes fastrace an excellent choice for use in performance-sensitive applications, and it can be seamlessly integrated into libraries in a similar fashion to the log crate, something other tracing libraries may not offer.
 
-### How does fastrace differ from other tracing libraries?
+### How does Fastrace differ from other tracing libraries?
 
-While many tracing libraries aim for extensive features, fastrace prioritizes performance and simplicity.
+While many tracing libraries aim for extensive features, Fastrace prioritizes performance and simplicity.
 
-For example, fastrace doesn't introduce new logging macros, e.g. `info!()` or `error!()`, but seamlessly integrates with the [`log`](https://crates.io/crates/log) crate. This allows you to use existing logging macros and dependencies, with logs automatically attached to the current tracing span.
+For example, fastrace doesn't introduce new logging macros, e.g., `info!()` or `error!()`, but seamlessly integrates with the [`log`](https://crates.io/crates/log) crate. This allows you to use existing logging macros and dependencies, with logs automatically attached to the current tracing span.
 
 ### Will fastrace incorporate 'level' for spans?
 
@@ -168,7 +168,7 @@ The concept of 'level' may not be an optimal feature for tracing systems. While 
 1. Disregarding a low-level span might inadvertently discard a high-level child span.
 2. The process of filtering, or 'level' as it's often called, in a tracing system should be applied to a trace as a whole rather than individual spans within a trace.
 
-In this context, fastrace offers a more efficient solution by filtering out entire traces that are not of interest through its unique [tail-sampling](https://opentelemetry.io/blog/2022/tail-sampling/) design. Therefore, the concept of 'level', borrowed directly from logging systems, may not be suitable for fastrace.
+In this context, Fastrace offers a more efficient solution by filtering out entire traces that are not of interest through its unique [tail-sampling](https://opentelemetry.io/blog/2022/tail-sampling/) design. Therefore, the concept of 'level', borrowed directly from logging systems, may not be suitable for Fastrace.
 
 [Docs]: https://docs.rs/fastrace/
 [Examples]: https://github.com/fast/fastrace/tree/main/examples
@@ -188,7 +188,7 @@ In this context, fastrace offers a more efficient solution by filtering out enti
 | rustracing          | 45x slower               | 10x slower             | 11x slower       | 9x slower           |
 | fastrace (baseline) | 1x (3.4us)               | 1x (3.2us)             | 1x (3.8us)       | 1x (4.2us)          |
 
-**By creating different number of spans:**
+**By creating a different number of spans:**
 
 ![Benchmark result by number of spans](https://raw.githubusercontent.com/fast/fastrace/refs/heads/main/etc/img/benchmark-spans.svg)
 
