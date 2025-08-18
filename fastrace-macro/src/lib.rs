@@ -19,6 +19,8 @@ use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;
 use syn::*;
 
+use crate::visit_mut::VisitMut;
+
 /// An attribute macro designed to eliminate boilerplate code.
 ///
 /// This macro automatically creates a span for the annotated function. The span name defaults to
@@ -124,14 +126,13 @@ pub fn trace(
 
     let args = parse_macro_input!(args as Args);
     let input = parse_macro_input!(item as ItemFn);
-
     let func_name = input.sig.ident.to_string();
-    // check for async_trait-like patterns in the block, and instrument
-    // the future instead of the wrapper
+
+    // Check for async_trait-like patterns in the block, and instrument
+    // the future instead of the wrapper.
     let func_body = if let Some(internal_fun) =
         get_async_trait_info(&input.block, input.sig.asyncness.is_some())
     {
-        // let's rewrite some statements!
         match internal_fun.kind {
             // async-trait <= 0.1.43
             AsyncTraitKind::Function => {
@@ -141,10 +142,8 @@ pub fn trace(
             }
             // async-trait >= 0.1.44
             AsyncTraitKind::Async(async_expr) => {
-                // fallback if we couldn't find the '__async_trait' binding, might be
-                // useful for crates exhibiting the same behaviors as async-trait
                 let instrumented_block =
-                    gen_block(&func_name, &async_expr.block, true, false, &args);
+                    gen_block(&func_name, &async_expr.block, true, false, &args, None);
                 let async_attrs = &async_expr.attrs;
                 quote::quote! {
                     Box::pin(#(#async_attrs) * #instrumented_block)
@@ -152,12 +151,17 @@ pub fn trace(
             }
         }
     } else {
+        let output_ty = match input.sig.output {
+            ReturnType::Type(_, ref ty) => (**ty).clone(),
+            ReturnType::Default => parse_quote! { () },
+        };
         gen_block(
             &func_name,
             &input.block,
             input.sig.asyncness.is_some(),
             input.sig.asyncness.is_some(),
             &args,
+            Some(output_ty),
         )
     };
 
@@ -371,10 +375,14 @@ fn gen_block(
     async_context: bool,
     async_keyword: bool,
     args: &Args,
+    output_ty: Option<Type>,
 ) -> proc_macro2::TokenStream {
     let name = gen_name(block.span(), func_name, args);
     let properties = gen_properties(block.span(), args);
     let crate_path = &args.crate_path;
+    let output_ty_hint = output_ty
+        .map(erase_impl_trait)
+        .unwrap_or_else(|| parse_quote! { _ });
 
     // Generate the instrumented function body.
     // If the function is an `async fn`, this will wrap it in an async block.
@@ -392,7 +400,10 @@ fn gen_block(
                 {
                     let __span__ = #crate_path::Span::enter_with_local_parent( #name ) #properties;
                     #crate_path::future::FutureExt::in_span(
-                        async move { #block },
+                        async move {
+                            let __ret__: #output_ty_hint = #block;
+                            __ret__
+                        },
                         __span__,
                     )
                 }
@@ -546,4 +557,26 @@ fn path_to_string(path: &Path) -> String {
         }
     }
     res
+}
+
+/// Replaces any `impl Trait` with `_` so it can be used as the type in
+/// a `let` statement's LHS.
+struct ImplTraitEraser;
+
+impl VisitMut for ImplTraitEraser {
+    fn visit_type_mut(&mut self, t: &mut Type) {
+        if let Type::ImplTrait(..) = t {
+            *t = syn::TypeInfer {
+                underscore_token: Token![_](t.span()),
+            }
+            .into();
+        } else {
+            syn::visit_mut::visit_type_mut(self, t);
+        }
+    }
+}
+
+fn erase_impl_trait(mut ty: Type) -> Type {
+    ImplTraitEraser.visit_type_mut(&mut ty);
+    ty
 }
