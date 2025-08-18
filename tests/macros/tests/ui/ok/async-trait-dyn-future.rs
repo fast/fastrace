@@ -1,6 +1,6 @@
+use async_trait::async_trait;
 use std::future::Future;
 use std::pin::Pin;
-use async_trait::async_trait;
 
 use fastrace::trace;
 
@@ -26,7 +26,7 @@ impl MyTrait for MyStruct {
         let inner = async { Err(InnerError) };
 
         let mapped = async move { inner.await.map_err(OuterError) };
-    
+
         Ok(Box::pin(mapped))
     }
 }
