@@ -131,6 +131,7 @@ impl OpenTelemetryReporter {
                      trace_id,
                      span_id,
                      parent_id,
+                     parent_is_remote,
                      begin_time_unix_ns,
                      duration_ns,
                      name,
@@ -157,6 +158,7 @@ impl OpenTelemetryReporter {
                     SpanData {
                         span_context,
                         parent_span_id,
+                        parent_span_is_remote: parent_is_remote,
                         span_kind,
                         name,
                         start_time,

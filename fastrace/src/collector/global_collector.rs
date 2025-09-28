@@ -196,11 +196,13 @@ enum SpanCollection {
         spans: SpanSet,
         trace_id: TraceId,
         parent_id: SpanId,
+        parent_is_remote: bool,
     },
     Shared {
         spans: Arc<SpanSet>,
         trace_id: TraceId,
         parent_id: SpanId,
+        parent_is_remote: bool,
     },
 }
 
@@ -347,12 +349,14 @@ impl GlobalCollector {
                             spans,
                             trace_id: item.trace_id,
                             parent_id: item.parent_id,
+                            parent_is_remote: item.parent_is_remote,
                         });
                 } else if !self.config.tail_sampled {
                     stale_spans.push(SpanCollection::Owned {
                         spans,
                         trace_id: item.trace_id,
                         parent_id: item.parent_id,
+                        parent_is_remote: item.parent_is_remote,
                     });
                 }
             } else {
@@ -366,12 +370,14 @@ impl GlobalCollector {
                                 spans: spans.clone(),
                                 trace_id: item.trace_id,
                                 parent_id: item.parent_id,
+                                parent_is_remote: item.parent_is_remote,
                             });
                     } else if !self.config.tail_sampled {
                         stale_spans.push(SpanCollection::Shared {
                             spans: spans.clone(),
                             trace_id: item.trace_id,
                             parent_id: item.parent_id,
+                            parent_is_remote: item.parent_is_remote,
                         });
                     }
                 }
@@ -430,6 +436,7 @@ impl LocalSpansInner {
             self,
             parent.trace_id,
             parent.span_id,
+            parent.is_remote,
             &mut records,
             &mut danglings,
             &anchor,
@@ -458,11 +465,13 @@ fn postprocess_span_collection<'a>(
                 spans,
                 trace_id,
                 parent_id,
+                parent_is_remote,
             } => match spans {
                 SpanSet::Span(raw_span) => amend_span(
                     raw_span,
                     *trace_id,
                     *parent_id,
+                    *parent_is_remote,
                     committed_records,
                     danglings,
                     anchor,
@@ -471,6 +480,7 @@ fn postprocess_span_collection<'a>(
                     local_spans,
                     *trace_id,
                     *parent_id,
+                    *parent_is_remote,
                     committed_records,
                     danglings,
                     anchor,
@@ -479,6 +489,7 @@ fn postprocess_span_collection<'a>(
                     local_spans,
                     *trace_id,
                     *parent_id,
+                    *parent_is_remote,
                     committed_records,
                     danglings,
                     anchor,
@@ -488,11 +499,13 @@ fn postprocess_span_collection<'a>(
                 spans,
                 trace_id,
                 parent_id,
+                parent_is_remote,
             } => match &**spans {
                 SpanSet::Span(raw_span) => amend_span(
                     raw_span,
                     *trace_id,
                     *parent_id,
+                    *parent_is_remote,
                     committed_records,
                     danglings,
                     anchor,
@@ -501,6 +514,7 @@ fn postprocess_span_collection<'a>(
                     local_spans,
                     *trace_id,
                     *parent_id,
+                    *parent_is_remote,
                     committed_records,
                     danglings,
                     anchor,
@@ -509,6 +523,7 @@ fn postprocess_span_collection<'a>(
                     local_spans,
                     *trace_id,
                     *parent_id,
+                    *parent_is_remote,
                     committed_records,
                     danglings,
                     anchor,
@@ -524,12 +539,20 @@ fn amend_local_span(
     local_spans: &LocalSpansInner,
     trace_id: TraceId,
     parent_id: SpanId,
+    parent_is_remote: bool,
     spans: &mut Vec<SpanRecord>,
     dangling: &mut HashMap<SpanId, Vec<DanglingItem>>,
     anchor: &Anchor,
 ) {
     for span in local_spans.spans.iter() {
         let parent_id = span.parent_id.unwrap_or(parent_id);
+
+        let span_parent_is_remote = if span.parent_id.is_none() {
+            parent_is_remote
+        } else {
+            false // Child spans always have local parents
+        };
+
         match span.raw_kind {
             RawKind::Span => {
                 let begin_time_unix_ns = span.begin_instant.as_unix_nanos(anchor);
@@ -542,6 +565,7 @@ fn amend_local_span(
                     trace_id,
                     span_id: span.id,
                     parent_id,
+                    parent_is_remote: span_parent_is_remote,
                     begin_time_unix_ns,
                     duration_ns: end_time_unix_ns.saturating_sub(begin_time_unix_ns),
                     name: span.name.clone(),
@@ -588,6 +612,7 @@ fn amend_span(
     span: &RawSpan,
     trace_id: TraceId,
     parent_id: SpanId,
+    parent_is_remote: bool,
     spans: &mut Vec<SpanRecord>,
     dangling: &mut HashMap<SpanId, Vec<DanglingItem>>,
     anchor: &Anchor,
@@ -600,6 +625,7 @@ fn amend_span(
                 trace_id,
                 span_id: span.id,
                 parent_id,
+                parent_is_remote,
                 begin_time_unix_ns,
                 duration_ns: end_time_unix_ns.saturating_sub(begin_time_unix_ns),
                 name: span.name.clone(),

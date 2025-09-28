@@ -226,6 +226,7 @@ mod tests {
             collect_id: 42,
             is_root: false,
             is_sampled: true,
+            parent_is_remote: false,
         };
         let collector = LocalCollector::new(Some(token.into()), stack.clone());
 
@@ -264,6 +265,7 @@ span1 []
             collect_id: 42,
             is_root: false,
             is_sampled: true,
+            parent_is_remote: false,
         };
         let collector = LocalCollector::new(Some(token.into()), stack.clone());
 

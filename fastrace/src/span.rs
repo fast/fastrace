@@ -92,6 +92,7 @@ impl Span {
                 collect_id,
                 is_root: true,
                 is_sampled: parent.sampled,
+                parent_is_remote: parent.is_remote,
             }
             .into();
 
@@ -543,6 +544,7 @@ impl SpanInner {
                 collect_id: collect_item.collect_id,
                 is_root: false,
                 is_sampled: collect_item.is_sampled,
+                parent_is_remote: false, // Child spans have local parents
             })
     }
 
@@ -692,6 +694,7 @@ mod tests {
                         collect_id: 42,
                         is_root: true,
                         is_sampled: true,
+                        parent_is_remote: false,
                     }
                     .into(),
                 ),

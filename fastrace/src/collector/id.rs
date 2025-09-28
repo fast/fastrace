@@ -134,6 +134,7 @@ pub struct SpanContext {
     pub trace_id: TraceId,
     pub span_id: SpanId,
     pub sampled: bool,
+    pub is_remote: bool,
 }
 
 impl SpanContext {
@@ -154,6 +155,7 @@ impl SpanContext {
             trace_id,
             span_id,
             sampled: true,
+            is_remote: false,
         }
     }
 
@@ -171,6 +173,7 @@ impl SpanContext {
             trace_id: TraceId::random(),
             span_id: SpanId(0),
             sampled: true,
+            is_remote: false,
         }
     }
 
@@ -190,6 +193,23 @@ impl SpanContext {
     /// ```
     pub fn sampled(mut self, sampled: bool) -> Self {
         self.sampled = sampled;
+        self
+    }
+
+    /// When the `is_remote` flag is `true`, it indicates that this context originated from
+    /// a remote service via trace context propagation headers.
+    ///
+    /// The default value is `false`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use fastrace::prelude::*;
+    ///
+    /// let span_context = SpanContext::new(TraceId(12), SpanId(34)).is_remote(true);
+    /// ```
+    pub fn is_remote(mut self, is_remote: bool) -> Self {
+        self.is_remote = is_remote;
         self
     }
 
@@ -221,6 +241,7 @@ impl SpanContext {
                 trace_id: collect_token.trace_id,
                 span_id: collect_token.parent_id,
                 sampled: collect_token.is_sampled,
+                is_remote: collect_token.parent_is_remote,
             })
         }
     }
@@ -255,6 +276,7 @@ impl SpanContext {
                 trace_id: collect_token.trace_id,
                 span_id: collect_token.parent_id,
                 sampled: collect_token.is_sampled,
+                is_remote: collect_token.parent_is_remote,
             })
         }
     }
@@ -295,7 +317,11 @@ impl SpanContext {
                 if trace_id == 0 || span_id == 0 {
                     return None;
                 }
-                Some(Self::new(TraceId(trace_id), SpanId(span_id)).sampled(sampled))
+                Some(
+                    Self::new(TraceId(trace_id), SpanId(span_id))
+                        .sampled(sampled)
+                        .is_remote(true),
+                )
             }
             _ => None,
         }
