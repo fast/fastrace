@@ -43,7 +43,7 @@ rand = "0.9"
 serial_test = "3.1"
 tokio = { workspace = true }
 tracing = { version = "0.1" }
-tracing-opentelemetry = { version = "0.31.0" }
+tracing-opentelemetry = { version = "0.32.0" }
 tracing-subscriber = { version = "0.3.19" }
 
 [[bench]]
