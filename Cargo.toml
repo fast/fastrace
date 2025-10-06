@@ -21,11 +21,11 @@ repository = "https://github.com/fast/fastrace"
 rust-version = "1.80.0"
 
 [workspace.dependencies]
-# workspace dependencies
+# Workspace dependencies
 fastrace = { version = "0.7.14", path = "fastrace" }
 fastrace-macro = { version = "=0.7.14", path = "fastrace-macro" }
 
-# workspace leaves
+# Workspace leaves
 fastrace-datadog = { path = "fastrace-datadog" }
 fastrace-futures = { path = "fastrace-futures" }
 fastrace-jaeger = { path = "fastrace-jaeger" }
