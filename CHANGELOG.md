@@ -124,7 +124,7 @@
 
 - Add `Event` type to represent single points in time during the span's lifetime.
 - Add `fastrace-opentelementry` reporter that reports spans to OpenTelemetry collector.
-- Removed `Collector` and raplaced it with `Reporter`.
+- Removed `Collector` and replaced it with `Reporter`.
 - The macro arguments must be named if any, e.g. `#[trace(name="name")]`.
 - Allow to statically opt-out of tracing by not setting `enable` feature.
 

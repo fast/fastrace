@@ -157,6 +157,7 @@ impl OpenTelemetryReporter {
                     SpanData {
                         span_context,
                         parent_span_id,
+                        parent_span_is_remote: false,
                         span_kind,
                         name,
                         start_time,

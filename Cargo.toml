@@ -21,11 +21,11 @@ repository = "https://github.com/fast/fastrace"
 rust-version = "1.80.0"
 
 [workspace.dependencies]
-# workspace dependencies
+# Workspace dependencies
 fastrace = { version = "0.7.14", path = "fastrace" }
 fastrace-macro = { version = "=0.7.14", path = "fastrace-macro" }
 
-# workspace leaves
+# Workspace leaves
 fastrace-datadog = { path = "fastrace-datadog" }
 fastrace-futures = { path = "fastrace-futures" }
 fastrace-jaeger = { path = "fastrace-jaeger" }
@@ -33,14 +33,14 @@ fastrace-opentelemetry = { path = "fastrace-opentelemetry" }
 
 # crates.io dependencies
 log = { version = "0.4.27" }
-opentelemetry = { version = "0.30.0", default-features = false, features = [
+opentelemetry = { version = "0.31.0", default-features = false, features = [
   "trace",
 ] }
-opentelemetry-otlp = { version = "0.30.0", default-features = false, features = [
+opentelemetry-otlp = { version = "0.31.0", default-features = false, features = [
   "trace",
   "grpc-tonic",
 ] }
-opentelemetry_sdk = { version = "0.30.0", default-features = false, features = [
+opentelemetry_sdk = { version = "0.31.0", default-features = false, features = [
   "trace",
 ] }
 serde = { version = "1.0", features = ["derive"] }
