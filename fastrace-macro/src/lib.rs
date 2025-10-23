@@ -12,6 +12,8 @@ extern crate proc_macro_error2;
 use std::collections::HashSet;
 
 use proc_macro2::Span;
+use quote::ToTokens;
+use quote::quote;
 use quote::quote_spanned;
 use syn::parse::Parse;
 use syn::parse::ParseStream;
@@ -126,7 +128,7 @@ pub fn trace(
 
     let args = parse_macro_input!(args as Args);
     let input = parse_macro_input!(item as ItemFn);
-    let func_name = input.sig.ident.to_string();
+    let func_name = &input.sig.ident;
 
     // Check for async_trait-like patterns in the block, and instrument
     // the future instead of the wrapper.
@@ -143,7 +145,7 @@ pub fn trace(
             // async-trait >= 0.1.44
             AsyncTraitKind::Async(async_expr) => {
                 let instrumented_block =
-                    gen_block(&func_name, &async_expr.block, true, false, &args, None);
+                    gen_block(func_name, &async_expr.block, true, false, &args, None);
                 let async_attrs = &async_expr.attrs;
                 quote::quote! {
                     Box::pin(#(#async_attrs) * #instrumented_block)
@@ -156,7 +158,7 @@ pub fn trace(
             ReturnType::Default => parse_quote! { () },
         };
         gen_block(
-            &func_name,
+            func_name,
             &input.block,
             input.sig.asyncness.is_some(),
             input.sig.asyncness.is_some(),
@@ -198,10 +200,10 @@ pub fn trace(
 }
 
 struct Args {
-    name: Option<String>,
+    name: Option<LitStr>,
     short_name: bool,
     enter_on_poll: bool,
-    properties: Vec<(String, String)>,
+    properties: Vec<(LitStr, LitStr)>,
     crate_path: Path,
 }
 
@@ -218,8 +220,8 @@ impl Default for Args {
 }
 
 struct Property {
-    key: String,
-    value: String,
+    key: LitStr,
+    value: LitStr,
 }
 
 impl Parse for Property {
@@ -227,10 +229,7 @@ impl Parse for Property {
         let key: LitStr = input.parse()?;
         input.parse::<Token![:]>()?;
         let value: LitStr = input.parse()?;
-        Ok(Property {
-            key: key.value(),
-            value: value.value(),
-        })
+        Ok(Property { key, value })
     }
 }
 
@@ -256,7 +255,7 @@ impl Parse for Args {
             match key.to_string().as_str() {
                 "name" => {
                     let parsed_name: LitStr = input.parse()?;
-                    name = Some(parsed_name.value());
+                    name = Some(parsed_name);
                 }
                 "short_name" => {
                     let parsed_short_name: LitBool = input.parse()?;
@@ -298,34 +297,28 @@ impl Parse for Args {
     }
 }
 
-fn gen_name(span: Span, func_name: &str, args: &Args) -> proc_macro2::TokenStream {
+fn gen_name(func_name: &Ident, args: &Args) -> proc_macro2::TokenStream {
     let crate_path = &args.crate_path;
     match &args.name {
-        Some(name) if name.is_empty() => {
+        Some(name) if name.value().is_empty() => {
             abort_call_site!("`name` can not be empty")
         }
         Some(_) if args.short_name => {
             abort_call_site!("`name` and `short_name` can not be used together")
         }
-        Some(name) => {
-            quote_spanned!(span=>
-                #name
-            )
-        }
+        Some(name) => name.into_token_stream(),
         None if args.short_name => {
-            quote_spanned!(span=>
-                #func_name
-            )
+            LitStr::new(&func_name.to_string(), func_name.span()).into_token_stream()
         }
         None => {
-            quote_spanned!(span=>
+            quote_spanned!(func_name.span()=>
                 #crate_path::func_path!()
             )
         }
     }
 }
 
-fn gen_properties(span: Span, args: &Args) -> proc_macro2::TokenStream {
+fn gen_properties(args: &Args) -> proc_macro2::TokenStream {
     if args.properties.is_empty() {
         return quote::quote!();
     }
@@ -335,50 +328,33 @@ fn gen_properties(span: Span, args: &Args) -> proc_macro2::TokenStream {
     }
 
     let properties = args.properties.iter().map(|(k, v)| {
-        let k = k.as_str();
-        let v = v.as_str();
-
-        let (v, need_format) = unescape_format_string(v);
-
-        if need_format {
-            quote_spanned!(span=>
-                (std::borrow::Cow::from(#k), std::borrow::Cow::from(format!(#v)))
-            )
-        } else {
-            quote_spanned!(span=>
-                (std::borrow::Cow::from(#k), std::borrow::Cow::from(#v))
-            )
-        }
+        quote!(
+            (std::borrow::Cow::from(#k), match format_args!(#v) {
+                __f => if let Some(__s) = __f.as_str() {
+                    std::borrow::Cow::from(__s)
+                } else {
+                    std::borrow::Cow::from(std::string::ToString::to_string(&__f))
+                }
+            })
+        )
     });
     let properties = Punctuated::<_, Token![,]>::from_iter(properties);
-    quote_spanned!(span=>
+    quote!(
         .with_properties(|| [ #properties ])
     )
 }
 
-fn unescape_format_string(s: &str) -> (String, bool) {
-    let unescaped_delete = s.replace("{{", "").replace("}}", "");
-    let contains_valid_format_string =
-        unescaped_delete.contains('{') || unescaped_delete.contains('}');
-    if contains_valid_format_string {
-        (s.to_string(), true)
-    } else {
-        let unescaped_replace = s.replace("{{", "{").replace("}}", "}");
-        (unescaped_replace, false)
-    }
-}
-
 /// Instrument a block
 fn gen_block(
-    func_name: &str,
+    func_name: &Ident,
     block: &Block,
     async_context: bool,
     async_keyword: bool,
     args: &Args,
     output_ty: Option<Type>,
 ) -> proc_macro2::TokenStream {
-    let name = gen_name(block.span(), func_name, args);
-    let properties = gen_properties(block.span(), args);
+    let name = gen_name(func_name, args);
+    let properties = gen_properties(args);
     let crate_path = &args.crate_path;
     let output_ty_hint = output_ty
         .map(erase_impl_trait)
@@ -389,14 +365,14 @@ fn gen_block(
     // Otherwise, this will enter the span and then perform the rest of the body.
     if async_context {
         let block = if args.enter_on_poll {
-            quote_spanned!(block.span()=>
+            quote!(
                 #crate_path::future::FutureExt::enter_on_poll(
                     async move { #block },
                     #name
                 )
             )
         } else {
-            quote_spanned!(block.span()=>
+            quote!(
                 {
                     let __span__ = #crate_path::Span::enter_with_local_parent( #name ) #properties;
                     #crate_path::future::FutureExt::in_span(
@@ -411,7 +387,7 @@ fn gen_block(
         };
 
         if async_keyword {
-            quote_spanned!(block.span()=>
+            quote!(
                 #block.await
             )
         } else {
@@ -422,7 +398,7 @@ fn gen_block(
             abort_call_site!("`enter_on_poll` can not be applied on non-async function");
         }
 
-        quote_spanned!(block.span()=>
+        quote!(
             let __guard__ = #crate_path::local::LocalSpan::enter_with_local_parent( #name ) #properties;
             #block
         )
