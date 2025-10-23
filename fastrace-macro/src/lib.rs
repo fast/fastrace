@@ -402,6 +402,7 @@ fn gen_block(
                     #crate_path::future::FutureExt::in_span(
                         async move {
                             let __ret__: #output_ty_hint = #block;
+                            #[allow(unreachable_code)]
                             __ret__
                         },
                         __span__,
