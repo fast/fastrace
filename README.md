@@ -21,6 +21,7 @@ Features:
 
 - [Docs]
 - [Examples]
+- [Architecture and Span Lifecycle](docs/architecture-and-span-lifecycle.md)
 - [FAQ](#faq)
 - [Migrating from tracing](#migrating-from-tokio-tracing)
 

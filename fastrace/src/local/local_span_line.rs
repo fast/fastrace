@@ -125,6 +125,26 @@ impl SpanLine {
         (self.epoch == span_line_epoch)
             .then(move || (self.span_queue.take_queue(), self.collect_token))
     }
+
+    #[inline]
+    pub fn submit_partial(&self) -> Option<(RawSpans, CollectToken)> {
+        if !self.is_sampled {
+            return None;
+        }
+
+        let collect_token = self.collect_token.as_ref()?;
+        let mut snapshot = self.span_queue.snapshot_queue();
+        
+        // Mark all spans as ended with current time
+        let now = fastant::Instant::now();
+        for span in snapshot.iter_mut() {
+            if span.end_instant == fastant::Instant::ZERO {
+                span.end_with(now);
+            }
+        }
+        
+        Some((snapshot, collect_token.clone()))
+    }
 }
 
 pub struct LocalSpanHandle {

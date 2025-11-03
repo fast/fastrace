@@ -129,6 +129,11 @@ impl SpanQueue {
     }
 
     #[inline]
+    pub fn snapshot_queue(&self) -> RawSpans {
+        self.span_queue.clone()
+    }
+
+    #[inline]
     pub fn current_parent_id(&self) -> Option<SpanId> {
         self.next_parent_id
     }

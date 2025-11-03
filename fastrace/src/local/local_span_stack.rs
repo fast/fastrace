@@ -57,6 +57,29 @@ impl LocalSpanStack {
         }
     }
 
+    #[inline]
+    pub fn submit_partial(&mut self) {
+        #[cfg(feature = "enable")]
+        {
+            use crate::collector::SpanSet;
+            use crate::local::local_collector::LocalSpansInner;
+            use crate::span::current_collect;
+            use fastant::Instant;
+            use std::sync::Arc;
+            
+            if let Some(span_line) = self.current_span_line() {
+                if let Some((spans, collect_token)) = span_line.submit_partial() {
+                    let local_spans = Arc::new(LocalSpansInner { 
+                        spans,
+                        end_time: Instant::now(),
+                    });
+                    let collect = current_collect();
+                    collect.submit_spans(SpanSet::SharedLocalSpans(local_spans), collect_token);
+                }
+            }
+        }
+    }
+
     /// Register a new span line to the span stack. If succeed, return a span line epoch which can
     /// be used to unregister the span line via [`LocalSpanStack::unregister_and_collect`]. If
     /// the size of the span stack is greater than the `capacity`, registration will fail
