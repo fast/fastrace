@@ -4,11 +4,11 @@ use std::borrow::Cow;
 use std::cell::RefCell;
 use std::rc::Rc;
 
+use crate::Event;
 use crate::local::local_span_line::LocalSpanHandle;
 use crate::local::local_span_line::SpanLine;
 use crate::util::CollectToken;
 use crate::util::RawSpans;
-use crate::Event;
 
 const DEFAULT_SPAN_STACK_SIZE: usize = 4096;
 const DEFAULT_SPAN_QUEUE_SIZE: usize = 10240;
@@ -61,11 +61,13 @@ impl LocalSpanStack {
     pub fn submit_partial(&mut self) {
         #[cfg(feature = "enable")]
         {
+            use std::sync::Arc;
+
+            use fastant::Instant;
+
             use crate::collector::SpanSet;
             use crate::local::local_collector::LocalSpansInner;
             use crate::span::current_collect;
-            use fastant::Instant;
-            use std::sync::Arc;
 
             if let Some(span_line) = self.current_span_line() {
                 if let Some((spans, collect_token)) = span_line.submit_partial() {
@@ -258,18 +260,20 @@ span1 []
                 {
                     let span_line4 = span_stack.register_span_line(None).unwrap();
                     {
-                        assert!(span_stack
-                            .register_span_line(Some(
-                                CollectTokenItem {
-                                    trace_id: TraceId(1235),
-                                    parent_id: SpanId::default(),
-                                    collect_id: 43,
-                                    is_root: false,
-                                    is_sampled: true,
-                                }
-                                .into()
-                            ))
-                            .is_none());
+                        assert!(
+                            span_stack
+                                .register_span_line(Some(
+                                    CollectTokenItem {
+                                        trace_id: TraceId(1235),
+                                        parent_id: SpanId::default(),
+                                        collect_id: 43,
+                                        is_root: false,
+                                        is_sampled: true,
+                                    }
+                                    .into()
+                                ))
+                                .is_none()
+                        );
                         assert!(span_stack.register_span_line(None).is_none());
                     }
                     let _ = span_stack.unregister_and_collect(span_line4).unwrap();
@@ -277,18 +281,20 @@ span1 []
                 {
                     let span_line5 = span_stack.register_span_line(None).unwrap();
                     {
-                        assert!(span_stack
-                            .register_span_line(Some(
-                                CollectTokenItem {
-                                    trace_id: TraceId(1236),
-                                    parent_id: SpanId::default(),
-                                    collect_id: 44,
-                                    is_root: false,
-                                    is_sampled: true,
-                                }
-                                .into()
-                            ))
-                            .is_none());
+                        assert!(
+                            span_stack
+                                .register_span_line(Some(
+                                    CollectTokenItem {
+                                        trace_id: TraceId(1236),
+                                        parent_id: SpanId::default(),
+                                        collect_id: 44,
+                                        is_root: false,
+                                        is_sampled: true,
+                                    }
+                                    .into()
+                                ))
+                                .is_none()
+                        );
                         assert!(span_stack.register_span_line(None).is_none());
                     }
                     let _ = span_stack.unregister_and_collect(span_line5).unwrap();
@@ -312,10 +318,9 @@ span1 []
             is_sampled: true,
         };
         let span_line1 = span_stack.register_span_line(Some(token1.into())).unwrap();
-        assert_eq!(
-            span_stack.current_collect_token().unwrap().as_slice(),
-            &[token1]
-        );
+        assert_eq!(span_stack.current_collect_token().unwrap().as_slice(), &[
+            token1
+        ]);
         {
             let span_line2 = span_stack.register_span_line(None).unwrap();
             assert!(span_stack.current_collect_token().is_none());
@@ -328,10 +333,9 @@ span1 []
                     is_sampled: true,
                 };
                 let span_line3 = span_stack.register_span_line(Some(token3.into())).unwrap();
-                assert_eq!(
-                    span_stack.current_collect_token().unwrap().as_slice(),
-                    &[token3]
-                );
+                assert_eq!(span_stack.current_collect_token().unwrap().as_slice(), &[
+                    token3
+                ]);
                 let _ = span_stack.unregister_and_collect(span_line3).unwrap();
             }
             assert!(span_stack.current_collect_token().is_none());
@@ -345,16 +349,14 @@ span1 []
                 is_sampled: true,
             };
             let span_line4 = span_stack.register_span_line(Some(token4.into())).unwrap();
-            assert_eq!(
-                span_stack.current_collect_token().unwrap().as_slice(),
-                &[token4]
-            );
+            assert_eq!(span_stack.current_collect_token().unwrap().as_slice(), &[
+                token4
+            ]);
             let _ = span_stack.unregister_and_collect(span_line4).unwrap();
         }
-        assert_eq!(
-            span_stack.current_collect_token().unwrap().as_slice(),
-            &[token1]
-        );
+        assert_eq!(span_stack.current_collect_token().unwrap().as_slice(), &[
+            token1
+        ]);
         let _ = span_stack.unregister_and_collect(span_line1).unwrap();
         assert!(span_stack.current_collect_token().is_none());
     }

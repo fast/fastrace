@@ -4,10 +4,10 @@ use std::borrow::Cow;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use crate::local::local_span_line::LocalSpanHandle;
-use crate::local::local_span_stack::LocalSpanStack;
-use crate::local::local_span_stack::LOCAL_SPAN_STACK;
 use crate::Event;
+use crate::local::local_span_line::LocalSpanHandle;
+use crate::local::local_span_stack::LOCAL_SPAN_STACK;
+use crate::local::local_span_stack::LocalSpanStack;
 
 /// An optimized [`Span`] for tracing operations within a single thread.
 ///
@@ -195,15 +195,16 @@ impl LocalSpan {
     /// # Examples
     ///
     /// ```
-    /// use fastrace::prelude::*;
     /// use std::time::Duration;
+    ///
+    /// use fastrace::prelude::*;
     ///
     /// let root = Span::root("long-running-task", SpanContext::random());
     /// let _guard = root.set_local_parent();
     ///
     /// {
     ///     let _span = LocalSpan::enter_with_local_parent("operation");
-    ///     
+    ///
     ///     // Do some work...
     ///     std::thread::sleep(Duration::from_millis(100));
     ///
@@ -331,12 +332,14 @@ span1 []
 
     #[test]
     fn local_span_submit_partial() {
+        use std::sync::Arc;
+        use std::sync::Mutex;
+
+        use mockall::Sequence;
+
         use crate::collector::MockGlobalCollect;
         use crate::collector::SpanSet;
         use crate::span::set_mock_collect;
-        use mockall::Sequence;
-        use std::sync::Arc;
-        use std::sync::Mutex;
 
         let routine = || {
             let stack = Rc::new(RefCell::new(LocalSpanStack::with_capacity(16)));

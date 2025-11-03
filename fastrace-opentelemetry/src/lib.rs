@@ -28,20 +28,20 @@ use std::time::SystemTime;
 use fastrace::collector::EventRecord;
 use fastrace::collector::Reporter;
 use fastrace::prelude::*;
+use opentelemetry::InstrumentationScope;
+use opentelemetry::KeyValue;
 use opentelemetry::trace::Event;
 use opentelemetry::trace::SpanContext;
 use opentelemetry::trace::SpanKind;
 use opentelemetry::trace::Status;
 use opentelemetry::trace::TraceFlags;
 use opentelemetry::trace::TraceState;
-use opentelemetry::InstrumentationScope;
-use opentelemetry::KeyValue;
+use opentelemetry_sdk::Resource;
 use opentelemetry_sdk::error::OTelSdkResult;
 use opentelemetry_sdk::trace::SpanData;
 use opentelemetry_sdk::trace::SpanEvents;
 use opentelemetry_sdk::trace::SpanExporter;
 use opentelemetry_sdk::trace::SpanLinks;
-use opentelemetry_sdk::Resource;
 
 /// [OpenTelemetry](https://github.com/open-telemetry/opentelemetry-rust) reporter for `fastrace`.
 ///
