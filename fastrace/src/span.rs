@@ -419,6 +419,54 @@ impl Span {
         None
     }
 
+    /// Submits a partial snapshot of the span's current state to the collector.
+    ///
+    /// This method allows you to report the span's current state before it completes,
+    /// which is useful for long-running operations where you want visibility into
+    /// progress before the span finishes.
+    ///
+    /// The partial span will include all properties and events added up to this point,
+    /// with the duration calculated from the start time to the current time.
+    ///
+    /// # Note
+    ///
+    /// - The span continues to exist and can still have properties/events added
+    /// - When the span is dropped, a final complete version will be submitted
+    /// - Calling this method introduces overhead from cloning the span state
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use fastrace::prelude::*;
+    /// use std::time::Duration;
+    ///
+    /// let root = Span::root("long-running-task", SpanContext::random());
+    ///
+    /// // Do some work...
+    /// std::thread::sleep(Duration::from_millis(100));
+    ///
+    /// // Submit a partial update to show progress
+    /// root.submit_partial();
+    ///
+    /// // Continue working...
+    /// std::thread::sleep(Duration::from_millis(100));
+    ///
+    /// // The final span is submitted when root is dropped
+    /// ```
+    #[inline]
+    pub fn submit_partial(&self) {
+        #[cfg(feature = "enable")]
+        if let Some(inner) = &self.inner {
+            if inner.collect_token.iter().any(|token| token.is_sampled) {
+                let mut partial_span = inner.raw_span.clone();
+                partial_span.end_with(Instant::now());
+                inner
+                    .collect
+                    .submit_spans(SpanSet::Span(partial_span), inner.collect_token.clone());
+            }
+        }
+    }
+
     /// Dismisses the trace, preventing the reporting of any span records associated with it.
     ///
     /// This is particularly useful when focusing on the tail latency of a program. For instant,
@@ -624,7 +672,7 @@ thread_local! {
 }
 
 #[cfg(test)]
-fn current_collect() -> GlobalCollect {
+pub(crate) fn current_collect() -> GlobalCollect {
     MOCK_COLLECT.with(|mock| mock.borrow().clone())
 }
 
@@ -634,7 +682,7 @@ fn set_mock_collect(collect: GlobalCollect) {
 }
 
 #[cfg(not(test))]
-fn current_collect() -> GlobalCollect {
+pub(crate) fn current_collect() -> GlobalCollect {
     GlobalCollect
 }
 

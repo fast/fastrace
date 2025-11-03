@@ -176,6 +176,55 @@ impl LocalSpan {
                 .ok();
         }
     }
+
+    /// Submits a partial snapshot of the current local parent span's state to the collector.
+    ///
+    /// This method allows you to report the current local parent span's state before it completes,
+    /// which is useful for long-running operations where you want visibility into progress.
+    ///
+    /// The partial span will include all properties and events added up to this point,
+    /// with the duration calculated from the start time to the current time.
+    ///
+    /// # Note
+    ///
+    /// - The local parent span continues to exist and can still have properties/events added
+    /// - When the local parent guard is dropped, a final complete version will be submitted
+    /// - Calling this method introduces overhead from cloning the span state
+    /// - This method submits the current local parent span, not a specific LocalSpan instance
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use fastrace::prelude::*;
+    /// use std::time::Duration;
+    ///
+    /// let root = Span::root("long-running-task", SpanContext::random());
+    /// let _guard = root.set_local_parent();
+    ///
+    /// {
+    ///     let _span = LocalSpan::enter_with_local_parent("operation");
+    ///     
+    ///     // Do some work...
+    ///     std::thread::sleep(Duration::from_millis(100));
+    ///
+    ///     // Submit a partial update to show progress
+    ///     LocalSpan::submit_partial();
+    ///
+    ///     // Continue working...
+    ///     std::thread::sleep(Duration::from_millis(100));
+    /// }
+    ///
+    /// // The final span is submitted when _guard is dropped
+    /// ```
+    #[inline]
+    pub fn submit_partial() {
+        #[cfg(feature = "enable")]
+        {
+            LOCAL_SPAN_STACK
+                .try_with(|stack| stack.borrow_mut().submit_partial())
+                .ok();
+        }
+    }
 }
 
 #[cfg(feature = "enable")]

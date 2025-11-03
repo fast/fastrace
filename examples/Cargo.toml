@@ -49,3 +49,7 @@ path = "synchronous.rs"
 [[example]]
 name = "sampling"
 path = "sampling.rs"
+
+[[example]]
+name = "partial_submission"
+path = "partial_submission.rs"
