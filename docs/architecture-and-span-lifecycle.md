@@ -12,7 +12,18 @@ This document outlines the core architecture and span lifecycle within the `fast
 *   **`LocalSpan`**: An optimized, non-thread-safe span for operations within a single thread. It offers lower overhead than `Span` but requires a local parent context.
 *   **`Event`**: A single point-in-time occurrence within a span, akin to a log record attached to a span.
 *   **`SpanContext`**: Contains `TraceId`, `SpanId`, and a `sampled` flag, used for context propagation.
-*   **`RawSpan`**: The internal, raw data structure representing a span or event before it's processed into a `SpanRecord`. It includes `id`, `parent_id`, `begin_instant`, `end_instant`, `name`, `properties`, and `raw_kind` (Span, Event, Properties).
+*   **`RawSpan`**: The internal, raw data structure representing a span or event before it's processed into a `SpanRecord`. It includes `id`, `parent_id`, `begin_instant`, `end_instant`, `name`, `properties`, and `raw_kind` (Span, Event, Properties). For reference, the structure is defined in `fastrace/src/local/raw_span.rs`:
+    ```rust
+    pub struct RawSpan {
+        pub id: SpanId,
+        pub parent_id: Option<SpanId>,
+        pub begin_instant: Instant,
+        pub name: Cow<'static, str>,
+        pub properties: Option<Properties>,
+        pub raw_kind: RawKind,
+        pub end_instant: Instant,
+    }
+    ```
 *   **`SpanRecord`**: The finalized, reportable representation of a span, containing all necessary information for a `Reporter`.
 
 ## 3. Span Lifecycle and Data Flow
