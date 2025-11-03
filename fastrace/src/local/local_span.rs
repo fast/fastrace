@@ -4,10 +4,10 @@ use std::borrow::Cow;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use crate::Event;
 use crate::local::local_span_line::LocalSpanHandle;
-use crate::local::local_span_stack::LOCAL_SPAN_STACK;
 use crate::local::local_span_stack::LocalSpanStack;
+use crate::local::local_span_stack::LOCAL_SPAN_STACK;
+use crate::Event;
 
 /// An optimized [`Span`] for tracing operations within a single thread.
 ///
@@ -354,7 +354,7 @@ span1 []
                 let _span1 = LocalSpan::enter_with_stack("span1", stack.clone());
                 {
                     let _span2 = LocalSpan::enter_with_stack("span2", stack.clone());
-                    
+
                     // Submit partial while spans are still active
                     stack.borrow_mut().submit_partial();
                 }
@@ -380,9 +380,7 @@ span1 []
             })
             .returning({
                 let submitted_span_sets = submitted_span_sets.clone();
-                move |span_set, token| {
-                    submitted_span_sets.lock().unwrap().push((span_set, token))
-                }
+                move |span_set, token| submitted_span_sets.lock().unwrap().push((span_set, token))
             });
 
         let mock = Arc::new(mock);

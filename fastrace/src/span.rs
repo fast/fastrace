@@ -8,22 +8,22 @@ use std::time::Duration;
 
 use fastant::Instant;
 
-use crate::Event;
+use crate::collector::global_collector::NOT_SAMPLED_COLLECT_ID;
 use crate::collector::CollectTokenItem;
 use crate::collector::GlobalCollect;
 use crate::collector::SpanContext;
 use crate::collector::SpanId;
 use crate::collector::SpanSet;
-use crate::collector::global_collector::NOT_SAMPLED_COLLECT_ID;
-use crate::local::LocalCollector;
-use crate::local::LocalSpans;
 use crate::local::local_collector::LocalSpansInner;
-use crate::local::local_span_stack::LOCAL_SPAN_STACK;
 use crate::local::local_span_stack::LocalSpanStack;
+use crate::local::local_span_stack::LOCAL_SPAN_STACK;
 use crate::local::raw_span::RawKind;
 use crate::local::raw_span::RawSpan;
+use crate::local::LocalCollector;
+use crate::local::LocalSpans;
 use crate::util::CollectToken;
 use crate::util::Properties;
+use crate::Event;
 
 /// A thread-safe span.
 #[must_use]
@@ -688,12 +688,12 @@ pub(crate) fn current_collect() -> GlobalCollect {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Mutex;
     use std::sync::atomic::AtomicUsize;
     use std::sync::atomic::Ordering;
+    use std::sync::Mutex;
 
-    use mockall::Sequence;
     use mockall::predicate;
+    use mockall::Sequence;
     use rand::rng;
     use rand::seq::SliceRandom;
 
@@ -887,9 +887,10 @@ root []
             let parent4 = Span::root("parent4", parent_ctx);
             let parent5 = Span::root("parent5", parent_ctx);
             let child1 = Span::enter_with_parent("child1", &parent5);
-            let child2 = Span::enter_with_parents("child2", [
-                &parent1, &parent2, &parent3, &parent4, &parent5, &child1,
-            ])
+            let child2 = Span::enter_with_parents(
+                "child2",
+                [&parent1, &parent2, &parent3, &parent4, &parent5, &child1],
+            )
             .with_property(|| ("k1", "v1"));
 
             crossbeam::scope(move |scope| {
@@ -1131,25 +1132,25 @@ root []
         let routine = || {
             let parent_ctx = SpanContext::random();
             let root = Span::root("root", parent_ctx);
-            
+
             // Submit partial update
             root.submit_partial();
-            
+
             // Add a property after partial submission
             root.add_property(|| ("key", "value"));
-            
+
             fastrace::flush();
         };
 
         let mut mock = MockGlobalCollect::new();
         let mut seq = Sequence::new();
         let span_sets = Arc::new(Mutex::new(Vec::new()));
-        
+
         mock.expect_start_collect()
             .times(1)
             .in_sequence(&mut seq)
             .return_const(42_usize);
-        
+
         // Expect three submit_spans calls: partial span, properties span, and final span
         mock.expect_submit_spans()
             .times(3)
@@ -1159,13 +1160,13 @@ root []
                 let span_sets = span_sets.clone();
                 move |span_set, token| span_sets.lock().unwrap().push((span_set, token))
             });
-        
+
         mock.expect_commit_collect()
             .times(1)
             .in_sequence(&mut seq)
             .with(predicate::eq(42_usize))
             .return_const(());
-        
+
         mock.expect_drop_collect().times(0);
 
         let mock = Arc::new(mock);
@@ -1176,7 +1177,7 @@ root []
         let span_sets = std::mem::take(&mut *span_sets.lock().unwrap());
         // Should have 3 span submissions: partial root, properties, and final root
         assert_eq!(span_sets.len(), 3);
-        
+
         // Verify the first submission is the partial span
         match &span_sets[0].0 {
             SpanSet::Span(raw_span) => {
@@ -1186,15 +1187,18 @@ root []
             }
             _ => panic!("Expected Span variant for partial submission"),
         }
-        
+
         // Verify the second submission is the properties span
         match &span_sets[1].0 {
             SpanSet::Span(raw_span) => {
-                assert_eq!(raw_span.raw_kind, crate::local::raw_span::RawKind::Properties);
+                assert_eq!(
+                    raw_span.raw_kind,
+                    crate::local::raw_span::RawKind::Properties
+                );
             }
             _ => panic!("Expected Span variant for properties submission"),
         }
-        
+
         // Verify the third submission is the final root span
         match &span_sets[2].0 {
             SpanSet::Span(raw_span) => {

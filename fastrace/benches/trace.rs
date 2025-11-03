@@ -1,5 +1,5 @@
-use divan::Bencher;
 use divan::black_box;
+use divan::Bencher;
 use fastrace::local::LocalCollector;
 use fastrace::prelude::*;
 

@@ -6,9 +6,9 @@ use std::sync::Arc;
 
 use fastant::Instant;
 
-use crate::local::local_span_stack::LOCAL_SPAN_STACK;
 use crate::local::local_span_stack::LocalSpanStack;
 use crate::local::local_span_stack::SpanLineHandle;
+use crate::local::local_span_stack::LOCAL_SPAN_STACK;
 use crate::prelude::SpanContext;
 use crate::prelude::SpanRecord;
 use crate::util::CollectToken;

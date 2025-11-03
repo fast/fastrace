@@ -33,8 +33,8 @@
 use std::borrow::Cow;
 use std::task::Poll;
 
-use crate::Span;
 use crate::local::LocalSpan;
+use crate::Span;
 
 impl<T: std::future::Future> FutureExt for T {}
 
