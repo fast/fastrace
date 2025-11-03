@@ -1,7 +1,9 @@
 // Copyright 2020 TiKV Project Authors. Licensed under Apache-2.0.
 
+use std::sync::Arc;
+
+use crate::collector::CollectTokenItem;
 use crate::collector::SpanSet;
-use crate::util::CollectToken;
 
 #[derive(Debug)]
 pub enum CollectCommand {
@@ -28,6 +30,6 @@ pub struct CommitCollect {
 
 #[derive(Debug)]
 pub struct SubmitSpans {
-    pub spans: SpanSet,
-    pub collect_token: CollectToken,
+    pub spans: Arc<SpanSet>,
+    pub collect_token_item: CollectTokenItem,
 }

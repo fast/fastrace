@@ -79,6 +79,16 @@ The core mechanism for span finalization and submission relies heavily on Rust's
 *   **`Reporter`**: Once `RawSpan`s are processed into `SpanRecord`s (in `postprocess_span_collection`), they are passed to the configured `Reporter` (e.g., `JaegerReporter`, `ConsoleReporter`) for external transmission.
 *   **`fastrace::flush()`**: Manually triggers `GlobalCollector::handle_commands()` to process all pending commands immediately, ensuring all collected spans are reported.
 
+### 3.4.1. Optimized Span Submission
+
+To further reduce overhead, especially when a span has multiple parents, the internal mechanism for submitting spans to the `GlobalCollector` has been optimized:
+
+*   **Shared `SpanSet`**: When `Span::submit_spans()` or `LocalSpan::submit_partial()` is called, the `SpanSet` (which contains the `RawSpan` data) is now wrapped in an `Arc<SpanSet>` once. This `Arc` allows the `SpanSet` data to be shared efficiently without cloning the entire data structure.
+*   **Individual Commands**: Instead of sending a single `SubmitSpans` command with a `Vec<CollectTokenItem>`, the `GlobalCollect::submit_spans` method now sends individual `SubmitSpans` commands for each `CollectTokenItem`. Each command contains a clone of the `Arc<SpanSet>` (which is just a pointer copy, not a deep clone of the span data) and a single `CollectTokenItem`.
+*   **Simplified `SpanCollection`**: Internally, the `GlobalCollector`'s `SpanCollection` enum has been simplified to a single `Collected(Arc<SpanSet>, TraceId, SpanId)` variant. This streamlines the handling of submitted spans within the collector.
+
+This optimization significantly reduces the cloning overhead associated with `SpanSet`s, particularly in scenarios where a single span or set of local spans needs to be associated with multiple parent contexts. By leveraging `Arc`, the underlying span data is shared, leading to improved performance.
+
 ## 4. Addressing the User's Concern: Spans Not Collected Until Scope Changes
 
 The user observed that spans are not immediately visible in the `GlobalCollector` even with `tail_sampled` off, and only appear after the enclosing scope changes. This behavior is a direct consequence of `fastrace`'s RAII-based design for span finalization:
@@ -90,27 +100,24 @@ The user observed that spans are not immediately visible in the `GlobalCollector
 
 Therefore, the "scope change" is critical because it triggers the `Drop` implementations of `Span`s and `LocalParentGuard`s, which are responsible for collecting and submitting the span data to the `GlobalCollector`.
 
-## 5. Potential Feature for Earlier Span Submission
+## 5. Earlier Span Submission with `submit_partial()`
 
-Implementing a feature to allow earlier (e.g., "mid-span") submission of `fastrace` spans would be a significant architectural change with several challenges:
+`fastrace` now provides `Span::submit_partial()` and `LocalSpan::submit_partial()` methods to allow for earlier (e.g., "mid-span") submission of span data to the `GlobalCollector`. This addresses scenarios where long-running operations might benefit from intermediate trace updates.
 
-### 5.1. Technical Challenges
+### 5.1. How `submit_partial()` Works
 
-1.  **`RawSpan` Mutability and Ownership**: `RawSpan`s are currently mutable within the `SpanQueue` (to set `end_instant`, add properties/events). Submitting a `RawSpan` mid-lifecycle would require either:
-    *   Cloning the `RawSpan` (introducing overhead).
-    *   Designing a mechanism for partial submission and later updates (complex state management, potential for race conditions if not carefully handled).
-    *   Changing `RawSpan` to be immutable and submitting "span update" events, which would be a major redesign.
-2.  **Duration Calculation**: A span's duration is typically calculated from its start and end timestamps. If a span is submitted before it ends, its duration would be incomplete or require a "current duration" field, which would need to be updated.
-3.  **Parent-Child Relationships**: Ensuring correct parent-child relationships for partially submitted spans, especially in multi-threaded or asynchronous contexts, would be complex. A child span might be submitted before its parent, requiring the `GlobalCollector` to handle out-of-order span processing or re-parenting.
-4.  **Overhead**: Frequent "mid-span" submissions would increase the load on the SPSC channel and the `GlobalCollector`, potentially negating `fastrace`'s performance benefits.
-5.  **API Design**: A new API would be needed (e.g., `span.submit_partial()`, `local_span.submit_partial()`) that clearly communicates its behavior and limitations.
+The `submit_partial()` methods work by taking a snapshot of the current state of the `Span` or `LocalSpan` and sending this partial data to the `GlobalCollector`.
 
-### 5.2. Possible Approaches (High-Level)
+*   **`Span::submit_partial()`**: When called on a `Span`, it clones the current `RawSpan` data and sends it to the `GlobalCollector` via the SPSC channel as a `CollectCommand::SubmitSpans` with `SpanSet::SharedLocalSpans`. This allows the `GlobalCollector` to process and potentially report the span's current state even if the span has not yet ended.
+*   **`LocalSpan::submit_partial()`**: Similarly, when called on a `LocalSpan`, it collects all `RawSpan`s from the current `SpanLine` and submits them to the `GlobalCollector` as `CollectCommand::SubmitSpans` with `SpanSet::SharedLocalSpans`. This effectively flushes the thread-local buffer of `LocalSpan`s up to that point.
 
-*   **Explicit `Span::submit_partial()`**: A method that clones the current state of a `RawSpan` and sends it to the `GlobalCollector` with a flag indicating it's a partial span. The `GlobalCollector` would need to handle updates to these partial spans.
-*   **Event-Based Updates**: Instead of submitting the entire span, submit "span update" events (e.g., "span_properties_updated", "span_event_added") that the `GlobalCollector` can apply to an existing, in-progress span record. This would require the `GlobalCollector` to maintain a map of in-progress spans.
-*   **Timed Partial Submission**: A configuration option to automatically submit partial spans every `X` milliseconds for long-running spans. This would still face the challenges of mutability and duration.
+### 5.2. Considerations and Best Practices
+
+1.  **Overhead**: Calling `submit_partial()` involves cloning span data and sending it over an SPSC channel. Frequent calls can introduce overhead, potentially impacting `fastrace`'s low-overhead design. Use it judiciously for long-running spans where intermediate visibility is genuinely beneficial.
+2.  **Partial Data**: The submitted data represents the span's state at the time of the call. If the span continues to execute and more properties or events are added, these will only be included in subsequent `submit_partial()` calls or the final submission when the span drops.
+3.  **Duration**: The `end_instant` of a partially submitted span will reflect the time of the `submit_partial()` call. The final `end_instant` will be set when the span naturally drops. The `GlobalCollector` is designed to handle updates to spans, so later submissions with a final `end_instant` will supersede earlier partial submissions.
+4.  **Asynchronous Contexts**: `submit_partial()` is particularly useful in asynchronous operations where a single logical operation might span a significant amount of time, and immediate feedback on its progress is desired.
 
 ### 5.3. Recommendation
 
-Given `fastrace`'s strong emphasis on performance and its current RAII-based design, a feature for "mid-span" submission would require careful consideration to avoid introducing significant overhead or complexity. The existing `fastrace::flush()` mechanism, combined with a low `report_interval`, is the intended way to get more frequent updates on completed spans. For truly real-time, in-progress span visibility, a different tracing paradigm might be more suitable, or a highly optimized, event-driven update mechanism would need to be designed for `fastrace`.
+For scenarios requiring earlier visibility of long-running spans, `Span::submit_partial()` and `LocalSpan::submit_partial()` provide a direct mechanism. While they introduce some overhead due to data cloning and channel communication, this is a controlled trade-off for improved observability. For general use cases, relying on the RAII-based `Drop` implementations for final span submission remains the most performant approach. The `fastrace::flush()` mechanism can still be used to ensure all *completed* spans are processed and reported promptly.

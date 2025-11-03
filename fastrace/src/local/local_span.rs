@@ -259,11 +259,14 @@ impl Drop for LocalSpan {
 
 #[cfg(test)]
 mod tests {
+    use mockall::predicate;
+
     use super::*;
     use crate::collector::CollectTokenItem;
     use crate::collector::SpanId;
     use crate::local::LocalCollector;
     use crate::prelude::TraceId;
+    use crate::util::CollectToken;
     use crate::util::tree::tree_str_from_raw_spans;
 
     #[test]
@@ -369,7 +372,7 @@ span1 []
 
         let mut mock = MockGlobalCollect::new();
         let mut seq = Sequence::new();
-        let submitted_span_sets = Arc::new(Mutex::new(Vec::new()));
+        let submitted_span_sets = Arc::new(Mutex::new(Vec::<(SpanSet, CollectToken)>::new()));
 
         // Expect submit_spans to be called for the partial submission
         mock.expect_submit_spans()
@@ -411,5 +414,85 @@ span1 []
 
         // Final collection should still work normally
         assert_eq!(final_spans.spans.len(), 2);
+    }
+
+    #[tokio::test]
+    async fn async_local_span_submit_partial() {
+        use std::sync::Arc;
+        use std::sync::Mutex;
+        use std::time::Duration;
+
+        use mockall::Sequence;
+
+        use crate::Span;
+        use crate::collector::MockGlobalCollect;
+        use crate::collector::SpanSet;
+        use crate::prelude::SpanContext;
+        use crate::span::set_mock_collect;
+
+        let mut mock = MockGlobalCollect::new();
+        let mut seq = Sequence::new();
+
+        // Expect start_collect for the root span
+        mock.expect_start_collect().times(1).return_const(42_usize);
+
+        // Expect submit_spans for the partial local span submission
+        mock.expect_submit_spans()
+            .times(1)
+            .withf(|span_set, collect_token| {
+                matches!(span_set, SpanSet::SharedLocalSpans(_))
+                    && collect_token.len() == 1
+                    && collect_token[0].collect_id == 42
+            })
+            .return_const(());
+
+        // Expect submit_spans for the final local spans when LocalParentGuard drops
+        mock.expect_submit_spans()
+            .times(1)
+            .withf(|span_set, collect_token| {
+                matches!(span_set, SpanSet::LocalSpansInner(_))
+                    && collect_token.len() == 1
+                    && collect_token[0].collect_id == 42
+            })
+            .return_const(());
+
+        // Expect submit_spans for the root span when it drops
+        mock.expect_submit_spans()
+            .times(1)
+            .withf(|span_set, collect_token| {
+                matches!(span_set, SpanSet::Span(_))
+                    && collect_token.len() == 1
+                    && collect_token[0].collect_id == 42
+            })
+            .return_const(());
+
+        // Expect commit_collect for the root span
+        mock.expect_commit_collect()
+            .times(1)
+            .with(predicate::eq(42_usize))
+            .return_const(());
+
+        let mock = Arc::new(mock);
+        set_mock_collect(mock.clone());
+
+        let root = Span::root("async_root", SpanContext::random());
+        let _guard = root.set_local_parent();
+
+        tokio::task::LocalSet::new()
+            .run_until(async move {
+                tokio::task::spawn_local(async move {
+                    let _span1 = LocalSpan::enter_with_local_parent("async_span1");
+                    tokio::time::sleep(Duration::from_millis(50)).await;
+                    LocalSpan::submit_partial();
+                    tokio::time::sleep(Duration::from_millis(50)).await;
+                    let _span2 = LocalSpan::enter_with_local_parent("async_span2");
+                    tokio::time::sleep(Duration::from_millis(50)).await;
+                })
+                .await
+                .unwrap();
+            })
+            .await;
+
+        drop(root); // Explicitly drop root to trigger its submission
     }
 }

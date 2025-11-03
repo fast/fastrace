@@ -171,7 +171,6 @@ impl GlobalCollect {
     //     |  15  |  default  | ... | <- root span         |    874     |     321    |
     //     | 545  |    15     | ... |                      |    915     |     413    |
     //     |  70  |  default  | ... | <- root span         +------------+------------+
-    //     +------+-----------+-----+
     //
     // There is a many-to-many mapping. Span#15 has parents Span#7, Span#321 and Span#413, so does
     // Span#70.
@@ -183,32 +182,26 @@ impl GlobalCollect {
     pub fn submit_spans(&self, spans: SpanSet, mut collect_token: CollectToken) {
         collect_token.retain(|item| item.is_sampled);
         if !collect_token.is_empty() {
-            send_command(CollectCommand::SubmitSpans(SubmitSpans {
-                spans,
-                collect_token,
-            }));
+            let shared_spans = Arc::new(spans);
+
+            for item in collect_token {
+                send_command(CollectCommand::SubmitSpans(SubmitSpans {
+                    spans: shared_spans.clone(),
+                    collect_token_item: item,
+                }));
+            }
         }
     }
 }
 
 enum SpanCollection {
-    Owned {
-        spans: SpanSet,
-        trace_id: TraceId,
-        parent_id: SpanId,
-    },
-    Shared {
-        spans: Arc<SpanSet>,
-        trace_id: TraceId,
-        parent_id: SpanId,
-    },
+    Collected(Arc<SpanSet>, TraceId, SpanId),
 }
 
 impl SpanCollection {
     fn trace_id(&self) -> TraceId {
         match self {
-            SpanCollection::Owned { trace_id, .. } => *trace_id,
-            SpanCollection::Shared { trace_id, .. } => *trace_id,
+            SpanCollection::Collected(.., trace_id, _) => *trace_id,
         }
     }
 }
@@ -333,48 +326,26 @@ impl GlobalCollector {
 
         for SubmitSpans {
             spans,
-            collect_token,
+            collect_token_item,
         } in self.submit_spans.drain(..)
         {
-            debug_assert!(!collect_token.is_empty());
-
-            if collect_token.len() == 1 {
-                let item = collect_token[0];
-                if let Some(active_collector) = self.active_collectors.get_mut(&item.collect_id) {
-                    active_collector
-                        .span_collections
-                        .push(SpanCollection::Owned {
-                            spans,
-                            trace_id: item.trace_id,
-                            parent_id: item.parent_id,
-                        });
-                } else if !self.config.tail_sampled {
-                    stale_spans.push(SpanCollection::Owned {
+            if let Some(active_collector) = self
+                .active_collectors
+                .get_mut(&collect_token_item.collect_id)
+            {
+                active_collector
+                    .span_collections
+                    .push(SpanCollection::Collected(
                         spans,
-                        trace_id: item.trace_id,
-                        parent_id: item.parent_id,
-                    });
-                }
-            } else {
-                let spans = Arc::new(spans);
-                for item in &collect_token {
-                    if let Some(active_collector) = self.active_collectors.get_mut(&item.collect_id)
-                    {
-                        active_collector
-                            .span_collections
-                            .push(SpanCollection::Shared {
-                                spans: spans.clone(),
-                                trace_id: item.trace_id,
-                                parent_id: item.parent_id,
-                            });
-                    } else if !self.config.tail_sampled {
-                        stale_spans.push(SpanCollection::Shared {
-                            spans: spans.clone(),
-                            trace_id: item.trace_id,
-                            parent_id: item.parent_id,
-                        });
-                    }
-                }
+                        collect_token_item.trace_id,
+                        collect_token_item.parent_id,
+                    ));
+            } else if !self.config.tail_sampled {
+                stale_spans.push(SpanCollection::Collected(
+                    spans,
+                    collect_token_item.trace_id,
+                    collect_token_item.parent_id,
+                ));
             }
         }
 
@@ -454,41 +425,7 @@ fn postprocess_span_collection<'a>(
 
     for span_collection in span_collections {
         match span_collection {
-            SpanCollection::Owned {
-                spans,
-                trace_id,
-                parent_id,
-            } => match spans {
-                SpanSet::Span(raw_span) => amend_span(
-                    raw_span,
-                    *trace_id,
-                    *parent_id,
-                    committed_records,
-                    danglings,
-                    anchor,
-                ),
-                SpanSet::LocalSpansInner(local_spans) => amend_local_span(
-                    local_spans,
-                    *trace_id,
-                    *parent_id,
-                    committed_records,
-                    danglings,
-                    anchor,
-                ),
-                SpanSet::SharedLocalSpans(local_spans) => amend_local_span(
-                    local_spans,
-                    *trace_id,
-                    *parent_id,
-                    committed_records,
-                    danglings,
-                    anchor,
-                ),
-            },
-            SpanCollection::Shared {
-                spans,
-                trace_id,
-                parent_id,
-            } => match &**spans {
+            SpanCollection::Collected(spans, trace_id, parent_id) => match &**spans {
                 SpanSet::Span(raw_span) => amend_span(
                     raw_span,
                     *trace_id,
@@ -659,5 +596,33 @@ fn mount_danglings(records: &mut [SpanRecord], danglings: &mut HashMap<SpanId, V
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashSet;
+
+    use super::*;
+
+    #[test]
+    #[allow(clippy::needless_collect)]
+    fn unique_id() {
+        let handles = std::iter::repeat_with(|| {
+            std::thread::spawn(|| {
+                std::iter::repeat_with(SpanId::next_id)
+                    .take(1000)
+                    .collect::<Vec<_>>()
+            })
+        })
+        .take(32)
+        .collect::<Vec<_>>();
+
+        let k = handles
+            .into_iter()
+            .flat_map(|h| h.join().unwrap())
+            .collect::<HashSet<_>>();
+
+        assert_eq!(k.len(), 32 * 1000);
     }
 }

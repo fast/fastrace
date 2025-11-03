@@ -1,61 +1,81 @@
-// Copyright 2020 TiKV Project Authors. Licensed under Apache-2.0.
-
 use std::time::Duration;
 
+use fastrace::Span;
 use fastrace::collector::Config;
 use fastrace::collector::ConsoleReporter;
 use fastrace::prelude::*;
+use tokio::time::sleep;
 
-fn main() {
-    fastrace::set_reporter(ConsoleReporter, Config::default());
+#[tokio::main]
+async fn main() {
+    // Initialize fastrace with a ConsoleReporter
+    fastrace::set_reporter(
+        ConsoleReporter,
+        Config::default().report_interval(Duration::from_millis(100)),
+    );
 
-    {
-        let root = Span::root("long-running-operation", SpanContext::random());
-        let _guard = root.set_local_parent();
+    println!("--- Synchronous Partial Submission Example ---");
+    sync_partial_submission();
+    fastrace::flush(); // Flush to ensure synchronous spans are reported
 
-        println!("Starting long-running operation...");
+    println!(
+        "
+--- Asynchronous Partial Submission Example ---"
+    );
+    async_partial_submission().await;
+    fastrace::flush(); // Flush to ensure asynchronous spans are reported
 
-        // Simulate some work
-        std::thread::sleep(Duration::from_millis(100));
+    // Give some time for the reporter to process and print
+    sleep(Duration::from_millis(200)).await;
+}
 
-        // Submit partial update to show progress
-        println!("Submitting partial update #1...");
-        root.submit_partial();
+fn sync_partial_submission() {
+    let root_span = Span::root("sync_root", SpanContext::random());
+    root_span.add_property(|| ("stage", "start"));
 
-        // Do more work
-        std::thread::sleep(Duration::from_millis(100));
+    // Simulate some work
+    std::thread::sleep(Duration::from_millis(50));
+    root_span.add_property(|| ("progress", "25%"));
+    root_span.submit_partial(); // Submit partial data
 
-        // Submit another partial update
-        println!("Submitting partial update #2...");
-        root.submit_partial();
+    std::thread::sleep(Duration::from_millis(50));
+    root_span.add_property(|| ("progress", "50%"));
+    root_span.submit_partial(); // Submit another partial data
 
-        // Final work
-        std::thread::sleep(Duration::from_millis(100));
+    let child_span = Span::enter_with_parent("sync_child", &root_span);
+    std::thread::sleep(Duration::from_millis(30));
+    child_span.add_property(|| ("child_status", "done"));
+    child_span.submit_partial(); // Partial submission for child
 
-        println!("Completing operation...");
-        // Root span will be submitted when dropped
-    }
+    std::thread::sleep(Duration::from_millis(50));
+    root_span.add_property(|| ("stage", "complete"));
+    // root_span and child_span will be fully submitted when they drop
+}
 
-    // Example with LocalSpan
-    {
-        let root = Span::root("batch-processing", SpanContext::random());
-        let _guard = root.set_local_parent();
+async fn async_partial_submission() {
+    let root_span = Span::root("async_root", SpanContext::random());
+    let _guard = root_span.set_local_parent(); // Set local parent for LocalSpans
 
-        println!("\nStarting batch processing...");
+    tokio::task::LocalSet::new()
+        .run_until(async move {
+            tokio::task::spawn_local(async move {
+                let _span1 = LocalSpan::enter_with_local_parent("async_task_1");
+                sleep(Duration::from_millis(50)).await;
+                LocalSpan::add_property(|| ("step", "1"));
+                LocalSpan::submit_partial(); // Submit partial data for local spans
 
-        for i in 1..=3 {
-            let _span = LocalSpan::enter_with_local_parent(format!("batch-{}", i));
+                sleep(Duration::from_millis(50)).await;
+                let _span2 = LocalSpan::enter_with_local_parent("async_task_2");
+                sleep(Duration::from_millis(30)).await;
+                LocalSpan::add_property(|| ("step", "2"));
+                LocalSpan::submit_partial(); // Submit another partial data for local spans
 
-            // Simulate work
-            std::thread::sleep(Duration::from_millis(50));
-
-            // Submit partial update showing progress through batches
-            println!("Submitting partial update for batch {}...", i);
-            LocalSpan::submit_partial();
-        }
-
-        println!("Batch processing complete.");
-    }
-
-    fastrace::flush();
+                sleep(Duration::from_millis(50)).await;
+                LocalSpan::add_property(|| ("status", "finished"));
+                // LocalSpans will be fully submitted when _guard drops
+            })
+            .await
+            .unwrap();
+        })
+        .await;
 }
