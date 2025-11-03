@@ -677,7 +677,7 @@ pub(crate) fn current_collect() -> GlobalCollect {
 }
 
 #[cfg(test)]
-fn set_mock_collect(collect: GlobalCollect) {
+pub(crate) fn set_mock_collect(collect: GlobalCollect) {
     MOCK_COLLECT.with(|mock| *mock.borrow_mut() = collect);
 }
 
@@ -1122,5 +1122,86 @@ root []
     local []
 "#
         );
+    }
+
+    #[test]
+    fn span_submit_partial() {
+        crate::set_reporter(ConsoleReporter, crate::collector::Config::default());
+
+        let routine = || {
+            let parent_ctx = SpanContext::random();
+            let root = Span::root("root", parent_ctx);
+            
+            // Submit partial update
+            root.submit_partial();
+            
+            // Add a property after partial submission
+            root.add_property(|| ("key", "value"));
+            
+            fastrace::flush();
+        };
+
+        let mut mock = MockGlobalCollect::new();
+        let mut seq = Sequence::new();
+        let span_sets = Arc::new(Mutex::new(Vec::new()));
+        
+        mock.expect_start_collect()
+            .times(1)
+            .in_sequence(&mut seq)
+            .return_const(42_usize);
+        
+        // Expect three submit_spans calls: partial span, properties span, and final span
+        mock.expect_submit_spans()
+            .times(3)
+            .in_sequence(&mut seq)
+            .withf(|_, collect_token| collect_token.len() == 1 && collect_token[0].collect_id == 42)
+            .returning({
+                let span_sets = span_sets.clone();
+                move |span_set, token| span_sets.lock().unwrap().push((span_set, token))
+            });
+        
+        mock.expect_commit_collect()
+            .times(1)
+            .in_sequence(&mut seq)
+            .with(predicate::eq(42_usize))
+            .return_const(());
+        
+        mock.expect_drop_collect().times(0);
+
+        let mock = Arc::new(mock);
+        set_mock_collect(mock);
+
+        routine();
+
+        let span_sets = std::mem::take(&mut *span_sets.lock().unwrap());
+        // Should have 3 span submissions: partial root, properties, and final root
+        assert_eq!(span_sets.len(), 3);
+        
+        // Verify the first submission is the partial span
+        match &span_sets[0].0 {
+            SpanSet::Span(raw_span) => {
+                assert_eq!(raw_span.name.as_ref(), "root");
+                // Partial span should have an end time set
+                assert_ne!(raw_span.end_instant, fastant::Instant::ZERO);
+            }
+            _ => panic!("Expected Span variant for partial submission"),
+        }
+        
+        // Verify the second submission is the properties span
+        match &span_sets[1].0 {
+            SpanSet::Span(raw_span) => {
+                assert_eq!(raw_span.raw_kind, crate::local::raw_span::RawKind::Properties);
+            }
+            _ => panic!("Expected Span variant for properties submission"),
+        }
+        
+        // Verify the third submission is the final root span
+        match &span_sets[2].0 {
+            SpanSet::Span(raw_span) => {
+                assert_eq!(raw_span.name.as_ref(), "root");
+                assert_ne!(raw_span.end_instant, fastant::Instant::ZERO);
+            }
+            _ => panic!("Expected Span variant for final submission"),
+        }
     }
 }

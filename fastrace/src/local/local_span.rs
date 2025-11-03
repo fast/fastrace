@@ -328,4 +328,87 @@ span1 []
 
         let _ = collector.collect_spans_and_token();
     }
+
+    #[test]
+    fn local_span_submit_partial() {
+        use crate::collector::MockGlobalCollect;
+        use crate::collector::SpanSet;
+        use crate::span::set_mock_collect;
+        use mockall::Sequence;
+        use std::sync::Arc;
+        use std::sync::Mutex;
+
+        let routine = || {
+            let stack = Rc::new(RefCell::new(LocalSpanStack::with_capacity(16)));
+
+            let token = CollectTokenItem {
+                trace_id: TraceId(1234),
+                parent_id: SpanId::default(),
+                collect_id: 42,
+                is_root: false,
+                is_sampled: true,
+            };
+            let collector = LocalCollector::new(Some(token.into()), stack.clone());
+
+            {
+                let _span1 = LocalSpan::enter_with_stack("span1", stack.clone());
+                {
+                    let _span2 = LocalSpan::enter_with_stack("span2", stack.clone());
+                    
+                    // Submit partial while spans are still active
+                    stack.borrow_mut().submit_partial();
+                }
+            }
+
+            let (spans, _) = collector.collect_spans_and_token();
+            spans
+        };
+
+        let mut mock = MockGlobalCollect::new();
+        let mut seq = Sequence::new();
+        let submitted_span_sets = Arc::new(Mutex::new(Vec::new()));
+
+        // Expect submit_spans to be called for the partial submission
+        mock.expect_submit_spans()
+            .times(1)
+            .in_sequence(&mut seq)
+            .withf(|span_set, collect_token| {
+                // Verify it's a SharedLocalSpans submission
+                matches!(span_set, SpanSet::SharedLocalSpans(_))
+                    && collect_token.len() == 1
+                    && collect_token[0].collect_id == 42
+            })
+            .returning({
+                let submitted_span_sets = submitted_span_sets.clone();
+                move |span_set, token| {
+                    submitted_span_sets.lock().unwrap().push((span_set, token))
+                }
+            });
+
+        let mock = Arc::new(mock);
+        set_mock_collect(mock);
+
+        let final_spans = routine();
+
+        // Verify partial submission occurred
+        let submitted = submitted_span_sets.lock().unwrap();
+        assert_eq!(submitted.len(), 1);
+
+        // Verify the partial submission contained spans
+        match &submitted[0].0 {
+            SpanSet::SharedLocalSpans(local_spans) => {
+                assert!(!local_spans.spans.is_empty());
+                // Partial spans should have end times set
+                for span in local_spans.spans.iter() {
+                    if span.raw_kind == crate::local::raw_span::RawKind::Span {
+                        assert_ne!(span.end_instant, fastant::Instant::ZERO);
+                    }
+                }
+            }
+            _ => panic!("Expected SharedLocalSpans variant"),
+        }
+
+        // Final collection should still work normally
+        assert_eq!(final_spans.spans.len(), 2);
+    }
 }
