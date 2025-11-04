@@ -545,13 +545,11 @@ fn amend_local_span(
     anchor: &Anchor,
 ) {
     for span in local_spans.spans.iter() {
-        let parent_id = span.parent_id.unwrap_or(parent_id);
-
-        let span_parent_is_remote = if span.parent_id.is_none() {
-            parent_is_remote
-        } else {
-            false // Child spans always have local parents
-        };
+        let (parent_id, parent_is_remote) = span
+            .parent_id
+            .map_or((parent_id, parent_is_remote), |local_parent_id| {
+                (local_parent_id, false)
+            });
 
         match span.raw_kind {
             RawKind::Span => {
@@ -565,7 +563,7 @@ fn amend_local_span(
                     trace_id,
                     span_id: span.id,
                     parent_id,
-                    parent_is_remote: span_parent_is_remote,
+                    parent_is_remote,
                     begin_time_unix_ns,
                     duration_ns: end_time_unix_ns.saturating_sub(begin_time_unix_ns),
                     name: span.name.clone(),

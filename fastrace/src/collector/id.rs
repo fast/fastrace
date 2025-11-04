@@ -133,6 +133,7 @@ impl<'de> serde::Deserialize<'de> for SpanId {
 pub struct SpanContext {
     pub trace_id: TraceId,
     pub span_id: SpanId,
+    // TODO: rename to trace_flags / is_sampled
     pub sampled: bool,
     pub is_remote: bool,
 }
@@ -241,7 +242,7 @@ impl SpanContext {
                 trace_id: collect_token.trace_id,
                 span_id: collect_token.parent_id,
                 sampled: collect_token.is_sampled,
-                is_remote: collect_token.parent_is_remote,
+                is_remote: false,
             })
         }
     }
@@ -276,7 +277,7 @@ impl SpanContext {
                 trace_id: collect_token.trace_id,
                 span_id: collect_token.parent_id,
                 sampled: collect_token.is_sampled,
-                is_remote: collect_token.parent_is_remote,
+                is_remote: false,
             })
         }
     }

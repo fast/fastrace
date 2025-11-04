@@ -751,22 +751,22 @@ fn test_remote_parent_flag_in_span_context() {
     )
     .unwrap();
 
-    assert!(
-        remote_context.is_remote,
-        "W3C traceparent context should be marked as remote"
-    );
+    assert!(remote_context.is_remote);
 
     let local_random_context = SpanContext::random();
-    assert!(
-        !local_random_context.is_remote,
-        "Random context should not be remote"
-    );
+    assert!(!local_random_context.is_remote);
 
     let local_new_context = SpanContext::new(TraceId(123), SpanId(456));
-    assert!(
-        !local_new_context.is_remote,
-        "Manually created context should not be remote"
-    );
+    assert!(!local_new_context.is_remote);
+
+    let root = Span::root("root", remote_context);
+    let root_context = SpanContext::from_span(&root).unwrap();
+    assert!(!root_context.is_remote);
+
+    let _g = root.set_local_parent();
+    let _span = LocalSpan::enter_with_local_parent("span");
+    let local_context = SpanContext::current_local_parent().unwrap();
+    assert!(!local_context.is_remote);
 }
 
 #[test]
@@ -790,27 +790,11 @@ fn test_local_spans_with_remote_parent() {
     .unwrap();
     let records_with_remote = local_spans.to_span_records(remote_context);
 
-    // The root span in the local collection should have the remote parent
     let root_span = &records_with_remote[0];
-    assert_eq!(
-        root_span.parent_id, remote_context.span_id,
-        "Root span should have the remote span as parent"
-    );
-    assert!(
-        root_span.parent_is_remote,
-        "Root span should be marked as having a remote parent"
-    );
+    assert_eq!(root_span.parent_id, remote_context.span_id);
+    assert!(root_span.parent_is_remote);
 
-    // Any child spans should have local parents
     let child_span = &records_with_remote[1];
-
-    assert_eq!(
-        child_span.parent_id, root_span.span_id,
-        "Child should have root span as parent"
-    );
-
-    assert!(
-        !child_span.parent_is_remote,
-        "Child span should have a local parent"
-    );
+    assert_eq!(child_span.parent_id, root_span.span_id);
+    assert!(!child_span.parent_is_remote);
 }

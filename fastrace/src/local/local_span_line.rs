@@ -115,7 +115,7 @@ impl SpanLine {
                     collect_id: item.collect_id,
                     is_root: item.is_root,
                     is_sampled: item.is_sampled,
-                    parent_is_remote: item.parent_is_remote,
+                    parent_is_remote: false,
                 })
                 .collect()
         })
