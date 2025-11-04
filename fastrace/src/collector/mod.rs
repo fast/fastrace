@@ -47,6 +47,7 @@ pub struct SpanRecord {
     pub trace_id: TraceId,
     pub span_id: SpanId,
     pub parent_id: SpanId,
+    pub parent_is_remote: bool,
     pub begin_time_unix_ns: u64,
     pub duration_ns: u64,
     pub name: Cow<'static, str>,
@@ -70,6 +71,7 @@ pub struct CollectTokenItem {
     pub collect_id: usize,
     pub is_root: bool,
     pub is_sampled: bool,
+    pub parent_is_remote: bool,
 }
 
 /// Configuration of the behavior of the global collector.

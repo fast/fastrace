@@ -743,3 +743,58 @@ fn test_not_sampled() {
     fastrace::flush();
     assert!(collected_spans.lock().is_empty());
 }
+
+#[test]
+fn test_remote_parent_flag_in_span_context() {
+    let remote_context = SpanContext::decode_w3c_traceparent(
+        "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+    )
+    .unwrap();
+
+    assert!(remote_context.is_remote);
+
+    let local_random_context = SpanContext::random();
+    assert!(!local_random_context.is_remote);
+
+    let local_new_context = SpanContext::new(TraceId(123), SpanId(456));
+    assert!(!local_new_context.is_remote);
+
+    let root = Span::root("root", remote_context);
+    let root_context = SpanContext::from_span(&root).unwrap();
+    assert!(!root_context.is_remote);
+
+    let _g = root.set_local_parent();
+    let _span = LocalSpan::enter_with_local_parent("span");
+    let local_context = SpanContext::current_local_parent().unwrap();
+    assert!(!local_context.is_remote);
+}
+
+#[test]
+fn test_local_spans_with_remote_parent() {
+    use fastrace::local::LocalCollector;
+    use fastrace::local::LocalSpan;
+
+    let collector = LocalCollector::start();
+    {
+        let _span1 = LocalSpan::enter_with_local_parent("span1");
+        {
+            let _span2 = LocalSpan::enter_with_local_parent("span2");
+        }
+    }
+
+    let local_spans = collector.collect();
+
+    let remote_context = SpanContext::decode_w3c_traceparent(
+        "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+    )
+    .unwrap();
+    let records_with_remote = local_spans.to_span_records(remote_context);
+
+    let root_span = &records_with_remote[0];
+    assert_eq!(root_span.parent_id, remote_context.span_id);
+    assert!(root_span.parent_is_remote);
+
+    let child_span = &records_with_remote[1];
+    assert_eq!(child_span.parent_id, root_span.span_id);
+    assert!(!child_span.parent_is_remote);
+}
