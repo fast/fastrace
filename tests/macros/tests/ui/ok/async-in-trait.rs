@@ -1,3 +1,5 @@
+#![deny(warnings)]
+
 trait MyTrait {
     async fn work(&self) -> usize;
 }
