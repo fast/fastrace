@@ -19,9 +19,11 @@
 #![doc = include_str!("../README.md")]
 
 use std::borrow::Cow;
+use std::collections::HashSet;
 use std::fmt::Debug;
 use std::future::Future;
 use std::pin::Pin;
+use std::sync::LazyLock;
 use std::time::Duration;
 use std::time::SystemTime;
 
@@ -66,6 +68,13 @@ pub struct OpenTelemetryReporter {
     exporter: Box<dyn DynSpanExporter>,
     instrumentation_scope: InstrumentationScope,
 }
+
+pub const SPAN_KIND: &str = "span.kind";
+pub const SPAN_STATUS_CODE: &str = "span.status_code";
+pub const SPAN_STATUS_DESCRIPTION: &str = "span.status_description";
+
+static OTEL_PROPERTIES: LazyLock<HashSet<&str>> =
+    LazyLock::new(|| HashSet::from([SPAN_KIND, SPAN_STATUS_CODE, SPAN_STATUS_DESCRIPTION]));
 
 /// Convert a list of properties to a list of key-value pairs.
 fn map_props_to_kvs(props: Vec<(Cow<'static, str>, Cow<'static, str>)>) -> Vec<KeyValue> {
@@ -152,7 +161,11 @@ impl OpenTelemetryReporter {
                         SystemTime::UNIX_EPOCH + Duration::from_nanos(begin_time_unix_ns);
                     let end_time = SystemTime::UNIX_EPOCH
                         + Duration::from_nanos(begin_time_unix_ns + duration_ns);
-                    let attributes = map_props_to_kvs(properties);
+                    let attributes = properties
+                        .into_iter()
+                        .filter(|(k, _)| !OTEL_PROPERTIES.contains(k.as_ref()))
+                        .map(|(k, v)| KeyValue::new(k, v))
+                        .collect();
                     let events = map_events(events);
                     SpanData {
                         span_context,
@@ -196,7 +209,7 @@ impl Reporter for OpenTelemetryReporter {
 fn span_kind(properties: &[(Cow<'static, str>, Cow<'static, str>)]) -> SpanKind {
     properties
         .iter()
-        .find(|(k, _)| k == "span.kind")
+        .find(|(k, _)| k == SPAN_KIND)
         .and_then(|(_, v)| match v.to_lowercase().as_str() {
             "client" => Some(SpanKind::Client),
             "server" => Some(SpanKind::Server),
@@ -211,12 +224,12 @@ fn span_kind(properties: &[(Cow<'static, str>, Cow<'static, str>)]) -> SpanKind 
 fn span_status(properties: &[(Cow<'static, str>, Cow<'static, str>)]) -> Status {
     let status_description = properties
         .iter()
-        .find(|(k, _)| k == "span.status_description")
+        .find(|(k, _)| k == SPAN_STATUS_DESCRIPTION)
         .map(|(_, v)| v.to_string())
         .unwrap_or_default();
     properties
         .iter()
-        .find(|(k, _)| k == "span.status_code")
+        .find(|(k, _)| k == SPAN_STATUS_CODE)
         .and_then(|(_, v)| match v.to_lowercase().as_str() {
             "unset" => Some(Status::Unset),
             "ok" => Some(Status::Ok),
