@@ -64,6 +64,12 @@ use opentelemetry_sdk::trace::SpanLinks;
 /// (case-insensitive). If no `span.status_code` property is provided, spans default to
 /// `Status::Unset`. If the code is "error", the `span.status_description` property is used as the
 /// error description.
+///
+/// ## Parent Span Is Remote
+///
+/// The reporter maps the `span.parent_span_is_remote` property from fastrace spans to indicate
+/// whether the parent span is remote. Supported values are "true" and "false" (case-insensitive).
+/// If no `span.parent_span_is_remote` property is provided, it defaults to `false`.
 pub struct OpenTelemetryReporter {
     exporter: Box<dyn DynSpanExporter>,
     instrumentation_scope: InstrumentationScope,
@@ -72,14 +78,22 @@ pub struct OpenTelemetryReporter {
 pub const SPAN_KIND: &str = "span.kind";
 pub const SPAN_STATUS_CODE: &str = "span.status_code";
 pub const SPAN_STATUS_DESCRIPTION: &str = "span.status_description";
+pub const SPAN_PARENT_SPAN_IS_REMOTE: &str = "span.parent_span_is_remote";
 
-static OTEL_PROPERTIES: LazyLock<HashSet<&str>> =
-    LazyLock::new(|| HashSet::from([SPAN_KIND, SPAN_STATUS_CODE, SPAN_STATUS_DESCRIPTION]));
+static OTEL_PROPERTIES: LazyLock<HashSet<&str>> = LazyLock::new(|| {
+    HashSet::from([
+        SPAN_KIND,
+        SPAN_STATUS_CODE,
+        SPAN_STATUS_DESCRIPTION,
+        SPAN_PARENT_SPAN_IS_REMOTE,
+    ])
+});
 
 /// Convert a list of properties to a list of key-value pairs.
 fn map_props_to_kvs(props: Vec<(Cow<'static, str>, Cow<'static, str>)>) -> Vec<KeyValue> {
     props
         .into_iter()
+        .filter(|(k, _)| !OTEL_PROPERTIES.contains(k.as_ref()))
         .map(|(k, v)| KeyValue::new(k, v))
         .collect()
 }
@@ -146,31 +160,28 @@ impl OpenTelemetryReporter {
                      properties,
                      events,
                  }| {
-                    let span_context = SpanContext::new(
-                        trace_id.0.into(),
-                        span_id.0.into(),
-                        TraceFlags::default(),
-                        false,
-                        TraceState::default(),
-                    );
                     let parent_span_id = parent_id.0.into();
                     let span_kind = span_kind(&properties);
                     let status = span_status(&properties);
+                    let parent_span_is_remote = parent_span_is_remote(&properties);
                     let instrumentation_scope = self.instrumentation_scope.clone();
                     let start_time =
                         SystemTime::UNIX_EPOCH + Duration::from_nanos(begin_time_unix_ns);
                     let end_time = SystemTime::UNIX_EPOCH
                         + Duration::from_nanos(begin_time_unix_ns + duration_ns);
-                    let attributes = properties
-                        .into_iter()
-                        .filter(|(k, _)| !OTEL_PROPERTIES.contains(k.as_ref()))
-                        .map(|(k, v)| KeyValue::new(k, v))
-                        .collect();
+                    let attributes = map_props_to_kvs(properties);
                     let events = map_events(events);
+
                     SpanData {
-                        span_context,
+                        span_context: SpanContext::new(
+                            trace_id.0.into(),
+                            span_id.0.into(),
+                            TraceFlags::default(),
+                            parent_span_is_remote,
+                            TraceState::default(),
+                        ),
                         parent_span_id,
-                        parent_span_is_remote: false,
+                        parent_span_is_remote,
                         span_kind,
                         name,
                         start_time,
@@ -239,4 +250,12 @@ fn span_status(properties: &[(Cow<'static, str>, Cow<'static, str>)]) -> Status 
             _ => None,
         })
         .unwrap_or(Status::Unset)
+}
+
+fn parent_span_is_remote(properties: &[(Cow<'static, str>, Cow<'static, str>)]) -> bool {
+    properties
+        .iter()
+        .find(|(k, _)| k == SPAN_PARENT_SPAN_IS_REMOTE)
+        .map(|(_, v)| v.to_lowercase().as_str() == "true")
+        .unwrap_or(false)
 }
