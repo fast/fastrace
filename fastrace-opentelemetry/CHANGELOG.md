@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+* Recognise `SpanContext.IsRemote` from the `span.parent_span_is_remote` properties on spans.
+
 ## v0.14.0
 
 * Upgrade opentelemtry to 0.31.0.
