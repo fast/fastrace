@@ -14,7 +14,6 @@ use std::collections::HashSet;
 use proc_macro2::Span;
 use quote::ToTokens;
 use quote::quote;
-use quote::quote_spanned;
 use syn::parse::Parse;
 use syn::parse::ParseStream;
 use syn::punctuated::Punctuated;
@@ -311,9 +310,7 @@ fn gen_name(func_name: &Ident, args: &Args) -> proc_macro2::TokenStream {
             LitStr::new(&func_name.to_string(), func_name.span()).into_token_stream()
         }
         None => {
-            quote_spanned!(func_name.span()=>
-                #crate_path::func_path!()
-            )
+            quote!(#crate_path::func_path!())
         }
     }
 }
