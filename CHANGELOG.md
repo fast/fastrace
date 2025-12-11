@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## v0.7.15
+
+- `#[trace]` macro now supports trait-object futures and preserves input tokens more faithfully to avoid compilation errors.
+- Added `#[allow(unreachable_code)]` on the macro return hint to quiet new compiler warnings.
+
 ## v0.7.14
 
 - Fix stale spans not being cleared after reporting.

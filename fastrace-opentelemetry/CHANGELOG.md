@@ -2,7 +2,10 @@
 
 ## Unreleased
 
-* Recognise `SpanContext.IsRemote` from the `span.parent_span_is_remote` properties on spans.
+## v0.15.0
+
+* Recognise `SpanContext.is_remote` from the `span.parent_span_is_remote` properties on spans.
+* Stop exporting OpenTelemetry-reserved properties (span kind, status, remote parent) as generic span attributes.
 
 ## v0.14.0
 
