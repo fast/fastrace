@@ -318,7 +318,7 @@ fn multiple_threads_multiple_spans() {
 #[serial]
 fn multiple_spans_without_local_spans() {
     let (reporter, collected_spans) = TestReporter::new();
-    fastrace::set_reporter(reporter, Config::default().tail_sampled(true));
+    fastrace::set_reporter(reporter, Config::default());
 
     {
         let root1 = Span::root("root1", SpanContext::new(TraceId(12), SpanId::default()));

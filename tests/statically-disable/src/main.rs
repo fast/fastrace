@@ -36,9 +36,7 @@ fn main() {
 
     fastrace::set_reporter(
         ConsoleReporter,
-        Config::default()
-            .report_interval(Duration::from_millis(10))
-            .tail_sampled(false),
+        Config::default().report_interval(Duration::from_millis(10)),
     );
 
     let root = Span::root("root", SpanContext::new(TraceId(0), SpanId(0)))
