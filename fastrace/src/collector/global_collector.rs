@@ -38,7 +38,7 @@ static NEXT_COLLECT_ID: AtomicUsize = AtomicUsize::new(0);
 static GLOBAL_COLLECTOR: Mutex<Option<GlobalCollector>> = Mutex::new(None);
 static REPORT_INTERVAL: AtomicU64 = AtomicU64::new(0);
 static REPORTER_READY: AtomicBool = AtomicBool::new(false);
-static COMMAND_BUS: LazyLock<CommandBus<CollectCommand>> = LazyLock::new(|| CommandBus::new());
+static COMMAND_BUS: LazyLock<CommandBus<CollectCommand>> = LazyLock::new(CommandBus::new);
 
 pub const NOT_SAMPLED_COLLECT_ID: usize = usize::MAX;
 
