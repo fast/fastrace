@@ -12,7 +12,7 @@ pub fn bounded<T>(capacity: usize) -> (Sender<T>, Receiver<T>) {
     (
         Sender {
             tx,
-            pending_messages: VecDeque::new(),
+            pending: VecDeque::new(),
         },
         Receiver { rx },
     )
@@ -20,7 +20,7 @@ pub fn bounded<T>(capacity: usize) -> (Sender<T>, Receiver<T>) {
 
 pub struct Sender<T> {
     tx: Producer<T>,
-    pending_messages: VecDeque<T>,
+    pending: VecDeque<T>,
 }
 
 pub struct Receiver<T> {
@@ -38,22 +38,23 @@ impl<T> Sender<T> {
     }
 
     pub fn send(&mut self, value: T) {
-        while let Some(value) = self.pending_messages.pop_front() {
-            if let Err(PushError::Full(value)) = self.tx.push(value) {
-                self.pending_messages.push_front(value);
-                break;
+        while let Some(pending_value) = self.pending.pop_front() {
+            if let Err(PushError::Full(pending_value)) = self.tx.push(pending_value) {
+                self.pending.push_front(pending_value);
+                self.pending.push_back(value);
+                return;
             }
         }
 
         if let Err(PushError::Full(value)) = self.tx.push(value) {
-            self.pending_messages.push_back(value);
+            self.pending.push_back(value);
         }
     }
 }
 
 impl<T> Drop for Sender<T> {
     fn drop(&mut self) {
-        for command in self.pending_messages.drain(..) {
+        for command in self.pending.drain(..) {
             drop(self.tx.push(command));
         }
     }

@@ -303,9 +303,9 @@
 //! records to stderr. For more advanced use, crates like `fastrace-jaeger`, `fastrace-datadog`,
 //! and `fastrace-opentelemetry` are available.
 //!
-//! By default, the reporter is triggered every 500 milliseconds. The reporter can also be
-//! triggered manually by calling [`flush()`]. See [`Config`] for customizing the reporting
-//! behavior.
+//! The reporter runs in a background collector thread. [`Config::report_interval()`] controls the
+//! *maximum* interval between report cycles, but the reporter may be invoked earlier. Do not rely
+//! on it for precise scheduling or batching.
 //!
 //! ```
 //! use std::time::Duration;
@@ -359,6 +359,7 @@
 //! [`Reporter`]: crate::collector::Reporter
 //! [`ConsoleReporter`]: crate::collector::ConsoleReporter
 //! [`Config`]: crate::collector::Config
+//! [`Config::report_interval()`]: crate::collector::Config::report_interval
 //! [`Future`]: std::future::Future
 
 // Suppress a false-positive lint from clippy

@@ -2,6 +2,7 @@
 
 use std::borrow::Cow;
 use std::cell::RefCell;
+use std::fmt;
 use std::rc::Rc;
 use std::sync::Arc;
 use std::time::Duration;
@@ -39,6 +40,12 @@ pub(crate) struct SpanInner {
     // If the span is not a root span, this field will be `None`.
     collect_id: Option<usize>,
     collect: GlobalCollect,
+}
+
+impl fmt::Debug for Span {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Span")
+    }
 }
 
 impl Span {
@@ -426,9 +433,11 @@ impl Span {
     ///
     /// # Note
     ///
-    /// To enable this feature, the
-    /// [`Config::tail_sampled()`](crate::collector::Config::tail_sampled) must be set to
-    /// `true`.
+    /// Trace cancellation is best-effort. Spans are held until the root span finishes, so calling
+    /// `cancel()` on the root span will discard spans already collected (and those collected until
+    /// the root span is dropped). Spans submitted after the root span finishes may still be
+    /// reported because there is no longer an active collector to associate them with the
+    /// cancelled trace.
     ///
     /// This method only dismisses the entire trace when called on the root span.
     /// If called on a non-root span, it will do nothing.
@@ -447,7 +456,7 @@ impl Span {
         #[cfg(feature = "enable")]
         if let Some(inner) = &self.inner {
             if let Some(collect_id) = inner.collect_id {
-                inner.collect.drop_collect(collect_id);
+                inner.collect.cancel_collect(collect_id);
             }
         }
     }
@@ -566,7 +575,7 @@ impl Drop for Span {
                 inner.submit_spans();
 
                 if let Some(collect_id) = collect_id {
-                    collect.commit_collect(collect_id);
+                    collect.drop_collect(collect_id);
                 }
             }
         }
@@ -697,12 +706,11 @@ mod tests {
                 ),
             )
             .return_const(());
-        mock.expect_commit_collect()
+        mock.expect_drop_collect()
             .times(1)
             .in_sequence(&mut seq)
             .with(predicate::eq(42_usize))
             .return_const(());
-        mock.expect_drop_collect().times(0);
 
         let mock = Arc::new(mock);
         set_mock_collect(mock);
@@ -728,7 +736,7 @@ mod tests {
             .times(1)
             .in_sequence(&mut seq)
             .return_const(42_usize);
-        mock.expect_drop_collect()
+        mock.expect_cancel_collect()
             .times(1)
             .in_sequence(&mut seq)
             .with(predicate::eq(42_usize))
@@ -741,7 +749,7 @@ mod tests {
                 let span_sets = span_sets.clone();
                 move |span_set, token| span_sets.lock().unwrap().push((span_set, token))
             });
-        mock.expect_commit_collect()
+        mock.expect_drop_collect()
             .times(1)
             .in_sequence(&mut seq)
             .with(predicate::eq(42_usize))
@@ -802,12 +810,11 @@ root []
                 let span_sets = span_sets.clone();
                 move |span_set, token| span_sets.lock().unwrap().push((span_set, token))
             });
-        mock.expect_commit_collect()
+        mock.expect_drop_collect()
             .times(1)
             .in_sequence(&mut seq)
             .with(predicate::eq(42_usize))
             .return_const(());
-        mock.expect_drop_collect().times(0);
 
         let mock = Arc::new(mock);
         set_mock_collect(mock);
@@ -883,11 +890,10 @@ root []
                 let span_sets = span_sets.clone();
                 move |span_set, token| span_sets.lock().unwrap().push((span_set, token))
             });
-        mock.expect_commit_collect()
+        mock.expect_drop_collect()
             .times(5)
             .with(predicate::in_iter([1_usize, 2, 3, 4, 5]))
             .return_const(());
-        mock.expect_drop_collect().times(0);
 
         let mock = Arc::new(mock);
         set_mock_collect(mock);
@@ -976,11 +982,10 @@ parent5 []
                 let span_sets = span_sets.clone();
                 move |span_set, token| span_sets.lock().unwrap().push((span_set, token))
             });
-        mock.expect_commit_collect()
+        mock.expect_drop_collect()
             .times(5)
             .with(predicate::in_iter([1_usize, 2, 3, 4, 5]))
             .return_const(());
-        mock.expect_drop_collect().times(0);
 
         let mock = Arc::new(mock);
         set_mock_collect(mock);
@@ -1051,12 +1056,11 @@ parent5 []
                 let span_sets = span_sets.clone();
                 move |span_set, token| span_sets.lock().unwrap().push((span_set, token))
             });
-        mock.expect_commit_collect()
+        mock.expect_drop_collect()
             .times(1)
             .in_sequence(&mut seq)
             .with(predicate::eq(42_usize))
             .return_const(());
-        mock.expect_drop_collect().times(0);
 
         let mock = Arc::new(mock);
         set_mock_collect(mock);
