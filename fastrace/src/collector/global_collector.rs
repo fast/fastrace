@@ -6,10 +6,8 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::LazyLock;
 use std::sync::atomic::AtomicBool;
-use std::sync::atomic::AtomicU64;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
-use std::time::Duration;
 
 use fastant::Anchor;
 use fastant::Instant;
@@ -36,7 +34,6 @@ use crate::util::command_bus::CommandSender;
 
 static NEXT_COLLECT_ID: AtomicUsize = AtomicUsize::new(0);
 static GLOBAL_COLLECTOR: Mutex<Option<GlobalCollector>> = Mutex::new(None);
-static REPORT_INTERVAL: AtomicU64 = AtomicU64::new(0);
 static REPORTER_READY: AtomicBool = AtomicBool::new(false);
 static COMMAND_BUS: LazyLock<CommandBus<CollectCommand>> = LazyLock::new(CommandBus::new);
 
@@ -139,14 +136,14 @@ impl GlobalCollect {
 
     // Note that: relationships are not built completely for now so a further job is needed.
     //
-    // Every `SpanSet` has its own root spans whose `raw_span.parent_id`s are equal to
+    // Every `SpanSet` has its own root spans whose `raw_span.parent_id` are equal to
     // `SpanId::default()`.
     //
     // Every root span can have multiple parents where mainly comes from `Span::enter_with_parents`.
     // Those parents are recorded into `CollectToken` which has several `CollectTokenItem`s. Look
     // into a `CollectTokenItem`, `parent_ids` can be found.
     //
-    // For example, we have a `SpanSet::LocalSpansInner` and a `CollectToken` as follow:
+    // For example, we have a `SpanSet::LocalSpansInner` and a `CollectToken` as follows:
     //
     //     SpanSet::LocalSpansInner::spans                  CollectToken::parent_ids
     //     +------+-----------+-----+                      +------------+------------+
@@ -211,8 +208,8 @@ pub(crate) struct GlobalCollector {
 
     active_collectors: HashMap<usize, ActiveCollector>,
 
-    // Vectors to be reused by collection loops. They must be empty outside of the
-    // `handle_commands` loop.
+    // Vectors to be reused by collection loops. They must be empty outside
+    // the `handle_commands` loop.
     start_collects: Vec<StartCollect>,
     cancel_collects: Vec<CancelCollect>,
     drop_collects: Vec<DropCollect>,
@@ -222,7 +219,6 @@ pub(crate) struct GlobalCollector {
 
 impl GlobalCollector {
     fn start(reporter: impl Reporter, config: Config) {
-        REPORT_INTERVAL.store(config.report_interval.as_nanos() as u64, Ordering::Relaxed);
         REPORTER_READY.store(true, Ordering::Relaxed);
 
         let mut global_collector = GLOBAL_COLLECTOR.lock();
@@ -250,9 +246,12 @@ impl GlobalCollector {
                     .name("fastrace-global-collector".to_string())
                     .spawn(move || {
                         loop {
-                            GLOBAL_COLLECTOR.lock().as_mut().unwrap().handle_commands();
-                            let report_interval =
-                                Duration::from_nanos(REPORT_INTERVAL.load(Ordering::Relaxed));
+                            let mut global_collector = GLOBAL_COLLECTOR.lock();
+                            let collector = global_collector.as_mut().unwrap();
+                            let report_interval = collector.config.report_interval;
+                            collector.handle_commands();
+                            drop(global_collector);
+
                             COMMAND_BUS.wait_timeout(report_interval);
                         }
                     })
@@ -275,7 +274,7 @@ impl GlobalCollector {
             CollectCommand::SubmitSpans(cmd) => self.submit_spans.push(cmd),
         });
 
-        // If the reporter is not set, global collectior only clears the channel and then dismiss
+        // If the reporter is not set, global collector only clears the channel and then dismiss
         // all messages.
         if self.reporter.is_none() {
             self.start_collects.clear();
