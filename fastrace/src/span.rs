@@ -2,6 +2,7 @@
 
 use std::borrow::Cow;
 use std::cell::RefCell;
+use std::fmt;
 use std::rc::Rc;
 use std::sync::Arc;
 use std::time::Duration;
@@ -39,6 +40,12 @@ pub(crate) struct SpanInner {
     // If the span is not a root span, this field will be `None`.
     collect_id: Option<usize>,
     collect: GlobalCollect,
+}
+
+impl fmt::Debug for Span {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Span")
+    }
 }
 
 impl Span {
