@@ -66,7 +66,7 @@ mod spsc {
             .bench_values(|(mut tx, mut rx)| {
                 std::thread::spawn(move || {
                     for i in 0..len {
-                        while tx.send(i).is_err() {}
+                        tx.send(i);
                     }
                 });
 
@@ -120,7 +120,7 @@ mod spsc_send_only {
             .with_inputs(|| fastrace::util::spsc::bounded(10240))
             .bench_values(|(mut tx, _rx)| {
                 for i in 0..len {
-                    while tx.send(i).is_err() {}
+                    tx.send(i);
                 }
             });
     }
