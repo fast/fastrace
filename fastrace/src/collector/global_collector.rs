@@ -4,6 +4,7 @@ use std::borrow::Cow;
 use std::cell::UnsafeCell;
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::sync::LazyLock;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::AtomicU64;
 use std::sync::atomic::AtomicUsize;
@@ -30,29 +31,23 @@ use crate::local::local_collector::LocalSpansInner;
 use crate::local::raw_span::RawKind;
 use crate::local::raw_span::RawSpan;
 use crate::util::CollectToken;
-use crate::util::spsc::Receiver;
-use crate::util::spsc::Sender;
-use crate::util::spsc::{self};
+use crate::util::command_bus::CommandBus;
+use crate::util::command_bus::CommandSender;
 
 static NEXT_COLLECT_ID: AtomicUsize = AtomicUsize::new(0);
 static GLOBAL_COLLECTOR: Mutex<Option<GlobalCollector>> = Mutex::new(None);
-static SPSC_RXS: Mutex<Vec<Receiver<CollectCommand>>> = Mutex::new(Vec::new());
 static REPORT_INTERVAL: AtomicU64 = AtomicU64::new(0);
 static REPORTER_READY: AtomicBool = AtomicBool::new(false);
+static COMMAND_BUS: LazyLock<CommandBus<CollectCommand>> = LazyLock::new(|| CommandBus::new());
 
 pub const NOT_SAMPLED_COLLECT_ID: usize = usize::MAX;
-const CHANNEL_SIZE: usize = 10240;
 
 thread_local! {
-    static COMMAND_SENDER: UnsafeCell<Sender<CollectCommand>> = {
-        let (tx, rx) = spsc::bounded(CHANNEL_SIZE);
-        register_receiver(rx);
+    static COMMAND_SENDER: UnsafeCell<CommandSender<CollectCommand>> = {
+        const CHANNEL_SIZE: usize = 10240;
+        let tx = COMMAND_BUS.sender(CHANNEL_SIZE);
         UnsafeCell::new(tx)
     };
-}
-
-fn register_receiver(rx: Receiver<CollectCommand>) {
-    SPSC_RXS.lock().push(rx);
 }
 
 fn send_command(cmd: CollectCommand) {
@@ -61,17 +56,7 @@ fn send_command(cmd: CollectCommand) {
     }
 
     COMMAND_SENDER
-        .try_with(|sender| unsafe { (*sender.get()).send(cmd).ok() })
-        .ok();
-}
-
-fn force_send_command(cmd: CollectCommand) {
-    if !reporter_ready() {
-        return;
-    }
-
-    COMMAND_SENDER
-        .try_with(|sender| unsafe { (*sender.get()).force_send(cmd) })
+        .try_with(|sender| unsafe { (*sender.get()).send(cmd) })
         .ok();
 }
 
@@ -145,11 +130,11 @@ impl GlobalCollect {
     }
 
     pub fn commit_collect(&self, collect_id: usize) {
-        force_send_command(CollectCommand::CommitCollect(CommitCollect { collect_id }));
+        send_command(CollectCommand::CommitCollect(CommitCollect { collect_id }));
     }
 
     pub fn drop_collect(&self, collect_id: usize) {
-        force_send_command(CollectCommand::DropCollect(DropCollect { collect_id }));
+        send_command(CollectCommand::DropCollect(DropCollect { collect_id }));
     }
 
     // Note that: relationships are not built completely for now so a further job is needed.
@@ -264,13 +249,10 @@ impl GlobalCollector {
                     .name("fastrace-global-collector".to_string())
                     .spawn(move || {
                         loop {
-                            let begin_instant = Instant::now();
                             GLOBAL_COLLECTOR.lock().as_mut().unwrap().handle_commands();
                             let report_interval =
                                 Duration::from_nanos(REPORT_INTERVAL.load(Ordering::Relaxed));
-                            std::thread::sleep(
-                                report_interval.saturating_sub(begin_instant.elapsed()),
-                            );
+                            COMMAND_BUS.wait_timeout(report_interval);
                         }
                     })
                     .unwrap();
@@ -285,40 +267,20 @@ impl GlobalCollector {
         debug_assert!(self.submit_spans.is_empty());
         debug_assert!(self.stale_spans.is_empty());
 
-        let start_collects = &mut self.start_collects;
-        let drop_collects = &mut self.drop_collects;
-        let commit_collects = &mut self.commit_collects;
-        let submit_spans = &mut self.submit_spans;
-        let stale_spans = &mut self.stale_spans;
-
-        {
-            SPSC_RXS.lock().retain_mut(|rx| {
-                loop {
-                    match rx.try_recv() {
-                        Ok(Some(CollectCommand::StartCollect(cmd))) => start_collects.push(cmd),
-                        Ok(Some(CollectCommand::DropCollect(cmd))) => drop_collects.push(cmd),
-                        Ok(Some(CollectCommand::CommitCollect(cmd))) => commit_collects.push(cmd),
-                        Ok(Some(CollectCommand::SubmitSpans(cmd))) => submit_spans.push(cmd),
-                        Ok(None) => {
-                            // Channel is empty.
-                            return true;
-                        }
-                        Err(_) => {
-                            // Channel closed. Remove it from the channel list.
-                            return false;
-                        }
-                    }
-                }
-            });
-        }
+        COMMAND_BUS.drain(|cmd| match cmd {
+            CollectCommand::StartCollect(cmd) => self.start_collects.push(cmd),
+            CollectCommand::DropCollect(cmd) => self.drop_collects.push(cmd),
+            CollectCommand::CommitCollect(cmd) => self.commit_collects.push(cmd),
+            CollectCommand::SubmitSpans(cmd) => self.submit_spans.push(cmd),
+        });
 
         // If the reporter is not set, global collectior only clears the channel and then dismiss
         // all messages.
         if self.reporter.is_none() {
-            start_collects.clear();
-            drop_collects.clear();
-            commit_collects.clear();
-            submit_spans.clear();
+            self.start_collects.clear();
+            self.drop_collects.clear();
+            self.commit_collects.clear();
+            self.submit_spans.clear();
             return;
         }
 
@@ -349,7 +311,7 @@ impl GlobalCollector {
                             parent_id: item.parent_id,
                         });
                 } else if !self.config.tail_sampled {
-                    stale_spans.push(SpanCollection::Owned {
+                    self.stale_spans.push(SpanCollection::Owned {
                         spans,
                         trace_id: item.trace_id,
                         parent_id: item.parent_id,
@@ -368,7 +330,7 @@ impl GlobalCollector {
                                 parent_id: item.parent_id,
                             });
                     } else if !self.config.tail_sampled {
-                        stale_spans.push(SpanCollection::Shared {
+                        self.stale_spans.push(SpanCollection::Shared {
                             spans: spans.clone(),
                             trace_id: item.trace_id,
                             parent_id: item.parent_id,
@@ -381,7 +343,7 @@ impl GlobalCollector {
         let anchor = Anchor::new();
         let mut committed_records = Vec::new();
 
-        for CommitCollect { collect_id } in commit_collects.drain(..) {
+        for CommitCollect { collect_id } in self.commit_collects.drain(..) {
             if let Some(mut active_collector) = self.active_collectors.remove(&collect_id) {
                 postprocess_span_collection(
                     &active_collector.span_collections,
@@ -404,9 +366,12 @@ impl GlobalCollector {
             }
         }
 
-        stale_spans.sort_by_key(|spans| spans.trace_id());
+        self.stale_spans.sort_by_key(|spans| spans.trace_id());
 
-        for spans in stale_spans.chunk_by(|a, b| a.trace_id() == b.trace_id()) {
+        for spans in self
+            .stale_spans
+            .chunk_by(|a, b| a.trace_id() == b.trace_id())
+        {
             postprocess_span_collection(
                 spans,
                 &anchor,
@@ -415,7 +380,7 @@ impl GlobalCollector {
             );
         }
 
-        stale_spans.clear();
+        self.stale_spans.clear();
 
         self.reporter.as_mut().unwrap().report(committed_records);
     }

@@ -89,7 +89,7 @@ impl Config {
     /// likely due to the channel being full during the reporting interval. To mitigate this issue,
     /// consider reducing the report interval, potentially down to zero, to prevent losing spans.
     ///
-    /// Defaults to 10 milliseconds.
+    /// Defaults to 1 second.
     ///
     /// # Examples
     ///
@@ -154,7 +154,7 @@ impl Config {
 impl Default for Config {
     fn default() -> Self {
         Self {
-            report_interval: Duration::from_millis(10),
+            report_interval: Duration::from_secs(1),
             tail_sampled: false,
         }
     }
