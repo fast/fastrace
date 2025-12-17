@@ -2,6 +2,7 @@
 
 use std::borrow::Cow;
 use std::cell::RefCell;
+use std::fmt;
 use std::rc::Rc;
 
 use crate::Event;
@@ -22,6 +23,12 @@ pub struct LocalSpan {
 struct LocalSpanInner {
     stack: Rc<RefCell<LocalSpanStack>>,
     span_handle: LocalSpanHandle,
+}
+
+impl fmt::Debug for LocalSpan {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "LocalSpan")
+    }
 }
 
 impl LocalSpan {

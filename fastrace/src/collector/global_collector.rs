@@ -20,8 +20,8 @@ use crate::collector::SpanId;
 use crate::collector::SpanRecord;
 use crate::collector::SpanSet;
 use crate::collector::TraceId;
+use crate::collector::command::CancelCollect;
 use crate::collector::command::CollectCommand;
-use crate::collector::command::CommitCollect;
 use crate::collector::command::DropCollect;
 use crate::collector::command::StartCollect;
 use crate::collector::command::SubmitSpans;
@@ -126,8 +126,8 @@ impl GlobalCollect {
         collect_id
     }
 
-    pub fn commit_collect(&self, collect_id: usize) {
-        send_command(CollectCommand::CommitCollect(CommitCollect { collect_id }));
+    pub fn cancel_collect(&self, collect_id: usize) {
+        send_command(CollectCommand::CancelCollect(CancelCollect { collect_id }));
     }
 
     pub fn drop_collect(&self, collect_id: usize) {
@@ -199,6 +199,7 @@ impl SpanCollection {
 struct ActiveCollector {
     span_collections: Vec<SpanCollection>,
     danglings: HashMap<SpanId, Vec<DanglingItem>>,
+    canceled: bool,
 }
 
 pub(crate) struct GlobalCollector {
@@ -210,8 +211,8 @@ pub(crate) struct GlobalCollector {
     // Vectors to be reused by collection loops. They must be empty outside
     // the `handle_commands` loop.
     start_collects: Vec<StartCollect>,
+    cancel_collects: Vec<CancelCollect>,
     drop_collects: Vec<DropCollect>,
-    commit_collects: Vec<CommitCollect>,
     submit_spans: Vec<SubmitSpans>,
     stale_spans: Vec<SpanCollection>,
 }
@@ -233,8 +234,8 @@ impl GlobalCollector {
                 active_collectors: HashMap::new(),
 
                 start_collects: vec![],
+                cancel_collects: vec![],
                 drop_collects: vec![],
-                commit_collects: vec![],
                 submit_spans: vec![],
                 stale_spans: vec![],
             });
@@ -261,15 +262,15 @@ impl GlobalCollector {
 
     fn handle_commands(&mut self) {
         debug_assert!(self.start_collects.is_empty());
+        debug_assert!(self.cancel_collects.is_empty());
         debug_assert!(self.drop_collects.is_empty());
-        debug_assert!(self.commit_collects.is_empty());
         debug_assert!(self.submit_spans.is_empty());
         debug_assert!(self.stale_spans.is_empty());
 
         COMMAND_BUS.drain(|cmd| match cmd {
             CollectCommand::StartCollect(cmd) => self.start_collects.push(cmd),
+            CollectCommand::CancelCollect(cmd) => self.cancel_collects.push(cmd),
             CollectCommand::DropCollect(cmd) => self.drop_collects.push(cmd),
-            CollectCommand::CommitCollect(cmd) => self.commit_collects.push(cmd),
             CollectCommand::SubmitSpans(cmd) => self.submit_spans.push(cmd),
         });
 
@@ -277,8 +278,8 @@ impl GlobalCollector {
         // all messages.
         if self.reporter.is_none() {
             self.start_collects.clear();
+            self.cancel_collects.clear();
             self.drop_collects.clear();
-            self.commit_collects.clear();
             self.submit_spans.clear();
             return;
         }
@@ -288,8 +289,12 @@ impl GlobalCollector {
                 .insert(collect_id, ActiveCollector::default());
         }
 
-        for DropCollect { collect_id } in self.drop_collects.drain(..) {
-            self.active_collectors.remove(&collect_id);
+        for CancelCollect { collect_id } in self.cancel_collects.drain(..) {
+            if let Some(active_collector) = self.active_collectors.get_mut(&collect_id) {
+                active_collector.span_collections.clear();
+                active_collector.danglings.clear();
+                active_collector.canceled = true;
+            }
         }
 
         for SubmitSpans {
@@ -302,14 +307,16 @@ impl GlobalCollector {
             if collect_token.len() == 1 {
                 let item = collect_token[0];
                 if let Some(active_collector) = self.active_collectors.get_mut(&item.collect_id) {
-                    active_collector
-                        .span_collections
-                        .push(SpanCollection::Owned {
-                            spans,
-                            trace_id: item.trace_id,
-                            parent_id: item.parent_id,
-                        });
-                } else if !self.config.tail_sampled {
+                    if !active_collector.canceled {
+                        active_collector
+                            .span_collections
+                            .push(SpanCollection::Owned {
+                                spans,
+                                trace_id: item.trace_id,
+                                parent_id: item.parent_id,
+                            });
+                    }
+                } else {
                     self.stale_spans.push(SpanCollection::Owned {
                         spans,
                         trace_id: item.trace_id,
@@ -321,14 +328,16 @@ impl GlobalCollector {
                 for item in &collect_token {
                     if let Some(active_collector) = self.active_collectors.get_mut(&item.collect_id)
                     {
-                        active_collector
-                            .span_collections
-                            .push(SpanCollection::Shared {
-                                spans: spans.clone(),
-                                trace_id: item.trace_id,
-                                parent_id: item.parent_id,
-                            });
-                    } else if !self.config.tail_sampled {
+                        if !active_collector.canceled {
+                            active_collector
+                                .span_collections
+                                .push(SpanCollection::Shared {
+                                    spans: spans.clone(),
+                                    trace_id: item.trace_id,
+                                    parent_id: item.parent_id,
+                                });
+                        }
+                    } else {
                         self.stale_spans.push(SpanCollection::Shared {
                             spans: spans.clone(),
                             trace_id: item.trace_id,
@@ -342,26 +351,16 @@ impl GlobalCollector {
         let anchor = Anchor::new();
         let mut committed_records = Vec::new();
 
-        for CommitCollect { collect_id } in self.commit_collects.drain(..) {
+        for DropCollect { collect_id } in self.drop_collects.drain(..) {
             if let Some(mut active_collector) = self.active_collectors.remove(&collect_id) {
-                postprocess_span_collection(
-                    &active_collector.span_collections,
-                    &anchor,
-                    &mut committed_records,
-                    &mut active_collector.danglings,
-                );
-            }
-        }
-
-        if !self.config.tail_sampled {
-            for active_collector in self.active_collectors.values_mut() {
-                postprocess_span_collection(
-                    &active_collector.span_collections,
-                    &anchor,
-                    &mut committed_records,
-                    &mut active_collector.danglings,
-                );
-                active_collector.span_collections.clear();
+                if !active_collector.canceled {
+                    postprocess_span_collection(
+                        &active_collector.span_collections,
+                        &anchor,
+                        &mut committed_records,
+                        &mut active_collector.danglings,
+                    );
+                }
             }
         }
 

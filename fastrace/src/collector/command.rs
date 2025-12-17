@@ -6,8 +6,8 @@ use crate::util::CollectToken;
 #[derive(Debug)]
 pub enum CollectCommand {
     StartCollect(StartCollect),
+    CancelCollect(CancelCollect),
     DropCollect(DropCollect),
-    CommitCollect(CommitCollect),
     SubmitSpans(SubmitSpans),
 }
 
@@ -17,12 +17,12 @@ pub struct StartCollect {
 }
 
 #[derive(Debug)]
-pub struct DropCollect {
+pub struct CancelCollect {
     pub collect_id: usize,
 }
 
 #[derive(Debug)]
-pub struct CommitCollect {
+pub struct DropCollect {
     pub collect_id: usize,
 }
 
