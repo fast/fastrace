@@ -87,7 +87,8 @@ pub struct OpenTelemetryReporter {
 ///
 /// The returned span context is **non-recording** (it does not create an OpenTelemetry span on
 /// its own). To make it usable as a parent for OpenTelemetry spans, attach it to an
-/// OpenTelemetry [`Context`] via [`TraceContextExt::with_remote_span_context`].
+/// OpenTelemetry [`Context`](opentelemetry::Context) via
+/// [`TraceContextExt::with_remote_span_context`](opentelemetry::trace::TraceContextExt::with_remote_span_context).
 ///
 /// # Examples
 ///
@@ -101,7 +102,7 @@ pub struct OpenTelemetryReporter {
 ///
 /// // Make the fastrace span the "current" OpenTelemetry parent for this thread.
 /// let _otel_guard = fastrace_opentelemetry::current_opentelemetry_context()
-///     .map(|sc| Context::current().with_remote_span_context(sc).attach());
+///     .map(|cx| Context::current().with_remote_span_context(cx).attach());
 ///
 /// // Any OpenTelemetry instrumentation that reads `Context::current()` can now
 /// // treat the fastrace span as its parent.

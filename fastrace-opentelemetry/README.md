@@ -82,12 +82,18 @@ This requires a local parent to be set for the current thread (e.g. via
 [`Span::set_local_parent`](https://docs.rs/fastrace/latest/fastrace/struct.Span.html#method.set_local_parent)).
 
 ```rust
+use fastrace::prelude::*;
 use fastrace_opentelemetry::current_opentelemetry_context;
 use opentelemetry::trace::TraceContextExt;
 use opentelemetry::Context;
 
-let _otel_guard = current_opentelemetry_context()
-    .map(|sc| Context::current().with_remote_span_context(sc).attach());
+fn main() {
+    let span = Span::root("root", SpanContext::random());
+    let _guard = span.set_local_parent();
 
-// Call library code that uses `Context::current()`.
+    let _otel_guard = current_opentelemetry_context()
+        .map(|cx| Context::current().with_remote_span_context(cx).attach());
+
+    // Call library code that uses `Context::current()`.
+}
 ```

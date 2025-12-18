@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-* Add helpers to extract the current fastrace `SpanContext` and convert it as the current OpenTelemetry `Context`.
+* Add a bridge to extract the current fastrace `SpanContext` and convert it as the current OpenTelemetry `Context`.
 
 ## v0.15.0
 

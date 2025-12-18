@@ -52,7 +52,7 @@ fn otel_span_can_be_parented_by_fastrace_local_parent() {
     let _g = root.set_local_parent();
 
     let _otel_guard = fastrace_opentelemetry::current_opentelemetry_context()
-        .map(|sc| Context::current().with_remote_span_context(sc).attach());
+        .map(|cx| Context::current().with_remote_span_context(cx).attach());
 
     let mut span = tracer.start("otel-child");
     span.end();
