@@ -84,8 +84,8 @@ pub fn flush() {
     {
         #[cfg(target_family = "wasm")]
         {
-            if let Some(global_collector) = GLOBAL_COLLECTOR.lock().as_mut() {
-                global_collector.handle_commands();
+            if let Some(collector) = GLOBAL_COLLECTOR.lock().as_mut() {
+                collector.handle_commands();
             }
         }
 
@@ -96,8 +96,8 @@ pub fn flush() {
             std::thread::Builder::new()
                 .name("fastrace-flush".to_string())
                 .spawn(move || {
-                    if let Some(global_collector) = GLOBAL_COLLECTOR.lock().as_mut() {
-                        global_collector.handle_commands();
+                    if let Some(collector) = GLOBAL_COLLECTOR.lock().as_mut() {
+                        collector.handle_commands();
                     }
                 })
                 .unwrap()
@@ -246,11 +246,12 @@ impl GlobalCollector {
                     .name("fastrace-global-collector".to_string())
                     .spawn(move || {
                         loop {
-                            let mut global_collector = GLOBAL_COLLECTOR.lock();
-                            let collector = global_collector.as_mut().unwrap();
-                            let report_interval = collector.config.report_interval;
-                            collector.handle_commands();
-                            drop(global_collector);
+                            let report_interval = {
+                                let mut collector = GLOBAL_COLLECTOR.lock();
+                                let collector = collector.as_mut().unwrap();
+                                collector.handle_commands();
+                                collector.config.report_interval
+                            };
 
                             COMMAND_BUS.wait_timeout(report_interval);
                         }

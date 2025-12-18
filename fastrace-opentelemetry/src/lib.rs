@@ -33,7 +33,7 @@ use fastrace::prelude::*;
 use opentelemetry::InstrumentationScope;
 use opentelemetry::KeyValue;
 use opentelemetry::trace::Event;
-use opentelemetry::trace::SpanContext;
+use opentelemetry::trace::SpanContext as OtelSpanContext;
 use opentelemetry::trace::SpanKind;
 use opentelemetry::trace::Status;
 use opentelemetry::trace::TraceFlags;
@@ -73,6 +73,56 @@ use opentelemetry_sdk::trace::SpanLinks;
 pub struct OpenTelemetryReporter {
     exporter: Box<dyn DynSpanExporter>,
     instrumentation_scope: InstrumentationScope,
+}
+
+/// Returns the OpenTelemetry [`SpanContext`] of the current fastrace local parent span.
+///
+/// This helper bridges fastrace's **thread-local parent stack** (set via
+/// [`Span::set_local_parent`]) into an OpenTelemetry
+/// `SpanContext` so you can interoperate with OpenTelemetry-based instrumentation.
+///
+/// It returns `None` when:
+/// - fastrace's `enable` feature is disabled (the local parent stack is inert), or
+/// - no local parent is currently set for the thread.
+///
+/// The returned span context is **non-recording** (it does not create an OpenTelemetry span on
+/// its own). To make it usable as a parent for OpenTelemetry spans, attach it to an
+/// OpenTelemetry [`Context`](opentelemetry::Context) via
+/// [`TraceContextExt::with_remote_span_context`](opentelemetry::trace::TraceContextExt::with_remote_span_context).
+///
+/// # Examples
+///
+/// ```rust, no_run
+/// use fastrace::prelude::*;
+/// use opentelemetry::Context;
+/// use opentelemetry::trace::TraceContextExt;
+///
+/// let root = Span::root("root", SpanContext::random());
+/// let _g = root.set_local_parent();
+///
+/// // Make the fastrace span the "current" OpenTelemetry parent for this thread.
+/// let _otel_guard = fastrace_opentelemetry::current_opentelemetry_context()
+///     .map(|cx| Context::current().with_remote_span_context(cx).attach());
+///
+/// // Any OpenTelemetry instrumentation that reads `Context::current()` can now
+/// // treat the fastrace span as its parent.
+/// ```
+pub fn current_opentelemetry_context() -> Option<OtelSpanContext> {
+    let span_context = fastrace::collector::SpanContext::current_local_parent()?;
+
+    let trace_flags = if span_context.sampled {
+        TraceFlags::SAMPLED
+    } else {
+        TraceFlags::default()
+    };
+
+    Some(OtelSpanContext::new(
+        span_context.trace_id.0.into(),
+        span_context.span_id.0.into(),
+        trace_flags,
+        false,
+        TraceState::default(),
+    ))
 }
 
 pub const SPAN_KIND: &str = "span.kind";
@@ -173,7 +223,7 @@ impl OpenTelemetryReporter {
                     let events = map_events(events);
 
                     SpanData {
-                        span_context: SpanContext::new(
+                        span_context: OtelSpanContext::new(
                             trace_id.0.into(),
                             span_id.0.into(),
                             TraceFlags::default(),
