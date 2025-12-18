@@ -10,8 +10,8 @@
 
 ```toml
 [dependencies]
-fastrace = "0.7"
-fastrace-opentelemetry = "0.13"
+fastrace = { version = "0.7", features = ["enable"] }
+fastrace-opentelemetry = "0.15"
 ```
 
 ## Setup OpenTelemetry Collector
@@ -36,17 +36,15 @@ Zipkin UI is available on [http://127.0.0.1:9411/](http://127.0.0.1:9411/)
 
 ```rust, no_run
 use std::borrow::Cow;
+
 use fastrace::collector::Config;
 use fastrace::prelude::*;
 use fastrace_opentelemetry::OpenTelemetryReporter;
-use opentelemetry_otlp::ExportConfig;
-use opentelemetry_otlp::Protocol;
-use opentelemetry_otlp::SpanExporter;
-use opentelemetry_otlp::TonicConfig;
-use opentelemetry_sdk::Resource;
-use opentelemetry::KeyValue;
 use opentelemetry::InstrumentationScope;
+use opentelemetry::KeyValue;
+use opentelemetry_otlp::SpanExporter;
 use opentelemetry_otlp::WithExportConfig;
+use opentelemetry_sdk::Resource;
 
 // Initialize reporter
 let reporter = OpenTelemetryReporter::new(
@@ -56,7 +54,7 @@ let reporter = OpenTelemetryReporter::new(
         .with_protocol(opentelemetry_otlp::Protocol::Grpc)
         .with_timeout(opentelemetry_otlp::OTEL_EXPORTER_OTLP_TIMEOUT_DEFAULT)
         .build()
-        .expect("initialize oltp exporter"),
+        .expect("initialize otlp exporter"),
     Cow::Owned(
         Resource::builder()
             .with_attributes([KeyValue::new("service.name", "asynchronous")])
@@ -71,5 +69,25 @@ fastrace::set_reporter(reporter, Config::default());
     let root = Span::root("root", SpanContext::random());
 }
 
-fastrace::flush()
+fastrace::flush();
+```
+
+## Activate OpenTelemetry Trace Context
+
+If you use fastrace spans but also depend on libraries that expect an OpenTelemetry parent
+[`Context`](https://docs.rs/opentelemetry/latest/opentelemetry/struct.Context.html), you can bridge
+the current fastrace **local parent** into an OpenTelemetry context.
+
+This requires a local parent to be set for the current thread (e.g. via
+[`Span::set_local_parent`](https://docs.rs/fastrace/latest/fastrace/struct.Span.html#method.set_local_parent)).
+
+```rust
+use fastrace_opentelemetry::current_opentelemetry_context;
+use opentelemetry::trace::TraceContextExt;
+use opentelemetry::Context;
+
+let _otel_guard = current_opentelemetry_context()
+    .map(|sc| Context::current().with_remote_span_context(sc).attach());
+
+// Call library code that uses `Context::current()`.
 ```

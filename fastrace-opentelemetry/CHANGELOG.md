@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+* Add helpers to extract the current fastrace `SpanContext` and convert it as the current OpenTelemetry `Context`.
+
 ## v0.15.0
 
 * Recognise `SpanContext.is_remote` from the `span.parent_span_is_remote` properties on spans.
