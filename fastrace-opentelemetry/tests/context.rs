@@ -2,11 +2,11 @@ use std::sync::Arc;
 use std::sync::Mutex;
 
 use fastrace::prelude::*;
+use opentelemetry::Context;
 use opentelemetry::trace::Span as _;
 use opentelemetry::trace::TraceContextExt;
 use opentelemetry::trace::Tracer as _;
 use opentelemetry::trace::TracerProvider as _;
-use opentelemetry::Context;
 use opentelemetry_sdk::error::OTelSdkResult;
 use opentelemetry_sdk::trace::SdkTracerProvider;
 use opentelemetry_sdk::trace::SpanData;
