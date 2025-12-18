@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## v0.7.16
+
 - Deprecate `Config::tail_sampled()`; spans are held until the root span finishes by default, and `Span::cancel()` discards spans collected up to the root's drop.
 
 ## v0.7.15
