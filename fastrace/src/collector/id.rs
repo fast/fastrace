@@ -344,8 +344,8 @@ impl serde::Serialize for SpanContext {
     }
 }
 
-impl<'a> serde::Deserialize<'a> for SpanContext {
-    fn deserialize<D: serde::Deserializer<'a>>(deserializer: D) -> Result<Self, D::Error> {
+impl<'de> serde::Deserialize<'de> for SpanContext {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         let s = String::deserialize(deserializer)?;
         SpanContext::decode_w3c_traceparent(&s)
             .ok_or_else(|| serde::de::Error::custom("invalid w3c traceparent"))
