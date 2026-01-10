@@ -187,7 +187,8 @@ pub fn trace(
         ..
     } = sig;
 
-    quote::quote!(
+    let fn_span = ident.span();
+    quote::quote_spanned!(fn_span=>
         #(#attrs) *
         #vis #constness #unsafety #asyncness #abi fn #ident<#gen_params>(#params) #return_type
         #where_clause
