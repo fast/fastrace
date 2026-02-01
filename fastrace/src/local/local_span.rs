@@ -6,6 +6,7 @@ use std::fmt;
 use std::rc::Rc;
 
 use crate::Event;
+use crate::collector::SpanContext;
 use crate::local::local_span_line::LocalSpanHandle;
 use crate::local::local_span_stack::LOCAL_SPAN_STACK;
 use crate::local::local_span_stack::LocalSpanStack;
@@ -84,6 +85,33 @@ impl LocalSpan {
         self.with_properties(|| [property()])
     }
 
+    /// Add a link to the `LocalSpan` and return the modified `LocalSpan`.
+    ///
+    /// Links allow a span to reference additional related spans without establishing
+    /// a strict parent-child relationship.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use fastrace::prelude::*;
+    ///
+    /// let root = Span::root("root", SpanContext::random());
+    /// let link = SpanContext::new(TraceId(1), SpanId(2));
+    /// let _g = root.set_local_parent();
+    ///
+    /// let _span = LocalSpan::enter_with_local_parent("child").with_link(link);
+    /// ```
+    #[inline]
+    pub fn with_link(self, link: SpanContext) -> Self {
+        #[cfg(feature = "enable")]
+        if let Some(LocalSpanInner { stack, span_handle }) = &self.inner {
+            let span_stack = &mut *stack.borrow_mut();
+            span_stack.with_link(span_handle, link);
+        }
+
+        self
+    }
+
     /// Add multiple properties to the `LocalSpan` and return the modified `LocalSpan`.
     ///
     /// # Examples
@@ -132,6 +160,34 @@ impl LocalSpan {
         F: FnOnce() -> (K, V),
     {
         Self::add_properties(|| [property()])
+    }
+
+    /// Add a link to the current local parent.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use fastrace::prelude::*;
+    ///
+    /// let root = Span::root("root", SpanContext::random());
+    /// let link = SpanContext::new(TraceId(1), SpanId(2));
+    /// let _g = root.set_local_parent();
+    ///
+    /// let _span = LocalSpan::enter_with_local_parent("child");
+    /// LocalSpan::add_link(link);
+    /// ```
+    #[inline]
+    pub fn add_link(link: SpanContext) {
+        #[cfg(feature = "enable")]
+        {
+            LOCAL_SPAN_STACK
+                .try_with(|s| {
+                    let span_stack = &mut s.borrow_mut();
+                    span_stack.add_link(link);
+                    Some(())
+                })
+                .ok();
+        }
     }
 
     /// Add multiple properties to the current local parent.
@@ -217,7 +273,7 @@ impl Drop for LocalSpan {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::collector::CollectTokenItem;
+    use crate::collector::CollectToken;
     use crate::collector::SpanId;
     use crate::local::LocalCollector;
     use crate::prelude::TraceId;
@@ -227,14 +283,14 @@ mod tests {
     fn local_span_basic() {
         let stack = Rc::new(RefCell::new(LocalSpanStack::with_capacity(16)));
 
-        let token = CollectTokenItem {
+        let token = CollectToken {
             trace_id: TraceId(1234),
             parent_id: SpanId::default(),
             collect_id: 42,
             is_root: false,
             is_sampled: true,
         };
-        let collector = LocalCollector::new(Some(token.into()), stack.clone());
+        let collector = LocalCollector::new(Some(token), stack.clone());
 
         {
             let _g = LocalSpan::enter_with_stack("span1", stack.clone());
@@ -245,7 +301,7 @@ mod tests {
         }
 
         let (spans, collect_token) = collector.collect_spans_and_token();
-        assert_eq!(collect_token.unwrap().as_slice(), &[token]);
+        assert_eq!(collect_token.unwrap(), token);
         assert_eq!(
             tree_str_from_raw_spans(spans.spans),
             r#"
@@ -265,14 +321,14 @@ span1 []
     fn drop_out_of_order() {
         let stack = Rc::new(RefCell::new(LocalSpanStack::with_capacity(16)));
 
-        let token = CollectTokenItem {
+        let token = CollectToken {
             trace_id: TraceId(1234),
             parent_id: SpanId::default(),
             collect_id: 42,
             is_root: false,
             is_sampled: true,
         };
-        let collector = LocalCollector::new(Some(token.into()), stack.clone());
+        let collector = LocalCollector::new(Some(token), stack.clone());
 
         {
             let span1 = LocalSpan::enter_with_stack("span1", stack.clone());

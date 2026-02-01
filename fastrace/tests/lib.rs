@@ -62,6 +62,54 @@ fn single_thread_single_span() {
 
 #[test]
 #[serial]
+fn span_links() {
+    let (reporter, collected_spans) = TestReporter::new();
+    fastrace::set_reporter(reporter, Config::default());
+
+    let root1 = Span::root("root1", SpanContext::new(TraceId(1), SpanId(0)));
+    let root2 = Span::root("root2", SpanContext::new(TraceId(2), SpanId(0)));
+    let link = SpanContext::from_span(&root2).unwrap();
+
+    let child = Span::enter_with_parent("child", &root1).with_link(link);
+    child.add_link(link);
+
+    drop(child);
+    drop(root1);
+    drop(root2);
+
+    fastrace::flush();
+
+    let spans = collected_spans.lock();
+    let child_record = spans.iter().find(|span| span.name == "child").unwrap();
+    assert_eq!(child_record.links, vec![link, link]);
+}
+
+#[test]
+#[serial]
+fn local_span_links() {
+    let (reporter, collected_spans) = TestReporter::new();
+    fastrace::set_reporter(reporter, Config::default());
+
+    let root = Span::root("root", SpanContext::new(TraceId(1), SpanId(0)));
+    let link1 = SpanContext::new(TraceId(2), SpanId(1));
+    let link2 = SpanContext::new(TraceId(3), SpanId(2));
+
+    {
+        let _g = root.set_local_parent();
+        let _span = LocalSpan::enter_with_local_parent("local").with_link(link1);
+        LocalSpan::add_link(link2);
+    }
+
+    drop(root);
+    fastrace::flush();
+
+    let spans = collected_spans.lock();
+    let local_record = spans.iter().find(|span| span.name == "local").unwrap();
+    assert_eq!(local_record.links, vec![link1, link2]);
+}
+
+#[test]
+#[serial]
 fn single_thread_multiple_spans() {
     let (reporter, collected_spans) = TestReporter::new();
     fastrace::set_reporter(reporter, Config::default());
@@ -187,128 +235,6 @@ fn multiple_threads_single_span() {
                 rec-span []
         iter-span-0 [("tmp_property", "tmp_value")]
         iter-span-1 [("tmp_property", "tmp_value")]
-        rec-span []
-            rec-span []
-    "###);
-}
-
-#[test]
-#[serial]
-fn multiple_threads_multiple_spans() {
-    let (reporter, collected_spans) = TestReporter::new();
-    fastrace::set_reporter(reporter, Config::default());
-
-    crossbeam::scope(|scope| {
-        let root1 = Span::root("root1", SpanContext::new(TraceId(12), SpanId(0)));
-        let root2 = Span::root("root2", SpanContext::new(TraceId(13), SpanId(0)));
-        let local_collector = LocalCollector::start();
-
-        let mut handles = vec![];
-
-        for _ in 0..4 {
-            let merged = Span::enter_with_parents("merged", vec![&root1, &root2]);
-            let _g = merged.set_local_parent();
-            let _local = LocalSpan::enter_with_local_parent("local");
-            let h = scope.spawn(move |_| {
-                let local_collector = LocalCollector::start();
-
-                four_spans();
-
-                let local_spans = local_collector.collect();
-                merged.push_child_spans(local_spans);
-            });
-
-            handles.push(h);
-        }
-
-        four_spans();
-
-        handles.into_iter().for_each(|h| h.join().unwrap());
-
-        let local_spans = local_collector.collect();
-        root1.push_child_spans(local_spans.clone());
-        root2.push_child_spans(local_spans);
-    })
-    .unwrap();
-
-    fastrace::flush();
-
-    let graph1 = tree_str_from_span_records(
-        collected_spans
-            .lock()
-            .iter()
-            .filter(|s| s.trace_id == TraceId(12))
-            .cloned()
-            .collect(),
-    );
-    insta::assert_snapshot!(graph1, @r###"
-    root1 []
-        iter-span-0 [("tmp_property", "tmp_value")]
-        iter-span-1 [("tmp_property", "tmp_value")]
-        merged []
-            iter-span-0 [("tmp_property", "tmp_value")]
-            iter-span-1 [("tmp_property", "tmp_value")]
-            local []
-            rec-span []
-                rec-span []
-        merged []
-            iter-span-0 [("tmp_property", "tmp_value")]
-            iter-span-1 [("tmp_property", "tmp_value")]
-            local []
-            rec-span []
-                rec-span []
-        merged []
-            iter-span-0 [("tmp_property", "tmp_value")]
-            iter-span-1 [("tmp_property", "tmp_value")]
-            local []
-            rec-span []
-                rec-span []
-        merged []
-            iter-span-0 [("tmp_property", "tmp_value")]
-            iter-span-1 [("tmp_property", "tmp_value")]
-            local []
-            rec-span []
-                rec-span []
-        rec-span []
-            rec-span []
-    "###);
-
-    let graph2 = tree_str_from_span_records(
-        collected_spans
-            .lock()
-            .iter()
-            .filter(|s| s.trace_id == TraceId(13))
-            .cloned()
-            .collect(),
-    );
-    insta::assert_snapshot!(graph2, @r###"
-    root2 []
-        iter-span-0 [("tmp_property", "tmp_value")]
-        iter-span-1 [("tmp_property", "tmp_value")]
-        merged []
-            iter-span-0 [("tmp_property", "tmp_value")]
-            iter-span-1 [("tmp_property", "tmp_value")]
-            local []
-            rec-span []
-                rec-span []
-        merged []
-            iter-span-0 [("tmp_property", "tmp_value")]
-            iter-span-1 [("tmp_property", "tmp_value")]
-            local []
-            rec-span []
-                rec-span []
-        merged []
-            iter-span-0 [("tmp_property", "tmp_value")]
-            iter-span-1 [("tmp_property", "tmp_value")]
-            local []
-            rec-span []
-                rec-span []
-        merged []
-            iter-span-0 [("tmp_property", "tmp_value")]
-            iter-span-1 [("tmp_property", "tmp_value")]
-            local []
-            rec-span []
-                rec-span []
         rec-span []
             rec-span []
     "###);

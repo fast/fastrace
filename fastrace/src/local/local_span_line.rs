@@ -3,10 +3,10 @@
 use std::borrow::Cow;
 
 use crate::Event;
-use crate::collector::CollectTokenItem;
+use crate::collector::CollectToken;
+use crate::collector::SpanContext;
 use crate::local::span_queue::SpanHandle;
 use crate::local::span_queue::SpanQueue;
-use crate::util::CollectToken;
 use crate::util::RawSpans;
 
 pub struct SpanLine {
@@ -23,7 +23,7 @@ impl SpanLine {
         collect_token: Option<CollectToken>,
     ) -> Self {
         let is_sampled = match &collect_token {
-            Some(token) => token.iter().any(|item| item.is_sampled),
+            Some(token) => token.is_sampled,
             None => true,
         };
 
@@ -84,6 +84,15 @@ impl SpanLine {
     }
 
     #[inline]
+    pub fn add_link(&mut self, link: SpanContext) {
+        if !self.is_sampled {
+            return;
+        }
+
+        self.span_queue.add_link(link);
+    }
+
+    #[inline]
     pub fn with_properties<K, V, I, F>(&mut self, handle: &LocalSpanHandle, properties: F)
     where
         K: Into<Cow<'static, str>>,
@@ -102,21 +111,27 @@ impl SpanLine {
     }
 
     #[inline]
+    pub fn with_link(&mut self, handle: &LocalSpanHandle, link: SpanContext) {
+        if !self.is_sampled {
+            return;
+        }
+
+        if self.epoch == handle.span_line_epoch {
+            self.span_queue.with_link(&handle.span_handle, link);
+        }
+    }
+
+    #[inline]
     pub fn current_collect_token(&self) -> Option<CollectToken> {
-        self.collect_token.as_ref().map(|collect_token| {
-            collect_token
-                .iter()
-                .map(|item| CollectTokenItem {
-                    trace_id: item.trace_id,
-                    parent_id: self
-                        .span_queue
-                        .current_parent_id()
-                        .unwrap_or(item.parent_id),
-                    collect_id: item.collect_id,
-                    is_root: item.is_root,
-                    is_sampled: item.is_sampled,
-                })
-                .collect()
+        self.collect_token.as_ref().map(|item| CollectToken {
+            trace_id: item.trace_id,
+            parent_id: self
+                .span_queue
+                .current_parent_id()
+                .unwrap_or(item.parent_id),
+            collect_id: item.collect_id,
+            is_root: item.is_root,
+            is_sampled: item.is_sampled,
         })
     }
 
@@ -169,52 +184,34 @@ span1 []
 
     #[test]
     fn current_collect_token() {
-        let token1 = CollectTokenItem {
+        let token = CollectToken {
             trace_id: TraceId(1234),
             parent_id: SpanId::default(),
             collect_id: 42,
             is_root: false,
             is_sampled: true,
         };
-        let token2 = CollectTokenItem {
-            trace_id: TraceId(1235),
-            parent_id: SpanId::default(),
-            collect_id: 43,
-            is_root: false,
-            is_sampled: true,
-        };
-        let token = [token1, token2].into_iter().collect();
         let mut span_line = SpanLine::new(16, 1, Some(token));
 
         let current_token = span_line.current_collect_token().unwrap();
-        assert_eq!(current_token.as_slice(), &[token1, token2]);
+        assert_eq!(current_token, token);
 
         let span = span_line.start_span("span").unwrap();
         let current_token = span_line.current_collect_token().unwrap();
-        assert_eq!(current_token.len(), 2);
-        assert_eq!(current_token.as_slice(), &[
-            CollectTokenItem {
-                trace_id: TraceId(1234),
-                parent_id: span_line.span_queue.current_parent_id().unwrap(),
-                collect_id: 42,
-                is_root: false,
-                is_sampled: true,
-            },
-            CollectTokenItem {
-                trace_id: TraceId(1235),
-                parent_id: span_line.span_queue.current_parent_id().unwrap(),
-                collect_id: 43,
-                is_root: false,
-                is_sampled: true,
-            }
-        ]);
+        assert_eq!(current_token, CollectToken {
+            trace_id: TraceId(1234),
+            parent_id: span_line.span_queue.current_parent_id().unwrap(),
+            collect_id: 42,
+            is_root: false,
+            is_sampled: true,
+        });
         span_line.finish_span(span);
 
         let current_token = span_line.current_collect_token().unwrap();
-        assert_eq!(current_token.as_slice(), &[token1, token2]);
+        assert_eq!(current_token, token);
 
         let (spans, collect_token) = span_line.collect(1).unwrap();
-        assert_eq!(collect_token.unwrap().as_slice(), &[token1, token2]);
+        assert_eq!(collect_token.unwrap(), token);
         assert_eq!(
             tree_str_from_raw_spans(spans),
             r#"
@@ -236,7 +233,7 @@ span []
 
         let raw_spans = span_line1.collect(1).unwrap().0;
         assert_eq!(raw_spans.len(), 1);
-        assert_eq!(raw_spans[0].properties, None);
+        assert!(raw_spans[0].properties.is_empty());
 
         let raw_spans = span_line2.collect(2).unwrap().0;
         assert!(raw_spans.is_empty());
@@ -244,14 +241,14 @@ span []
 
     #[test]
     fn unmatched_epoch_finish_span() {
-        let item = CollectTokenItem {
+        let item = CollectToken {
             trace_id: TraceId(1234),
             parent_id: SpanId::default(),
             collect_id: 42,
             is_root: false,
             is_sampled: true,
         };
-        let mut span_line1 = SpanLine::new(16, 1, Some(item.into()));
+        let mut span_line1 = SpanLine::new(16, 1, Some(item));
         let mut span_line2 = SpanLine::new(16, 2, None);
         assert_eq!(span_line1.span_line_epoch(), 1);
         assert_eq!(span_line2.span_line_epoch(), 2);
@@ -262,14 +259,11 @@ span []
 
         let token_after_finish = span_line1.current_collect_token().unwrap();
         // the span failed to finish
-        assert_eq!(
-            token_before_finish.as_slice(),
-            token_after_finish.as_slice()
-        );
+        assert_eq!(token_before_finish, token_after_finish);
 
         let (spans, collect_token) = span_line1.collect(1).unwrap();
         let collect_token = collect_token.unwrap();
-        assert_eq!(collect_token.as_slice(), &[item]);
+        assert_eq!(collect_token, item);
         assert_eq!(spans.len(), 1);
 
         let (spans, collect_token) = span_line2.collect(2).unwrap();

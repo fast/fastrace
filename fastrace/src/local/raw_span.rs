@@ -4,6 +4,7 @@ use std::borrow::Cow;
 
 use fastant::Instant;
 
+use crate::collector::SpanContext;
 use crate::collector::SpanId;
 use crate::util::Properties;
 
@@ -12,15 +13,17 @@ pub enum RawKind {
     Span,
     Event,
     Properties,
+    Link,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct RawSpan {
     pub id: SpanId,
     pub parent_id: Option<SpanId>,
     pub begin_instant: Instant,
     pub name: Cow<'static, str>,
-    pub properties: Option<Properties>,
+    pub properties: Properties,
+    pub links: Vec<SpanContext>,
     pub raw_kind: RawKind,
 
     // Will write this field at post processing
@@ -41,7 +44,8 @@ impl RawSpan {
             parent_id,
             begin_instant,
             name: name.into(),
-            properties: None,
+            properties: Properties::default(),
+            links: Vec::new(),
             raw_kind,
             end_instant: Instant::ZERO,
         }
@@ -50,25 +54,5 @@ impl RawSpan {
     #[inline]
     pub(crate) fn end_with(&mut self, end_instant: Instant) {
         self.end_instant = end_instant;
-    }
-}
-
-impl Clone for RawSpan {
-    fn clone(&self) -> Self {
-        let properties = self.properties.as_ref().map(|properties| {
-            let mut new_properties = Properties::default();
-            new_properties.extend(properties.iter().cloned());
-            new_properties
-        });
-
-        RawSpan {
-            id: self.id,
-            parent_id: self.parent_id,
-            begin_instant: self.begin_instant,
-            name: self.name.clone(),
-            properties,
-            raw_kind: self.raw_kind,
-            end_instant: self.end_instant,
-        }
     }
 }

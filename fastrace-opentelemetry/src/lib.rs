@@ -33,6 +33,7 @@ use fastrace::prelude::*;
 use opentelemetry::InstrumentationScope;
 use opentelemetry::KeyValue;
 use opentelemetry::trace::Event;
+use opentelemetry::trace::Link;
 use opentelemetry::trace::SpanContext as OtelSpanContext;
 use opentelemetry::trace::SpanKind;
 use opentelemetry::trace::Status;
@@ -139,7 +140,6 @@ static OTEL_PROPERTIES: LazyLock<HashSet<&str>> = LazyLock::new(|| {
     ])
 });
 
-/// Convert a list of properties to a list of key-value pairs.
 fn map_props_to_kvs(props: Vec<(Cow<'static, str>, Cow<'static, str>)>) -> Vec<KeyValue> {
     props
         .into_iter()
@@ -148,7 +148,6 @@ fn map_props_to_kvs(props: Vec<(Cow<'static, str>, Cow<'static, str>)>) -> Vec<K
         .collect()
 }
 
-/// Convert a list of [`EventRecord`] to OpenTelemetry [`SpanEvents`].
 fn map_events(events: Vec<EventRecord>) -> SpanEvents {
     let mut queue = SpanEvents::default();
     queue.events.reserve(events.len());
@@ -165,6 +164,31 @@ fn map_events(events: Vec<EventRecord>) -> SpanEvents {
     }
 
     queue
+}
+
+fn map_links(links: Vec<SpanContext>) -> SpanLinks {
+    let links = links
+        .into_iter()
+        .map(|link| {
+            let trace_flags = if link.sampled {
+                TraceFlags::SAMPLED
+            } else {
+                TraceFlags::default()
+            };
+            let span_context = OtelSpanContext::new(
+                link.trace_id.0.into(),
+                link.span_id.0.into(),
+                trace_flags,
+                false,
+                TraceState::default(),
+            );
+            Link::with_context(span_context)
+        })
+        .collect();
+
+    let mut span_links = SpanLinks::default();
+    span_links.links = links;
+    span_links
 }
 
 trait DynSpanExporter: Send + Sync + Debug {
@@ -209,6 +233,7 @@ impl OpenTelemetryReporter {
                      name,
                      properties,
                      events,
+                     links,
                  }| {
                     let parent_span_id = parent_id.0.into();
                     let span_kind = span_kind(&properties);
@@ -221,6 +246,7 @@ impl OpenTelemetryReporter {
                         + Duration::from_nanos(begin_time_unix_ns + duration_ns);
                     let attributes = map_props_to_kvs(properties);
                     let events = map_events(events);
+                    let links = map_links(links);
 
                     SpanData {
                         span_context: OtelSpanContext::new(
@@ -239,7 +265,7 @@ impl OpenTelemetryReporter {
                         attributes,
                         dropped_attributes_count: 0,
                         events,
-                        links: SpanLinks::default(),
+                        links,
                         status,
                         instrumentation_scope,
                     }

@@ -5,10 +5,10 @@
 use std::collections::HashMap;
 use std::fmt;
 
+use crate::collector::CollectToken;
 use crate::collector::SpanId;
 use crate::collector::SpanRecord;
 use crate::collector::SpanSet;
-use crate::util::CollectToken;
 use crate::util::RawSpans;
 
 type TreeChildren = HashMap<
@@ -76,14 +76,9 @@ impl Tree {
                     span.name.to_string(),
                     vec![],
                     span.properties
-                        .as_ref()
-                        .map(|properties| {
-                            properties
-                                .iter()
-                                .map(|(k, v)| (k.to_string(), v.to_string()))
-                                .collect()
-                        })
-                        .unwrap_or_default(),
+                        .iter()
+                        .map(|(k, v)| (k.to_string(), v.to_string()))
+                        .collect(),
                     vec![],
                 ),
             );
@@ -118,84 +113,79 @@ impl Tree {
         >::new();
 
         for (span_set, token) in span_sets {
-            for item in token.iter() {
-                collect
-                    .entry(item.collect_id)
-                    .or_default()
-                    .insert(Some(SpanId(0)), ("".into(), vec![], vec![], vec![]));
-                match span_set {
-                    SpanSet::Span(span) => {
-                        collect.entry(item.collect_id).or_default().insert(
+            collect
+                .entry(token.collect_id)
+                .or_default()
+                .insert(Some(SpanId(0)), ("".into(), vec![], vec![], vec![]));
+            match span_set {
+                SpanSet::Span(span) => {
+                    collect.entry(token.collect_id).or_default().insert(
+                        Some(span.id),
+                        (
+                            span.name.to_string(),
+                            vec![],
+                            span.properties
+                                .iter()
+                                .map(|(k, v)| (k.to_string(), v.to_string()))
+                                .collect(),
+                            vec![],
+                        ),
+                    );
+                }
+                SpanSet::LocalSpansInner(spans) => {
+                    for span in spans.spans.iter() {
+                        collect.entry(token.collect_id).or_default().insert(
                             Some(span.id),
                             (
                                 span.name.to_string(),
                                 vec![],
                                 span.properties
-                                    .as_ref()
-                                    .map(|properties| {
-                                        properties
-                                            .iter()
-                                            .map(|(k, v)| (k.to_string(), v.to_string()))
-                                            .collect()
-                                    })
-                                    .unwrap_or_default(),
+                                    .iter()
+                                    .map(|(k, v)| (k.to_string(), v.to_string()))
+                                    .collect(),
                                 vec![],
                             ),
                         );
                     }
-                    SpanSet::LocalSpansInner(spans) => {
-                        for span in spans.spans.iter() {
-                            collect.entry(item.collect_id).or_default().insert(
-                                Some(span.id),
-                                (
-                                    span.name.to_string(),
-                                    vec![],
-                                    span.properties
-                                        .as_ref()
-                                        .map(|properties| {
-                                            properties
-                                                .iter()
-                                                .map(|(k, v)| (k.to_string(), v.to_string()))
-                                                .collect()
-                                        })
-                                        .unwrap_or_default(),
-                                    vec![],
-                                ),
-                            );
-                        }
-                    }
-                    SpanSet::SharedLocalSpans(spans) => {
-                        for span in spans.spans.iter() {
-                            collect.entry(item.collect_id).or_default().insert(
-                                Some(span.id),
-                                (
-                                    span.name.to_string(),
-                                    vec![],
-                                    span.properties
-                                        .as_ref()
-                                        .map(|properties| {
-                                            properties
-                                                .iter()
-                                                .map(|(k, v)| (k.to_string(), v.to_string()))
-                                                .collect()
-                                        })
-                                        .unwrap_or_default(),
-                                    vec![],
-                                ),
-                            );
-                        }
+                }
+                SpanSet::SharedLocalSpans(spans) => {
+                    for span in spans.spans.iter() {
+                        collect.entry(token.collect_id).or_default().insert(
+                            Some(span.id),
+                            (
+                                span.name.to_string(),
+                                vec![],
+                                span.properties
+                                    .iter()
+                                    .map(|(k, v)| (k.to_string(), v.to_string()))
+                                    .collect(),
+                                vec![],
+                            ),
+                        );
                     }
                 }
             }
         }
 
         for (span_set, token) in span_sets {
-            for item in token.iter() {
-                match span_set {
-                    SpanSet::Span(span) => {
-                        let parent_id = span.parent_id.unwrap_or(item.parent_id);
+            match span_set {
+                SpanSet::Span(span) => {
+                    let parent_id = span.parent_id.unwrap_or(token.parent_id);
+                    collect
+                        .get_mut(&token.collect_id)
+                        .as_mut()
+                        .unwrap()
+                        .get_mut(&Some(parent_id))
+                        .as_mut()
+                        .unwrap()
+                        .1
+                        .push(span.id);
+                }
+                SpanSet::LocalSpansInner(spans) => {
+                    for span in spans.spans.iter() {
+                        let parent_id = span.parent_id.unwrap_or(token.parent_id);
                         collect
-                            .get_mut(&item.collect_id)
+                            .get_mut(&token.collect_id)
                             .as_mut()
                             .unwrap()
                             .get_mut(&Some(parent_id))
@@ -204,33 +194,19 @@ impl Tree {
                             .1
                             .push(span.id);
                     }
-                    SpanSet::LocalSpansInner(spans) => {
-                        for span in spans.spans.iter() {
-                            let parent_id = span.parent_id.unwrap_or(item.parent_id);
-                            collect
-                                .get_mut(&item.collect_id)
-                                .as_mut()
-                                .unwrap()
-                                .get_mut(&Some(parent_id))
-                                .as_mut()
-                                .unwrap()
-                                .1
-                                .push(span.id);
-                        }
-                    }
-                    SpanSet::SharedLocalSpans(spans) => {
-                        for span in spans.spans.iter() {
-                            let parent_id = span.parent_id.unwrap_or(item.parent_id);
-                            collect
-                                .get_mut(&item.collect_id)
-                                .as_mut()
-                                .unwrap()
-                                .get_mut(&Some(parent_id))
-                                .as_mut()
-                                .unwrap()
-                                .1
-                                .push(span.id);
-                        }
+                }
+                SpanSet::SharedLocalSpans(spans) => {
+                    for span in spans.spans.iter() {
+                        let parent_id = span.parent_id.unwrap_or(token.parent_id);
+                        collect
+                            .get_mut(&token.collect_id)
+                            .as_mut()
+                            .unwrap()
+                            .get_mut(&Some(parent_id))
+                            .as_mut()
+                            .unwrap()
+                            .1
+                            .push(span.id);
                     }
                 }
             }
