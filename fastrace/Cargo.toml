@@ -21,7 +21,7 @@ fastant = "0.1"
 fastrace-macro = { workspace = true }
 parking_lot = "0.12"
 pin-project = { version = "1.1.8" }
-rand = "0.9"
+rand = "0.10.0"
 rtrb = "0.3"
 serde = { workspace = true }
 
@@ -31,15 +31,15 @@ crossbeam = "0.8"
 divan = "0.1"
 fastrace = { path = ".", features = ["enable"] }
 fastrace-opentelemetry = { workspace = true }
-flume = "0.11"
+flume = "0.12.0"
 futures-timer = "3"
 insta = "1.43.1"
-mockall = "0.13"
+mockall = "0.14.0"
 opentelemetry = { workspace = true }
 opentelemetry-otlp = { workspace = true }
 opentelemetry_sdk = { workspace = true }
 pollster = { version = "0.4.0" }
-rand = "0.9"
+rand = "0.10.0"
 serial_test = "3.1"
 tokio = { workspace = true }
 tracing = { version = "0.1" }
