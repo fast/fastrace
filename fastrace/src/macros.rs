@@ -31,11 +31,11 @@ macro_rules! func_name {
 ///
 /// # Example
 ///
-/// ```
+/// ```no_run
 /// use fastrace::func_path;
 ///
 /// fn foo() {
-///    assert_eq!(func_path!(), "rust_out::main::_doctest_main_fastrace_src_macros_rs_34_0::foo");
+///    assert_eq!(func_path!(), "doctest_bundle_2024::__doctest_39::main::foo");
 /// }
 /// # foo()
 #[macro_export]
@@ -69,13 +69,12 @@ macro_rules! full_name {
 ///
 /// # Example
 ///
-/// ```
+/// ```no_run
 /// use fastrace::file_location;
 ///
 /// fn foo() {
 ///    assert_eq!(file_location!(), "fastrace/src/macros.rs:8:15");
 /// }
-/// # #[cfg(not(target_os = "windows"))]
 /// # foo()
 #[macro_export]
 macro_rules! file_location {
