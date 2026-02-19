@@ -77,9 +77,9 @@ macro_rules! full_name {
 /// fn foo() {
 ///     let loc = file_location!();
 ///     let mut parts = loc.rsplitn(3, ':');
-///     let file = parts.next().unwrap();
-///     let line = parts.next().unwrap();
 ///     let column = parts.next().unwrap();
+///     let line = parts.next().unwrap();
+///     let file = parts.next().unwrap();
 ///     assert!(file.ends_with(".rs"), "{file} should end with .rs");
 ///     assert!(
 ///         line.parse::<u32>().is_ok(),
