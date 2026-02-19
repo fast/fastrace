@@ -31,13 +31,15 @@ macro_rules! func_name {
 ///
 /// # Example
 ///
-/// ```no_run
+/// ```
 /// use fastrace::func_path;
 ///
 /// fn foo() {
-///    assert_eq!(func_path!(), "doctest_bundle_2024::__doctest_39::main::foo");
+///     let path = func_path!();
+///     assert!(path.ends_with("::foo"), "{path} should end with ::foo");
 /// }
 /// # foo()
+/// ```
 #[macro_export]
 macro_rules! func_path {
     () => {{
@@ -69,13 +71,27 @@ macro_rules! full_name {
 ///
 /// # Example
 ///
-/// ```no_run
+/// ```
 /// use fastrace::file_location;
 ///
 /// fn foo() {
-///    assert_eq!(file_location!(), "fastrace/src/macros.rs:8:15");
+///     let loc = file_location!();
+///     let mut parts = loc.rsplitn(3, ':');
+///     let file = parts.next().unwrap();
+///     let line = parts.next().unwrap();
+///     let column = parts.next().unwrap();
+///     assert!(file.ends_with(".rs"), "{file} should end with .rs");
+///     assert!(
+///         line.parse::<u32>().is_ok(),
+///         "{line} should be a valid line number"
+///     );
+///     assert!(
+///         column.parse::<u32>().is_ok(),
+///         "{column} should be a valid column number"
+///     );
 /// }
 /// # foo()
+/// ```
 #[macro_export]
 macro_rules! file_location {
     () => {
