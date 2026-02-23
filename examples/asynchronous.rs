@@ -62,7 +62,7 @@ async fn main() {
         let f = async {
             let jhs = {
                 let _span = LocalSpan::enter_with_local_parent("a span")
-                    .with_properties(|| [("a property", "a value")]);
+                    .with_property(|| ("a property", "a value"));
                 parallel_job()
             };
 
