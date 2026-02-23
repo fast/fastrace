@@ -474,12 +474,10 @@ fn amend_span(
                 .push(DanglingItem::Properties(span.properties.clone()));
         }
         RawKind::Link => {
-            if !span.links.is_empty() {
-                dangling
-                    .entry(parent_id)
-                    .or_default()
-                    .push(DanglingItem::Links(span.links.clone()));
-            }
+            dangling
+                .entry(parent_id)
+                .or_default()
+                .push(DanglingItem::Links(span.links.clone()));
         }
     }
 }
