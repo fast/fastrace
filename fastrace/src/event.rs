@@ -39,7 +39,7 @@ impl Event {
     /// ```
     /// use fastrace::prelude::*;
     ///
-    /// /// LocalSpan::add_event(Event::new("event").with_property(|| ("key", "value")));
+    /// LocalSpan::add_event(Event::new("event").with_property(|| ("key", "value")));
     /// ```
     #[inline]
     pub fn with_property<K, V, F>(self, property: F) -> Self
