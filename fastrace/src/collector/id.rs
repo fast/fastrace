@@ -129,7 +129,7 @@ impl<'de> serde::Deserialize<'de> for SpanId {
 ///
 /// [`TraceId`]: crate::collector::TraceId
 /// [`SpanId`]: crate::collector::SpanId
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct SpanContext {
     pub trace_id: TraceId,
     pub span_id: SpanId,
@@ -215,7 +215,7 @@ impl SpanContext {
         #[cfg(feature = "enable")]
         {
             let inner = span.inner.as_ref()?;
-            let collect_token = inner.issue_collect_token().next()?;
+            let collect_token = inner.issue_collect_token();
 
             Some(Self {
                 trace_id: collect_token.trace_id,
@@ -249,7 +249,7 @@ impl SpanContext {
             let stack = LOCAL_SPAN_STACK.try_with(Rc::clone).ok()?;
 
             let mut stack = stack.borrow_mut();
-            let collect_token = stack.current_collect_token()?[0];
+            let collect_token = stack.current_collect_token()?;
 
             Some(Self {
                 trace_id: collect_token.trace_id,

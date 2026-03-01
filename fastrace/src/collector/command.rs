@@ -1,7 +1,7 @@
 // Copyright 2020 TiKV Project Authors. Licensed under Apache-2.0.
 
+use crate::collector::CollectToken;
 use crate::collector::SpanSet;
-use crate::util::CollectToken;
 
 #[derive(Debug)]
 pub enum CollectCommand {

@@ -6,9 +6,9 @@ use fastant::Instant;
 
 use super::raw_span::RawKind;
 use crate::Event;
+use crate::collector::SpanContext;
 use crate::collector::SpanId;
 use crate::local::raw_span::RawSpan;
-use crate::util::Properties;
 use crate::util::RawSpans;
 
 pub struct SpanQueue {
@@ -84,6 +84,24 @@ impl SpanQueue {
     }
 
     #[inline]
+    pub fn add_link(&mut self, link: SpanContext) {
+        if self.span_queue.len() >= self.capacity {
+            return;
+        }
+
+        let mut span = RawSpan::begin_with(
+            SpanId::next_id(),
+            self.next_parent_id,
+            Instant::ZERO,
+            Cow::Borrowed(""),
+            RawKind::Link,
+        );
+        span.links.push(link);
+
+        self.span_queue.push(span);
+    }
+
+    #[inline]
     pub fn add_properties<K, V, I>(&mut self, properties: I)
     where
         K: Into<Cow<'static, str>>,
@@ -102,7 +120,6 @@ impl SpanQueue {
             RawKind::Properties,
         );
         span.properties
-            .get_or_insert_with(Properties::default)
             .extend(properties.into_iter().map(|(k, v)| (k.into(), v.into())));
 
         self.span_queue.push(span);
@@ -119,8 +136,15 @@ impl SpanQueue {
 
         let span = &mut self.span_queue[span_handle.index];
         span.properties
-            .get_or_insert_with(Properties::default)
             .extend(properties.into_iter().map(|(k, v)| (k.into(), v.into())));
+    }
+
+    #[inline]
+    pub fn with_link(&mut self, span_handle: &SpanHandle, link: SpanContext) {
+        debug_assert!(span_handle.index < self.span_queue.len());
+
+        let span = &mut self.span_queue[span_handle.index];
+        span.links.push(link);
     }
 
     #[inline]

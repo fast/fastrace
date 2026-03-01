@@ -6,12 +6,12 @@ use std::sync::Arc;
 
 use fastant::Instant;
 
+use crate::collector::CollectToken;
 use crate::local::local_span_stack::LOCAL_SPAN_STACK;
 use crate::local::local_span_stack::LocalSpanStack;
 use crate::local::local_span_stack::SpanLineHandle;
 use crate::prelude::SpanContext;
 use crate::prelude::SpanRecord;
-use crate::util::CollectToken;
 use crate::util::RawSpans;
 
 /// A collector to collect [`LocalSpan`].
@@ -238,7 +238,7 @@ impl LocalSpans {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::collector::CollectTokenItem;
+    use crate::collector::CollectToken;
     use crate::collector::SpanId;
     use crate::prelude::LocalSpan;
     use crate::prelude::TraceId;
@@ -252,21 +252,21 @@ mod tests {
 
         let span1 = stack.borrow_mut().enter_span("span1").unwrap();
         {
-            let token2 = CollectTokenItem {
+            let token2 = CollectToken {
                 trace_id: TraceId(1234),
                 parent_id: SpanId::default(),
                 collect_id: 42,
                 is_root: false,
                 is_sampled: true,
             };
-            let collector2 = LocalCollector::new(Some(token2.into()), stack.clone());
+            let collector2 = LocalCollector::new(Some(token2), stack.clone());
             let span2 = stack.borrow_mut().enter_span("span2").unwrap();
             let span3 = stack.borrow_mut().enter_span("span3").unwrap();
             stack.borrow_mut().exit_span(span3);
             stack.borrow_mut().exit_span(span2);
 
             let (spans, token) = collector2.collect_spans_and_token();
-            assert_eq!(token.unwrap().as_slice(), &[token2]);
+            assert_eq!(token.unwrap(), token2);
             assert_eq!(
                 tree_str_from_raw_spans(spans.spans),
                 r"
@@ -292,14 +292,14 @@ span1 []
 
         let span1 = stack.borrow_mut().enter_span("span1").unwrap();
         {
-            let token2 = CollectTokenItem {
+            let token2 = CollectToken {
                 trace_id: TraceId(1234),
                 parent_id: SpanId::default(),
                 collect_id: 42,
                 is_root: false,
                 is_sampled: true,
             };
-            let collector2 = LocalCollector::new(Some(token2.into()), stack.clone());
+            let collector2 = LocalCollector::new(Some(token2), stack.clone());
             let span2 = stack.borrow_mut().enter_span("span2").unwrap();
             let span3 = stack.borrow_mut().enter_span("span3").unwrap();
             stack.borrow_mut().exit_span(span3);

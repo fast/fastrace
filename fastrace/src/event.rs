@@ -9,7 +9,7 @@ use crate::util::Properties;
 /// An event that represents a single point in time during the execution of a span.
 pub struct Event {
     pub(crate) name: Cow<'static, str>,
-    pub(crate) properties: Option<Properties>,
+    pub(crate) properties: Properties,
 }
 
 impl Event {
@@ -26,7 +26,7 @@ impl Event {
     pub fn new(name: impl Into<Cow<'static, str>>) -> Self {
         Event {
             name: name.into(),
-            properties: None,
+            properties: Properties::default(),
         }
     }
 
@@ -71,7 +71,6 @@ impl Event {
         #[cfg(feature = "enable")]
         {
             self.properties
-                .get_or_insert_with(Properties::default)
                 .extend(properties().into_iter().map(|(k, v)| (k.into(), v.into())))
         }
         self

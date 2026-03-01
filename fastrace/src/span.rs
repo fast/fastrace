@@ -10,7 +10,7 @@ use std::time::Duration;
 use fastant::Instant;
 
 use crate::Event;
-use crate::collector::CollectTokenItem;
+use crate::collector::CollectToken;
 use crate::collector::GlobalCollect;
 use crate::collector::SpanContext;
 use crate::collector::SpanId;
@@ -23,8 +23,6 @@ use crate::local::local_span_stack::LOCAL_SPAN_STACK;
 use crate::local::local_span_stack::LocalSpanStack;
 use crate::local::raw_span::RawKind;
 use crate::local::raw_span::RawSpan;
-use crate::util::CollectToken;
-use crate::util::Properties;
 
 /// A thread-safe span.
 #[must_use]
@@ -93,14 +91,13 @@ impl Span {
                 NOT_SAMPLED_COLLECT_ID
             };
 
-            let token = CollectTokenItem {
+            let token = CollectToken {
                 trace_id: parent.trace_id,
                 parent_id: parent.span_id,
                 collect_id,
                 is_root: true,
                 is_sampled: parent.sampled,
-            }
-            .into();
+            };
 
             Self::new(token, name, Some(collect_id))
         }
@@ -126,7 +123,7 @@ impl Span {
         #[cfg(feature = "enable")]
         {
             match &parent.inner {
-                Some(_inner) => Self::enter_with_parents(name, [parent]),
+                Some(inner) => Self::new(inner.issue_collect_token(), name, None),
                 None => Span::noop(),
             }
         }
@@ -134,13 +131,10 @@ impl Span {
 
     /// Create a new child span associated with multiple parent spans.
     ///
-    /// This function is particularly useful when a single operation amalgamates multiple requests.
-    /// It enables the creation of a unique child span that is interconnected with all the parent
-    /// spans related to the requests, thereby obviating the need to generate individual child
-    /// spans for each parent span.
+    /// This API is deprecated. The first non-noop parent becomes the primary parent; any additional
+    /// parents are attached as links.
     ///
-    /// The newly created child span, and its children, will have a replica for each trace of parent
-    /// spans.
+    /// Use [`Span::enter_with_parent`] plus [`Span::with_link`] instead.
     ///
     /// # Examples
     ///
@@ -150,8 +144,12 @@ impl Span {
     /// let parent1 = Span::root("parent1", SpanContext::random());
     /// let parent2 = Span::root("parent2", SpanContext::random());
     ///
-    /// let child = Span::enter_with_parents("child", [&parent1, &parent2]);
+    /// let child = Span::enter_with_parent("child", &parent1)
+    ///     .with_link(SpanContext::from_span(&parent2).unwrap());
     #[inline]
+    #[deprecated(
+        note = "Multiple-parent spans are deprecated. Use `enter_with_parent` and link other parents with `with_link`."
+    )]
     pub fn enter_with_parents<'a>(
         name: impl Into<Cow<'static, str>>,
         parents: impl IntoIterator<Item = &'a Span>,
@@ -163,12 +161,35 @@ impl Span {
 
         #[cfg(feature = "enable")]
         {
-            let token = parents
-                .into_iter()
-                .filter_map(|span| span.inner.as_ref())
-                .flat_map(|inner| inner.issue_collect_token())
-                .collect();
-            Self::new(token, name, None)
+            let mut main: Option<&Span> = None;
+            let mut links = Vec::new();
+            for parent in parents.into_iter() {
+                if parent.inner.is_none() {
+                    continue;
+                }
+
+                if main.is_none() {
+                    main = Some(parent);
+                } else if let Some(ctx) = SpanContext::from_span(parent) {
+                    links.push(ctx);
+                }
+            }
+
+            let Some(main) = main else {
+                return Self::noop();
+            };
+
+            let mut span = Self::new(
+                main.inner.as_ref().unwrap().issue_collect_token(),
+                name,
+                None,
+            );
+
+            for link in links {
+                span = span.with_link(link);
+            }
+
+            span
         }
     }
 
@@ -360,6 +381,58 @@ impl Span {
         }
     }
 
+    /// Adds a link to another span context and returns the modified `Span`.
+    ///
+    /// Links allow a span to reference additional related spans without establishing
+    /// a strict parent-child relationship.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use fastrace::prelude::*;
+    ///
+    /// let root = Span::root("root", SpanContext::random());
+    /// let other = Span::root("other", SpanContext::random());
+    /// let link = SpanContext::from_span(&other).unwrap();
+    ///
+    /// let _span = Span::enter_with_parent("child", &root).with_link(link);
+    /// ```
+    #[inline]
+    pub fn with_link(mut self, link: SpanContext) -> Self {
+        #[cfg(feature = "enable")]
+        if let Some(inner) = self.inner.as_mut() {
+            inner.add_link(link);
+        }
+        self
+    }
+
+    /// Adds a link to another span context after the span has been created.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use fastrace::prelude::*;
+    ///
+    /// let root = Span::root("root", SpanContext::random());
+    /// let other = Span::root("other", SpanContext::random());
+    /// let link = SpanContext::from_span(&other).unwrap();
+    ///
+    /// let child = Span::enter_with_parent("child", &root);
+    /// child.add_link(link);
+    /// ```
+    #[inline]
+    pub fn add_link(&self, link: SpanContext) {
+        #[cfg(feature = "enable")]
+        {
+            let mut span = Span::enter_with_parent("", self);
+            if let Some(mut inner) = span.inner.take() {
+                inner.raw_span.raw_kind = RawKind::Link;
+                inner.raw_span.links.push(link);
+                inner.submit_spans();
+            }
+        }
+    }
+
     /// Attach a collection of [`LocalSpan`] instances as child spans to the current span.
     ///
     /// This method allows you to associate previously collected `LocalSpan` instances with the
@@ -518,13 +591,17 @@ impl SpanInner {
     {
         self.raw_span
             .properties
-            .get_or_insert_with(Properties::default)
             .extend(properties().into_iter().map(|(k, v)| (k.into(), v.into())));
     }
 
     #[inline]
+    fn add_link(&mut self, link: SpanContext) {
+        self.raw_span.links.push(link);
+    }
+
+    #[inline]
     fn capture_local_spans(&self, stack: Rc<RefCell<LocalSpanStack>>) -> LocalParentGuard {
-        let token = self.issue_collect_token().collect();
+        let token = self.issue_collect_token();
         let collector = LocalCollector::new(Some(token), stack);
 
         LocalParentGuard::new(collector, self.collect.clone())
@@ -538,21 +615,19 @@ impl SpanInner {
 
         self.collect.submit_spans(
             SpanSet::SharedLocalSpans(local_spans),
-            self.issue_collect_token().collect(),
+            self.issue_collect_token(),
         );
     }
 
     #[inline]
-    pub(crate) fn issue_collect_token(&self) -> impl Iterator<Item = CollectTokenItem> + '_ {
-        self.collect_token
-            .iter()
-            .map(move |collect_item| CollectTokenItem {
-                trace_id: collect_item.trace_id,
-                parent_id: self.raw_span.id,
-                collect_id: collect_item.collect_id,
-                is_root: false,
-                is_sampled: collect_item.is_sampled,
-            })
+    pub(crate) fn issue_collect_token(&self) -> CollectToken {
+        CollectToken {
+            trace_id: self.collect_token.trace_id,
+            parent_id: self.raw_span.id,
+            collect_id: self.collect_token.collect_id,
+            is_root: false,
+            is_sampled: self.collect_token.is_sampled,
+        }
     }
 
     #[inline]
@@ -566,7 +641,7 @@ impl Drop for Span {
     fn drop(&mut self) {
         #[cfg(feature = "enable")]
         if let Some(mut inner) = self.inner.take() {
-            if inner.collect_token.iter().any(|token| token.is_sampled) {
+            if inner.collect_token.is_sampled {
                 let collect_id = inner.collect_id.take();
                 let collect = inner.collect.clone();
 
@@ -617,7 +692,7 @@ impl Drop for LocalParentGuard {
             let (spans, token) = inner.collector.collect_spans_and_token();
             debug_assert!(token.is_some());
             if let Some(token) = token {
-                if token.iter().any(|token| token.is_sampled) {
+                if token.is_sampled {
                     inner
                         .collect
                         .submit_spans(SpanSet::LocalSpansInner(spans), token);
@@ -694,16 +769,13 @@ mod tests {
             .in_sequence(&mut seq)
             .with(
                 predicate::always(),
-                predicate::eq::<CollectToken>(
-                    CollectTokenItem {
-                        trace_id: TraceId(12),
-                        parent_id: SpanId::default(),
-                        collect_id: 42,
-                        is_root: true,
-                        is_sampled: true,
-                    }
-                    .into(),
-                ),
+                predicate::eq::<CollectToken>(CollectToken {
+                    trace_id: TraceId(12),
+                    parent_id: SpanId::default(),
+                    collect_id: 42,
+                    is_root: true,
+                    is_sampled: true,
+                }),
             )
             .return_const(());
         mock.expect_drop_collect()
@@ -744,7 +816,7 @@ mod tests {
         mock.expect_submit_spans()
             .times(1)
             .in_sequence(&mut seq)
-            .withf(|_, collect_token| collect_token.len() == 1 && collect_token[0].collect_id == 42)
+            .withf(|_, collect_token| collect_token.collect_id == 42)
             .returning({
                 let span_sets = span_sets.clone();
                 move |span_set, token| span_sets.lock().unwrap().push((span_set, token))
@@ -805,7 +877,7 @@ root []
         mock.expect_submit_spans()
             .times(4)
             .in_sequence(&mut seq)
-            .withf(|_, collect_token| collect_token.len() == 1 && collect_token[0].collect_id == 42)
+            .withf(|_, collect_token| collect_token.collect_id == 42)
             .returning({
                 let span_sets = span_sets.clone();
                 move |span_set, token| span_sets.lock().unwrap().push((span_set, token))
@@ -830,101 +902,6 @@ root []
     child1 [("k1", "v1")]
         grandchild []
     child2 []
-"#
-        );
-    }
-
-    #[test]
-    fn span_with_parents() {
-        crate::set_reporter(ConsoleReporter, crate::collector::Config::default());
-
-        let routine = || {
-            let parent_ctx = SpanContext::random();
-            let parent1 = Span::root("parent1", parent_ctx);
-            let parent2 = Span::root("parent2", parent_ctx);
-            let parent3 = Span::root("parent3", parent_ctx);
-            let parent4 = Span::root("parent4", parent_ctx);
-            let parent5 = Span::root("parent5", parent_ctx);
-            let child1 = Span::enter_with_parent("child1", &parent5);
-            let child2 = Span::enter_with_parents("child2", [
-                &parent1, &parent2, &parent3, &parent4, &parent5, &child1,
-            ])
-            .with_property(|| ("k1", "v1"));
-
-            crossbeam::scope(move |scope| {
-                let mut rng = rng();
-                let mut spans = [child1, child2];
-                spans.shuffle(&mut rng);
-                for span in spans {
-                    scope.spawn(|_| drop(span));
-                }
-            })
-            .unwrap();
-            crossbeam::scope(move |scope| {
-                let mut rng = rng();
-                let mut spans = [parent1, parent2, parent3, parent4, parent5];
-                spans.shuffle(&mut rng);
-                for span in spans {
-                    scope.spawn(|_| drop(span));
-                }
-            })
-            .unwrap();
-
-            fastrace::flush();
-        };
-
-        let mut mock = MockGlobalCollect::new();
-        let mut seq = Sequence::new();
-        let span_sets = Arc::new(Mutex::new(Vec::new()));
-        mock.expect_start_collect()
-            .times(5)
-            .in_sequence(&mut seq)
-            .returning({
-                let id = Arc::new(AtomicUsize::new(1));
-                move || id.fetch_add(1, Ordering::SeqCst)
-            });
-        mock.expect_submit_spans()
-            .times(7)
-            .in_sequence(&mut seq)
-            .returning({
-                let span_sets = span_sets.clone();
-                move |span_set, token| span_sets.lock().unwrap().push((span_set, token))
-            });
-        mock.expect_drop_collect()
-            .times(5)
-            .with(predicate::in_iter([1_usize, 2, 3, 4, 5]))
-            .return_const(());
-
-        let mock = Arc::new(mock);
-        set_mock_collect(mock);
-
-        routine();
-
-        let span_sets = std::mem::take(&mut *span_sets.lock().unwrap());
-        assert_eq!(
-            tree_str_from_span_sets(span_sets.as_slice()),
-            r#"
-#1
-parent1 []
-    child2 [("k1", "v1")]
-
-#2
-parent2 []
-    child2 [("k1", "v1")]
-
-#3
-parent3 []
-    child2 [("k1", "v1")]
-
-#4
-parent4 []
-    child2 [("k1", "v1")]
-
-#5
-parent5 []
-    child1 []
-        child2 [("k1", "v1")]
-    child2 [("k1", "v1")]
 "#
         );
     }
@@ -1051,7 +1028,7 @@ parent5 []
         mock.expect_submit_spans()
             .times(5)
             .in_sequence(&mut seq)
-            .withf(|_, collect_token| collect_token.len() == 1 && collect_token[0].collect_id == 42)
+            .withf(|_, collect_token| collect_token.collect_id == 42)
             .returning({
                 let span_sets = span_sets.clone();
                 move |span_set, token| span_sets.lock().unwrap().push((span_set, token))

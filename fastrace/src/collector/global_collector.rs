@@ -3,7 +3,6 @@
 use std::borrow::Cow;
 use std::cell::UnsafeCell;
 use std::collections::HashMap;
-use std::sync::Arc;
 use std::sync::LazyLock;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::AtomicUsize;
@@ -13,6 +12,7 @@ use fastant::Anchor;
 use fastant::Instant;
 use parking_lot::Mutex;
 
+use crate::collector::CollectToken;
 use crate::collector::Config;
 use crate::collector::EventRecord;
 use crate::collector::SpanContext;
@@ -28,7 +28,6 @@ use crate::collector::command::SubmitSpans;
 use crate::local::local_collector::LocalSpansInner;
 use crate::local::raw_span::RawKind;
 use crate::local::raw_span::RawSpan;
-use crate::util::CollectToken;
 use crate::util::command_bus::CommandBus;
 use crate::util::command_bus::CommandSender;
 
@@ -134,37 +133,8 @@ impl GlobalCollect {
         send_command(CollectCommand::DropCollect(DropCollect { collect_id }));
     }
 
-    // Note that: relationships are not built completely for now so a further job is needed.
-    //
-    // Every `SpanSet` has its own root spans whose `raw_span.parent_id` are equal to
-    // `SpanId::default()`.
-    //
-    // Every root span can have multiple parents where mainly comes from `Span::enter_with_parents`.
-    // Those parents are recorded into `CollectToken` which has several `CollectTokenItem`s. Look
-    // into a `CollectTokenItem`, `parent_ids` can be found.
-    //
-    // For example, we have a `SpanSet::LocalSpansInner` and a `CollectToken` as follows:
-    //
-    //     SpanSet::LocalSpansInner::spans                  CollectToken::parent_ids
-    //     +------+-----------+-----+                      +------------+------------+
-    //     |  id  | parent_id | ... |                      | collect_id | parent_ids |
-    //     +------+-----------+-----+                      +------------+------------+
-    //     |  43  |    545    | ... |                      |    1212    |      7     |
-    //     |  15  |  default  | ... | <- root span         |    874     |     321    |
-    //     | 545  |    15     | ... |                      |    915     |     413    |
-    //     |  70  |  default  | ... | <- root span         +------------+------------+
-    //     +------+-----------+-----+
-    //
-    // There is a many-to-many mapping. Span#15 has parents Span#7, Span#321 and Span#413, so does
-    // Span#70.
-    //
-    // So the expected further job mentioned above is:
-    // * Copy `SpanSet` to the same number of copies as `CollectTokenItem`s, one `SpanSet` to one
-    //   `CollectTokenItem`
-    // * Amend `raw_span.parent_id` of root spans in `SpanSet` to `parent_ids` of `CollectTokenItem`
-    pub fn submit_spans(&self, spans: SpanSet, mut collect_token: CollectToken) {
-        collect_token.retain(|item| item.is_sampled);
-        if !collect_token.is_empty() {
+    pub fn submit_spans(&self, spans: SpanSet, collect_token: CollectToken) {
+        if collect_token.is_sampled {
             send_command(CollectCommand::SubmitSpans(SubmitSpans {
                 spans,
                 collect_token,
@@ -173,26 +143,10 @@ impl GlobalCollect {
     }
 }
 
-enum SpanCollection {
-    Owned {
-        spans: SpanSet,
-        trace_id: TraceId,
-        parent_id: SpanId,
-    },
-    Shared {
-        spans: Arc<SpanSet>,
-        trace_id: TraceId,
-        parent_id: SpanId,
-    },
-}
-
-impl SpanCollection {
-    fn trace_id(&self) -> TraceId {
-        match self {
-            SpanCollection::Owned { trace_id, .. } => *trace_id,
-            SpanCollection::Shared { trace_id, .. } => *trace_id,
-        }
-    }
+struct SpanCollection {
+    spans: SpanSet,
+    trace_id: TraceId,
+    parent_id: SpanId,
 }
 
 #[derive(Default)]
@@ -303,49 +257,22 @@ impl GlobalCollector {
             collect_token,
         } in self.submit_spans.drain(..)
         {
-            debug_assert!(!collect_token.is_empty());
-
-            if collect_token.len() == 1 {
-                let item = collect_token[0];
-                if let Some(active_collector) = self.active_collectors.get_mut(&item.collect_id) {
-                    if !active_collector.canceled {
-                        active_collector
-                            .span_collections
-                            .push(SpanCollection::Owned {
-                                spans,
-                                trace_id: item.trace_id,
-                                parent_id: item.parent_id,
-                            });
-                    }
-                } else {
-                    self.stale_spans.push(SpanCollection::Owned {
+            if let Some(active_collector) =
+                self.active_collectors.get_mut(&collect_token.collect_id)
+            {
+                if !active_collector.canceled {
+                    active_collector.span_collections.push(SpanCollection {
                         spans,
-                        trace_id: item.trace_id,
-                        parent_id: item.parent_id,
+                        trace_id: collect_token.trace_id,
+                        parent_id: collect_token.parent_id,
                     });
                 }
             } else {
-                let spans = Arc::new(spans);
-                for item in &collect_token {
-                    if let Some(active_collector) = self.active_collectors.get_mut(&item.collect_id)
-                    {
-                        if !active_collector.canceled {
-                            active_collector
-                                .span_collections
-                                .push(SpanCollection::Shared {
-                                    spans: spans.clone(),
-                                    trace_id: item.trace_id,
-                                    parent_id: item.parent_id,
-                                });
-                        }
-                    } else {
-                        self.stale_spans.push(SpanCollection::Shared {
-                            spans: spans.clone(),
-                            trace_id: item.trace_id,
-                            parent_id: item.parent_id,
-                        });
-                    }
-                }
+                self.stale_spans.push(SpanCollection {
+                    spans,
+                    trace_id: collect_token.trace_id,
+                    parent_id: collect_token.parent_id,
+                });
             }
         }
 
@@ -365,12 +292,9 @@ impl GlobalCollector {
             }
         }
 
-        self.stale_spans.sort_by_key(|spans| spans.trace_id());
+        self.stale_spans.sort_by_key(|spans| spans.trace_id);
 
-        for spans in self
-            .stale_spans
-            .chunk_by(|a, b| a.trace_id() == b.trace_id())
-        {
+        for spans in self.stale_spans.chunk_by(|a, b| a.trace_id == b.trace_id) {
             postprocess_span_collection(
                 spans,
                 &anchor,
@@ -406,6 +330,7 @@ impl LocalSpansInner {
 enum DanglingItem {
     Event(EventRecord),
     Properties(Vec<(Cow<'static, str>, Cow<'static, str>)>),
+    Links(Vec<SpanContext>),
 }
 
 fn postprocess_span_collection<'a>(
@@ -417,67 +342,31 @@ fn postprocess_span_collection<'a>(
     let committed_len = committed_records.len();
 
     for span_collection in span_collections {
-        match span_collection {
-            SpanCollection::Owned {
-                spans,
-                trace_id,
-                parent_id,
-            } => match spans {
-                SpanSet::Span(raw_span) => amend_span(
-                    raw_span,
-                    *trace_id,
-                    *parent_id,
-                    committed_records,
-                    danglings,
-                    anchor,
-                ),
-                SpanSet::LocalSpansInner(local_spans) => amend_local_span(
-                    local_spans,
-                    *trace_id,
-                    *parent_id,
-                    committed_records,
-                    danglings,
-                    anchor,
-                ),
-                SpanSet::SharedLocalSpans(local_spans) => amend_local_span(
-                    local_spans,
-                    *trace_id,
-                    *parent_id,
-                    committed_records,
-                    danglings,
-                    anchor,
-                ),
-            },
-            SpanCollection::Shared {
-                spans,
-                trace_id,
-                parent_id,
-            } => match &**spans {
-                SpanSet::Span(raw_span) => amend_span(
-                    raw_span,
-                    *trace_id,
-                    *parent_id,
-                    committed_records,
-                    danglings,
-                    anchor,
-                ),
-                SpanSet::LocalSpansInner(local_spans) => amend_local_span(
-                    local_spans,
-                    *trace_id,
-                    *parent_id,
-                    committed_records,
-                    danglings,
-                    anchor,
-                ),
-                SpanSet::SharedLocalSpans(local_spans) => amend_local_span(
-                    local_spans,
-                    *trace_id,
-                    *parent_id,
-                    committed_records,
-                    danglings,
-                    anchor,
-                ),
-            },
+        match &span_collection.spans {
+            SpanSet::Span(raw_span) => amend_span(
+                raw_span,
+                span_collection.trace_id,
+                span_collection.parent_id,
+                committed_records,
+                danglings,
+                anchor,
+            ),
+            SpanSet::LocalSpansInner(local_spans) => amend_local_span(
+                local_spans,
+                span_collection.trace_id,
+                span_collection.parent_id,
+                committed_records,
+                danglings,
+                anchor,
+            ),
+            SpanSet::SharedLocalSpans(local_spans) => amend_local_span(
+                local_spans,
+                span_collection.trace_id,
+                span_collection.parent_id,
+                committed_records,
+                danglings,
+                anchor,
+            ),
         }
     }
 
@@ -509,12 +398,9 @@ fn amend_local_span(
                     begin_time_unix_ns,
                     duration_ns: end_time_unix_ns.saturating_sub(begin_time_unix_ns),
                     name: span.name.clone(),
-                    properties: span
-                        .properties
-                        .as_ref()
-                        .map(|p| p.to_vec())
-                        .unwrap_or_default(),
+                    properties: span.properties.clone(),
                     events: vec![],
+                    links: span.links.clone(),
                 });
             }
             RawKind::Event => {
@@ -522,11 +408,7 @@ fn amend_local_span(
                 let event = EventRecord {
                     name: span.name.clone(),
                     timestamp_unix_ns: begin_time_unix_ns,
-                    properties: span
-                        .properties
-                        .as_ref()
-                        .map(|p| p.to_vec())
-                        .unwrap_or_default(),
+                    properties: span.properties.clone(),
                 };
                 dangling
                     .entry(parent_id)
@@ -537,12 +419,13 @@ fn amend_local_span(
                 dangling
                     .entry(parent_id)
                     .or_default()
-                    .push(DanglingItem::Properties(
-                        span.properties
-                            .as_ref()
-                            .map(|p| p.to_vec())
-                            .unwrap_or_default(),
-                    ));
+                    .push(DanglingItem::Properties(span.properties.clone()));
+            }
+            RawKind::Link => {
+                dangling
+                    .entry(parent_id)
+                    .or_default()
+                    .push(DanglingItem::Links(span.links.clone()));
             }
         }
     }
@@ -567,12 +450,9 @@ fn amend_span(
                 begin_time_unix_ns,
                 duration_ns: end_time_unix_ns.saturating_sub(begin_time_unix_ns),
                 name: span.name.clone(),
-                properties: span
-                    .properties
-                    .as_ref()
-                    .map(|p| p.to_vec())
-                    .unwrap_or_default(),
+                properties: span.properties.clone(),
                 events: vec![],
+                links: span.links.clone(),
             });
         }
         RawKind::Event => {
@@ -580,11 +460,7 @@ fn amend_span(
             let event = EventRecord {
                 name: span.name.clone(),
                 timestamp_unix_ns: begin_time_unix_ns,
-                properties: span
-                    .properties
-                    .as_ref()
-                    .map(|p| p.to_vec())
-                    .unwrap_or_default(),
+                properties: span.properties.clone(),
             };
             dangling
                 .entry(parent_id)
@@ -595,12 +471,13 @@ fn amend_span(
             dangling
                 .entry(parent_id)
                 .or_default()
-                .push(DanglingItem::Properties(
-                    span.properties
-                        .as_ref()
-                        .map(|p| p.to_vec())
-                        .unwrap_or_default(),
-                ));
+                .push(DanglingItem::Properties(span.properties.clone()));
+        }
+        RawKind::Link => {
+            dangling
+                .entry(parent_id)
+                .or_default()
+                .push(DanglingItem::Links(span.links.clone()));
         }
     }
 }
@@ -619,6 +496,9 @@ fn mount_danglings(records: &mut [SpanRecord], danglings: &mut HashMap<SpanId, V
                     }
                     DanglingItem::Properties(properties) => {
                         record.properties.extend(properties);
+                    }
+                    DanglingItem::Links(links) => {
+                        record.links.extend(links);
                     }
                 }
             }

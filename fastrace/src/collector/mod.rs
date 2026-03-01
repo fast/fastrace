@@ -52,6 +52,7 @@ pub struct SpanRecord {
     pub name: Cow<'static, str>,
     pub properties: Vec<(Cow<'static, str>, Cow<'static, str>)>,
     pub events: Vec<EventRecord>,
+    pub links: Vec<SpanContext>,
 }
 
 /// A record of an event that occurred during the execution of a span.
@@ -64,7 +65,7 @@ pub struct EventRecord {
 
 #[doc(hidden)]
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
-pub struct CollectTokenItem {
+pub struct CollectToken {
     pub trace_id: TraceId,
     pub parent_id: SpanId,
     pub collect_id: usize,
