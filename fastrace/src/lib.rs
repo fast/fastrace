@@ -284,7 +284,7 @@
 //!         async {
 //!             do_something_async(100).await;
 //!         }
-//!         .in_span(Span::enter_with_local_parent("aync_job")),
+//!         .in_span(Span::enter_with_local_parent("async_job")),
 //!     );
 //! }
 //!
