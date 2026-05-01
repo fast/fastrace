@@ -4,6 +4,11 @@ All significant changes to this project will be documented in this file.
 
 ## Unreleased
 
+### New Features
+
+* Added `OpenTelemetryReporter::with_block_on()` for exporters that require a runtime-specific
+  executor, such as OTLP HTTP exporters using async `reqwest::Client`.
+
 ## v0.16.0
 
 ### New Features

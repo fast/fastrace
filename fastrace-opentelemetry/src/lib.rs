@@ -74,6 +74,7 @@ use opentelemetry_sdk::trace::SpanLinks;
 pub struct OpenTelemetryReporter {
     exporter: Box<dyn DynSpanExporter>,
     instrumentation_scope: InstrumentationScope,
+    block_on: Box<dyn for<'a> FnMut(ExportFuture<'a>) -> OTelSdkResult + Send + 'static>,
 }
 
 /// Returns the OpenTelemetry [`SpanContext`] of the current fastrace local parent span.
@@ -191,18 +192,18 @@ fn map_links(links: Vec<SpanContext>) -> SpanLinks {
     span_links
 }
 
+type ExportFuture<'a> = Pin<Box<dyn Future<Output = OTelSdkResult> + Send + 'a>>;
+
+fn default_block_on<'a>(future: ExportFuture<'a>) -> OTelSdkResult {
+    pollster::block_on(future)
+}
+
 trait DynSpanExporter: Send + Sync + Debug {
-    fn export(
-        &self,
-        batch: Vec<SpanData>,
-    ) -> Pin<Box<dyn Future<Output = OTelSdkResult> + Send + '_>>;
+    fn export(&self, batch: Vec<SpanData>) -> ExportFuture<'_>;
 }
 
 impl<T: SpanExporter> DynSpanExporter for T {
-    fn export(
-        &self,
-        batch: Vec<SpanData>,
-    ) -> Pin<Box<dyn Future<Output = OTelSdkResult> + Send + '_>> {
+    fn export(&self, batch: Vec<SpanData>) -> ExportFuture<'_> {
         Box::pin(SpanExporter::export(self, batch))
     }
 }
@@ -217,7 +218,30 @@ impl OpenTelemetryReporter {
         OpenTelemetryReporter {
             exporter: Box::new(exporter),
             instrumentation_scope,
+            block_on: Box::new(default_block_on),
         }
+    }
+
+    /// Sets the function used to drive OpenTelemetry export futures to completion.
+    ///
+    /// The default is [`pollster::block_on`], which works for exporters that do not require an
+    /// async runtime, such as the default blocking reqwest HTTP client. Exporters backed by async
+    /// clients may require a runtime-specific executor instead.
+    ///
+    /// For example, an OTLP HTTP exporter configured with async `reqwest::Client` requires Tokio:
+    ///
+    /// ```rust,ignore
+    /// let handle = tokio::runtime::Handle::current();
+    ///
+    /// let reporter = OpenTelemetryReporter::new(exporter, resource, instrumentation_scope)
+    ///     .with_block_on(move |future| handle.block_on(future));
+    /// ```
+    pub fn with_block_on<F>(mut self, block_on: F) -> Self
+    where F: for<'a> FnMut(Pin<Box<dyn Future<Output = OTelSdkResult> + Send + 'a>>) -> OTelSdkResult
+            + Send
+            + 'static {
+        self.block_on = Box::new(block_on);
+        self
     }
 
     fn convert(&self, spans: Vec<SpanRecord>) -> Vec<SpanData> {
@@ -276,7 +300,7 @@ impl OpenTelemetryReporter {
 
     fn try_report(&mut self, spans: Vec<SpanRecord>) -> Result<(), Box<dyn std::error::Error>> {
         let spans = self.convert(spans);
-        pollster::block_on(self.exporter.export(spans))?;
+        (self.block_on)(self.exporter.export(spans))?;
         Ok(())
     }
 }

@@ -72,6 +72,20 @@ fastrace::set_reporter(reporter, Config::default());
 fastrace::flush();
 ```
 
+## Use Async OpenTelemetry Exporters
+
+`OpenTelemetryReporter` blocks on exporter futures with `pollster::block_on` by default. If the
+exporter uses an async client that requires a runtime, pass a runtime-specific blocking function.
+
+For example, OTLP HTTP with async `reqwest::Client` should be driven by Tokio:
+
+```rust,ignore
+let handle = tokio::runtime::Handle::current();
+
+let reporter = OpenTelemetryReporter::new(exporter, resource, instrumentation_scope)
+    .with_block_on(move |future| handle.block_on(future));
+```
+
 ## Activate OpenTelemetry Trace Context
 
 If you use fastrace spans but also depend on libraries that expect an OpenTelemetry parent
