@@ -174,11 +174,11 @@ mod tests {
     use crate::util::tree::tree_str_from_raw_spans;
 
     fn trace_id(value: u128) -> TraceId {
-        TraceId::from_bytes(value.to_be_bytes()).unwrap()
+        TraceId::from_bytes(value.to_be_bytes())
     }
 
     fn span_id(value: u64) -> SpanId {
-        SpanId::from_bytes(value.to_be_bytes()).unwrap()
+        SpanId::from_bytes(value.to_be_bytes())
     }
 
     fn token(trace: u128, parent: Option<u64>, collect_id: usize) -> CollectToken {

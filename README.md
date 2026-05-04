@@ -134,9 +134,10 @@ let tracestate_header = outgoing
     .map(|value| (SpanContext::TRACESTATE_HEADER_NAME, value));
 ```
 
-`TraceId` and `SpanId` are checked values. Construct them with `from_bytes`, `from_hex`, or
-`FromStr`. Hex input may be shorter than the full id width and is left-padded with zeroes;
-empty, too-long, malformed, and all-zero ids are rejected.
+`TraceId` and `SpanId` are opaque values. Construct them with `from_bytes`, `from_hex`, or
+`FromStr`. Hex input may be shorter than the full id width and is left-padded with zeroes.
+All-zero ids are represented as `TraceId::INVALID` and `SpanId::INVALID`; W3C `traceparent`
+decode and encode reject those invalid ids.
 
 ## Integrations
 

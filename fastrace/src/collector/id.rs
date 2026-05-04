@@ -15,7 +15,7 @@ thread_local! {
     static LOCAL_ID_GENERATOR: Cell<(u32, u32)> = Cell::new((rand::random(), 0))
 }
 
-/// Error returned when a trace id is malformed or all zeroes.
+/// Error returned when a trace id is malformed.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct InvalidTraceId;
 
@@ -27,7 +27,7 @@ impl fmt::Display for InvalidTraceId {
 
 impl std::error::Error for InvalidTraceId {}
 
-/// Error returned when a span id is malformed or all zeroes.
+/// Error returned when a span id is malformed.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct InvalidSpanId;
 
@@ -39,17 +39,17 @@ impl fmt::Display for InvalidSpanId {
 
 impl std::error::Error for InvalidSpanId {}
 
-fn is_all_zero(bytes: &[u8]) -> bool {
-    bytes.iter().all(|byte| *byte == 0)
-}
-
 /// An identifier for a trace, which groups a set of related spans together.
 ///
-/// A valid `TraceId` contains at least one non-zero byte.
+/// `TraceId::INVALID` is all zeroes. Fastrace can carry it internally, but W3C
+/// `traceparent` propagation rejects it.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct TraceId(u128);
 
 impl TraceId {
+    /// The all-zero invalid trace id.
+    pub const INVALID: TraceId = TraceId(0);
+
     /// Create a random non-zero `TraceId`.
     ///
     /// # Examples
@@ -70,25 +70,23 @@ impl TraceId {
 
     /// Creates a `TraceId` from bytes.
     ///
-    /// Returns `None` if all bytes are zero.
-    pub fn from_bytes(bytes: [u8; 16]) -> Option<Self> {
-        let value = u128::from_be_bytes(bytes);
-        if value != 0 { Some(Self(value)) } else { None }
+    pub const fn from_bytes(bytes: [u8; 16]) -> Self {
+        Self(u128::from_be_bytes(bytes))
     }
 
     /// Creates a `TraceId` from a hexadecimal string.
     ///
     /// The input may contain fewer than 32 hexadecimal characters. Short inputs
     /// are interpreted as if they were left-padded with zeroes. Returns an error
-    /// if the input is empty, longer than 32 hexadecimal characters, contains
-    /// non-hexadecimal characters, or represents all zeroes.
+    /// if the input is empty, longer than 32 hexadecimal characters, or contains
+    /// non-hexadecimal characters.
     pub fn from_hex(hex: &str) -> Result<Self, InvalidTraceId> {
         if hex.is_empty() || hex.len() > 32 {
             return Err(InvalidTraceId);
         }
 
         match u128::from_str_radix(hex, 16) {
-            Ok(value) if value != 0 => Ok(Self(value)),
+            Ok(value) => Ok(Self(value)),
             _ => Err(InvalidTraceId),
         }
     }
@@ -134,11 +132,15 @@ impl<'de> serde::Deserialize<'de> for TraceId {
 
 /// An identifier for a span within a trace.
 ///
-/// A valid `SpanId` is exactly 8 bytes and contains at least one non-zero byte.
+/// `SpanId::INVALID` is all zeroes. Fastrace can carry it internally, but W3C
+/// `traceparent` propagation rejects it.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct SpanId([u8; 8]);
 
 impl SpanId {
+    /// The all-zero invalid span id.
+    pub const INVALID: SpanId = SpanId([0; 8]);
+
     /// Create a random non-zero `SpanId`.
     ///
     /// # Examples
@@ -151,32 +153,31 @@ impl SpanId {
     pub fn random() -> Self {
         loop {
             let bytes = rand::random::<u64>().to_be_bytes();
-            if let Some(span_id) = Self::from_bytes(bytes) {
+            let span_id = Self::from_bytes(bytes);
+            if span_id != Self::INVALID {
                 return span_id;
             }
         }
     }
 
     /// Creates a `SpanId` from bytes.
-    ///
-    /// Returns `None` if all bytes are zero.
-    pub fn from_bytes(bytes: [u8; 8]) -> Option<Self> {
-        (!is_all_zero(&bytes)).then_some(Self(bytes))
+    pub const fn from_bytes(bytes: [u8; 8]) -> Self {
+        Self(bytes)
     }
 
     /// Creates a `SpanId` from a hexadecimal string.
     ///
     /// The input may contain fewer than 16 hexadecimal characters. Short inputs
     /// are interpreted as if they were left-padded with zeroes. Returns an error
-    /// if the input is empty, longer than 16 hexadecimal characters, contains
-    /// non-hexadecimal characters, or represents all zeroes.
+    /// if the input is empty, longer than 16 hexadecimal characters, or contains
+    /// non-hexadecimal characters.
     pub fn from_hex(hex: &str) -> Result<Self, InvalidSpanId> {
         if hex.is_empty() || hex.len() > 16 {
             return Err(InvalidSpanId);
         }
 
         match u64::from_str_radix(hex, 16) {
-            Ok(value) if value != 0 => Ok(Self(value.to_be_bytes())),
+            Ok(value) => Ok(Self(value.to_be_bytes())),
             _ => Err(InvalidSpanId),
         }
     }
@@ -199,7 +200,12 @@ impl SpanId {
                 g.set((prefix, suffix));
 
                 let raw = ((prefix as u64) << 32) | (suffix as u64);
-                SpanId::from_bytes(raw.to_be_bytes()).unwrap_or_else(SpanId::random)
+                let span_id = SpanId::from_bytes(raw.to_be_bytes());
+                if span_id == SpanId::INVALID {
+                    SpanId::random()
+                } else {
+                    span_id
+                }
             })
             .unwrap_or_else(|_| SpanId::random())
     }
@@ -343,7 +349,7 @@ impl SpanContext {
     /// W3C `tracestate` header name.
     pub const TRACESTATE_HEADER_NAME: &'static str = "tracestate";
 
-    /// Creates a `SpanContext` from a trace id and a valid parent span id.
+    /// Creates a `SpanContext` from a trace id and a parent span id.
     ///
     /// Use [`SpanContext::root`] or [`SpanContext::random`] when starting a
     /// trace without a remote parent.
@@ -433,6 +439,9 @@ impl SpanContext {
     /// Returns `None` if this context represents a root with no remote parent span id.
     pub fn encode_traceparent(&self) -> Option<String> {
         let span_id = self.span_id?;
+        if self.trace_id == TraceId::INVALID || span_id == SpanId::INVALID {
+            return None;
+        }
         Some(format!(
             "00-{}-{}-{:02x}",
             self.trace_id, span_id, self.trace_flags
@@ -454,9 +463,14 @@ impl SpanContext {
                 if trace_id.len() != 32 || span_id.len() != 16 || trace_flags.len() != 2 {
                     return None;
                 }
+                let trace_id = TraceId::from_hex(trace_id).ok()?;
+                let span_id = SpanId::from_hex(span_id).ok()?;
+                if trace_id == TraceId::INVALID || span_id == SpanId::INVALID {
+                    return None;
+                }
                 Some(Self {
-                    trace_id: TraceId::from_hex(trace_id).ok()?,
-                    span_id: Some(SpanId::from_hex(span_id).ok()?),
+                    trace_id,
+                    span_id: Some(span_id),
                     trace_flags: TraceFlags::new(u8::from_str_radix(trace_flags, 16).ok()?),
                     trace_state: TraceState::EMPTY,
                 })
@@ -576,11 +590,11 @@ mod tests {
     use super::*;
 
     fn trace_id(value: u128) -> TraceId {
-        TraceId::from_bytes(value.to_be_bytes()).unwrap()
+        TraceId::from_bytes(value.to_be_bytes())
     }
 
     fn span_id(value: u64) -> SpanId {
-        SpanId::from_bytes(value.to_be_bytes()).unwrap()
+        SpanId::from_bytes(value.to_be_bytes())
     }
 
     #[test]
@@ -605,32 +619,48 @@ mod tests {
     }
 
     #[test]
-    fn zero_ids_are_rejected() {
-        assert!(TraceId::from_bytes([0; 16]).is_none());
-        assert!(SpanId::from_bytes([0; 8]).is_none());
-        assert!(TraceId::from_hex("").is_err());
-        assert!(SpanId::from_hex("").is_err());
-        assert!(TraceId::from_hex("0").is_err());
-        assert!(SpanId::from_hex("0").is_err());
-        assert!(TraceId::from_hex("00000000000000000000000000000000").is_err());
-        assert!(SpanId::from_hex("0000000000000000").is_err());
-        assert!(
+    fn invalid_ids_are_representable() {
+        assert_eq!(TraceId::from_bytes([0; 16]), TraceId::INVALID);
+        assert_eq!(SpanId::from_bytes([0; 8]), SpanId::INVALID);
+        assert_eq!(TraceId::from_hex("0").unwrap(), TraceId::INVALID);
+        assert_eq!(SpanId::from_hex("0").unwrap(), SpanId::INVALID);
+        assert_eq!(
+            TraceId::from_hex("00000000000000000000000000000000").unwrap(),
+            TraceId::INVALID
+        );
+        assert_eq!(
+            SpanId::from_hex("0000000000000000").unwrap(),
+            SpanId::INVALID
+        );
+        assert_eq!(
             "00000000000000000000000000000000"
                 .parse::<TraceId>()
-                .is_err()
+                .unwrap(),
+            TraceId::INVALID
         );
-        assert!("0000000000000000".parse::<SpanId>().is_err());
+        assert_eq!(
+            "0000000000000000".parse::<SpanId>().unwrap(),
+            SpanId::INVALID
+        );
+    }
+
+    #[test]
+    fn malformed_ids_are_rejected() {
+        assert!(TraceId::from_hex("").is_err());
+        assert!(SpanId::from_hex("").is_err());
+        assert!(TraceId::from_hex("g").is_err());
+        assert!(SpanId::from_hex("g").is_err());
     }
 
     #[test]
     fn short_hex_ids_are_left_padded() {
         let trace = TraceId::from_hex("abc").unwrap();
         assert_eq!(trace.to_string(), "00000000000000000000000000000abc");
-        assert_eq!(TraceId::from_bytes(0x0abcu128.to_be_bytes()), Some(trace));
+        assert_eq!(TraceId::from_bytes(0x0abcu128.to_be_bytes()), trace);
 
         let span = SpanId::from_hex("abc").unwrap();
         assert_eq!(span.to_string(), "0000000000000abc");
-        assert_eq!(SpanId::from_bytes(0x0abcu64.to_be_bytes()), Some(span));
+        assert_eq!(SpanId::from_bytes(0x0abcu64.to_be_bytes()), span);
 
         assert!(TraceId::from_hex("000000000000000000000000000000001").is_err());
         assert!(SpanId::from_hex("00000000000000001").is_err());
@@ -640,18 +670,18 @@ mod tests {
     fn valid_ids_roundtrip() {
         let trace = TraceId::from_hex("0af7651916cd43dd8448eb211c80319c").unwrap();
         assert_eq!(trace.to_string(), "0af7651916cd43dd8448eb211c80319c");
-        assert_eq!(TraceId::from_bytes(trace.to_bytes()), Some(trace));
+        assert_eq!(TraceId::from_bytes(trace.to_bytes()), trace);
         assert_eq!(
             TraceId::from_bytes(0x0af7651916cd43dd8448eb211c80319cu128.to_be_bytes()),
-            Some(trace)
+            trace
         );
 
         let span = SpanId::from_hex("b7ad6b7169203331").unwrap();
         assert_eq!(span.to_string(), "b7ad6b7169203331");
-        assert_eq!(SpanId::from_bytes(span.to_bytes()), Some(span));
+        assert_eq!(SpanId::from_bytes(span.to_bytes()), span);
         assert_eq!(
             SpanId::from_bytes(0xb7ad6b7169203331u64.to_be_bytes()),
-            Some(span)
+            span
         );
     }
 
@@ -777,6 +807,25 @@ mod tests {
     }
 
     #[test]
+    fn invalid_span_context_cannot_encode_traceparent() {
+        assert!(
+            SpanContext::root(TraceId::INVALID)
+                .encode_traceparent()
+                .is_none()
+        );
+        assert!(
+            SpanContext::new(TraceId::INVALID, span_id(1))
+                .encode_traceparent()
+                .is_none()
+        );
+        assert!(
+            SpanContext::new(trace_id(1), SpanId::INVALID)
+                .encode_traceparent()
+                .is_none()
+        );
+    }
+
+    #[test]
     fn span_context_serde_preserves_trace_state_and_root() {
         let ctx = SpanContext::root(trace_id(1))
             .with_trace_flags(TraceFlags::new(0x03))
@@ -792,18 +841,13 @@ mod tests {
     }
 
     #[test]
-    fn span_context_serde_rejects_zero_ids() {
-        assert!(
-            serde_json::from_str::<SpanContext>(
-                r#"{"trace_id":"0","span_id":null,"trace_flags":1,"trace_state":null}"#
-            )
-            .is_err()
-        );
-        assert!(
-            serde_json::from_str::<SpanContext>(
-                r#"{"trace_id":"1","span_id":"0","trace_flags":1,"trace_state":null}"#
-            )
-            .is_err()
-        );
+    fn span_context_serde_preserves_invalid_ids() {
+        let ctx = SpanContext::new(TraceId::INVALID, SpanId::INVALID);
+        let json = serde_json::to_string(&ctx).unwrap();
+        let decoded: SpanContext = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(decoded, ctx);
+        assert_eq!(decoded.trace_id(), TraceId::INVALID);
+        assert_eq!(decoded.span_id(), Some(SpanId::INVALID));
     }
 }

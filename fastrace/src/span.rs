@@ -748,7 +748,7 @@ mod tests {
     use crate::util::tree::tree_str_from_span_sets;
 
     fn trace_id(value: u128) -> TraceId {
-        TraceId::from_bytes(value.to_be_bytes()).unwrap()
+        TraceId::from_bytes(value.to_be_bytes())
     }
 
     #[test]
