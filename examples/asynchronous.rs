@@ -25,11 +25,11 @@ use fastrace::collector::Reporter;
 use fastrace::prelude::*;
 use opentelemetry_otlp::WithExportConfig;
 
-fn parallel_job() -> Vec<tokio::task::JoinHandle<()>> {
+fn parallel_job(parent: &Span) -> Vec<tokio::task::JoinHandle<()>> {
     let mut v = Vec::with_capacity(4);
     for i in 0..4 {
         v.push(tokio::spawn(
-            iter_job(i).in_span(Span::enter_with_local_parent("iter job")),
+            iter_job(i).in_span(Span::start("iter job", parent)),
         ));
     }
     v
@@ -41,7 +41,7 @@ async fn iter_job(iter: u64) {
     other_job().await;
 }
 
-#[trace(enter_on_poll = true)]
+#[trace(poll_span = true)]
 async fn other_job() {
     for i in 0..20 {
         if i == 10 {
@@ -61,9 +61,9 @@ async fn main() {
 
         let f = async {
             let jhs = {
-                let _span = LocalSpan::enter_with_local_parent("a span")
+                let span = Span::start_with_local_parent("a span")
                     .with_property(|| ("a property", "a value"));
-                parallel_job()
+                parallel_job(&span)
             };
 
             other_job().await;
@@ -72,7 +72,7 @@ async fn main() {
                 jh.await.unwrap();
             }
         }
-        .in_span(span);
+        .in_span(Span::start("main task", &span));
 
         tokio::spawn(f).await.unwrap();
     }

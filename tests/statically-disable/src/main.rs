@@ -61,24 +61,23 @@ fn main() {
             .with_properties(|| [("k1", "v1")]),
     );
 
-    let _span1 = LocalSpan::enter_with_local_parent("span1").with_property(|| ("k0", "v0"));
-    let _span2 = LocalSpan::enter_with_local_parent("span2")
+    let _span1 = LocalSpan::start("span1").with_property(|| ("k0", "v0"));
+    let _span2 = LocalSpan::start("span2")
         .with_property(|| ("k1", "v1"))
         .with_properties(|| [("k", "v")]);
-    let _span3 = LocalSpan::enter_with_local_parent("span3")
-        .with_link(SpanContext::new(TraceId(1), SpanId(1)));
+    let _span3 = LocalSpan::start("span3").with_link(SpanContext::new(TraceId(1), SpanId(1)));
 
     LocalSpan::add_property(|| ("k0", "v0"));
     LocalSpan::add_properties(|| [("k", "v")]);
     LocalSpan::add_link(SpanContext::new(TraceId(1), SpanId(1)));
 
     let local_collector = LocalCollector::start();
-    let _ = LocalSpan::enter_with_local_parent("span3");
+    let _ = LocalSpan::start("span3");
     let local_spans = local_collector.collect();
     assert_eq!(local_spans.to_span_records(SpanContext::random()), vec![]);
 
-    let span3 = Span::enter_with_parent("span3", &root);
-    let span4 = Span::enter_with_local_parent("span4");
+    let span3 = Span::start("span3", &root);
+    let span4 = Span::start_with_local_parent("span4");
 
     span4.push_child_spans(local_spans);
 

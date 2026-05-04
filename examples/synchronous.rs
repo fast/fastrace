@@ -25,7 +25,7 @@ use fastrace::prelude::*;
 use opentelemetry_otlp::WithExportConfig;
 
 fn func1(i: u64) {
-    let _guard = LocalSpan::enter_with_local_parent("func1");
+    let _guard = LocalSpan::start("func1");
     std::thread::sleep(Duration::from_millis(i));
     func2(i);
 }
@@ -44,8 +44,7 @@ async fn main() {
         let root = Span::root("root", parent);
 
         let _g = root.set_local_parent();
-        let _span = LocalSpan::enter_with_local_parent("a span")
-            .with_property(|| ("a property", "a value"));
+        let _span = LocalSpan::start("a span").with_property(|| ("a property", "a value"));
 
         for i in 1..=10 {
             func1(i);

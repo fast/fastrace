@@ -48,7 +48,7 @@ fn do_main() {
 
     info!("event in root span");
 
-    let _local_span_guard = LocalSpan::enter_with_local_parent("child");
+    let _local_span_guard = LocalSpan::start("child");
 
     info!("event in child span");
 

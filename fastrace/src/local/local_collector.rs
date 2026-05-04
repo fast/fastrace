@@ -31,7 +31,7 @@ use crate::util::RawSpans;
 ///
 /// // Collect local spans manually without a parent
 /// let collector = LocalCollector::start();
-/// let span = LocalSpan::enter_with_local_parent("a child span");
+/// let span = LocalSpan::start("a child span");
 /// drop(span);
 /// let local_spans = collector.collect();
 ///
@@ -72,7 +72,7 @@ struct LocalCollectorInner {
 ///
 /// // Collect local spans manually without a parent
 /// let collector = LocalCollector::start();
-/// let span = LocalSpan::enter_with_local_parent("a child span");
+/// let span = LocalSpan::start("a child span");
 /// drop(span);
 ///
 /// // Collect local spans into a LocalSpans instance
@@ -205,7 +205,7 @@ impl LocalSpans {
     ///
     /// // Collect local spans manually without a parent
     /// let collector = LocalCollector::start();
-    /// let span = LocalSpan::enter_with_local_parent("a child span");
+    /// let span = LocalSpan::start("a child span");
     /// drop(span);
     ///
     /// // Collect local spans into a LocalSpans instance
@@ -319,8 +319,8 @@ span1 []
     #[test]
     fn local_spans_to_span_record() {
         let collector = LocalCollector::start();
-        let span1 = LocalSpan::enter_with_local_parent("span1").with_property(|| ("k1", "v1"));
-        let span2 = LocalSpan::enter_with_local_parent("span2").with_property(|| ("k2", "v2"));
+        let span1 = LocalSpan::start("span1").with_property(|| ("k1", "v1"));
+        let span2 = LocalSpan::start("span2").with_property(|| ("k2", "v2"));
         drop(span2);
         drop(span1);
 

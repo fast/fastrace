@@ -37,8 +37,8 @@ use crate::visit_mut::VisitMut;
 /// * `name` - The name of the span. Defaults to the full path of the function.
 /// * `short_name` - Whether to use the function name without path as the span name. Defaults to
 ///   `false`.
-/// * `enter_on_poll` - Whether to enter the span on poll. If set to `false`, `in_span` will be
-///   used. Only available for `async fn`. Defaults to `false`.
+/// * `poll_span` - Whether to additionally create a span on each poll. Only available for `async
+///   fn`. Defaults to `false`.
 /// * `properties` - A list of key-value pairs to be added as properties to the span. The value can
 ///   be a format string, where the function arguments are accessible. Defaults to `{}`.
 /// * `crate` - The path to the fastrace crate. Defaults to `::fastrace`.
@@ -58,7 +58,7 @@ use crate::visit_mut::VisitMut;
 ///     // ...
 /// }
 ///
-/// #[trace(name = "qux", enter_on_poll = true)]
+/// #[trace(name = "qux", poll_span = true)]
 /// async fn baz() {
 ///     // ...
 /// }
@@ -75,29 +75,35 @@ use crate::visit_mut::VisitMut;
 /// # use fastrace::prelude::*;
 /// # use fastrace::local::LocalSpan;
 /// fn simple() {
-///     let __guard__ = LocalSpan::enter_with_local_parent("example::simple");
+///     let __guard__ = LocalSpan::start("example::simple");
 ///     // ...
 /// }
 ///
 /// async fn simple_async() {
-///     let __span__ = Span::enter_with_local_parent("simple_async");
-///     async {
-///         // ...
-///     }
-///     .in_span(__span__)
+///     let __span__ = Span::start_with_local_parent("simple_async");
+///     fastrace::future::FutureExt::in_span(
+///         async {
+///             // ...
+///         },
+///         __span__,
+///     )
 ///     .await
 /// }
 ///
 /// async fn baz() {
-///     async {
-///         // ...
-///     }
-///     .enter_on_poll("qux")
+///     let __span__ = Span::start_with_local_parent("qux");
+///     fastrace::future::FutureExt::in_span(
+///         async {
+///             // ...
+///         },
+///         __span__,
+///     )
+///     .with_poll_span("qux")
 ///     .await
 /// }
 ///
 /// async fn properties(a: u64) {
-///     let __span__ = Span::enter_with_local_parent("example::properties").with_properties(|| {
+///     let __span__ = Span::start_with_local_parent("example::properties").with_properties(|| {
 ///         [
 ///             (std::borrow::Cow::from("k1"), std::borrow::Cow::from("v1")),
 ///             (
@@ -106,10 +112,12 @@ use crate::visit_mut::VisitMut;
 ///             ),
 ///         ]
 ///     });
-///     async {
-///         // ...
-///     }
-///     .in_span(__span__)
+///     fastrace::future::FutureExt::in_span(
+///         async {
+///             // ...
+///         },
+///         __span__,
+///     )
 ///     .await
 /// }
 /// ```
@@ -202,7 +210,7 @@ pub fn trace(
 struct Args {
     name: Option<LitStr>,
     short_name: bool,
-    enter_on_poll: bool,
+    poll_span: bool,
     properties: Vec<(LitStr, LitStr)>,
     crate_path: Path,
 }
@@ -212,7 +220,7 @@ impl Default for Args {
         Self {
             name: None,
             short_name: false,
-            enter_on_poll: false,
+            poll_span: false,
             properties: Vec::new(),
             crate_path: parse_quote!(::fastrace),
         }
@@ -237,7 +245,7 @@ impl Parse for Args {
     fn parse(input: ParseStream) -> Result<Self> {
         let mut name = None;
         let mut short_name = false;
-        let mut enter_on_poll = false;
+        let mut poll_span = false;
         let mut properties = Vec::new();
         let mut crate_path = parse_quote!(::fastrace);
         let mut seen = HashSet::new();
@@ -261,9 +269,9 @@ impl Parse for Args {
                     let parsed_short_name: LitBool = input.parse()?;
                     short_name = parsed_short_name.value;
                 }
-                "enter_on_poll" => {
-                    let parsed_enter_on_poll: LitBool = input.parse()?;
-                    enter_on_poll = parsed_enter_on_poll.value;
+                "poll_span" => {
+                    let parsed_poll_span: LitBool = input.parse()?;
+                    poll_span = parsed_poll_span.value;
                 }
                 "properties" => {
                     let content;
@@ -290,7 +298,7 @@ impl Parse for Args {
         Ok(Args {
             name,
             short_name,
-            enter_on_poll,
+            poll_span,
             properties,
             crate_path,
         })
@@ -319,10 +327,6 @@ fn gen_name(func_name: &Ident, args: &Args) -> proc_macro2::TokenStream {
 fn gen_properties(args: &Args) -> proc_macro2::TokenStream {
     if args.properties.is_empty() {
         return quote::quote!();
-    }
-
-    if args.enter_on_poll {
-        abort_call_site!("`enter_on_poll` can not be used with `properties`")
     }
 
     let properties = args.properties.iter().map(|(k, v)| {
@@ -362,28 +366,25 @@ fn gen_block(
     // If the function is an `async fn`, this will wrap it in an async block.
     // Otherwise, this will enter the span and then perform the rest of the body.
     if async_context {
-        let block = if args.enter_on_poll {
-            quote!(
-                #crate_path::future::FutureExt::enter_on_poll(
-                    async move { #block },
-                    #name
-                )
-            )
+        let poll_span = if args.poll_span {
+            quote!(.with_poll_span( #name ))
         } else {
-            quote!(
-                {
-                    let __span__ = #crate_path::Span::enter_with_local_parent( #name ) #properties;
-                    #crate_path::future::FutureExt::in_span(
-                        async move {
-                            let __ret__: #output_ty_hint = #block;
-                            #[allow(unreachable_code)]
-                            __ret__
-                        },
-                        __span__,
-                    )
-                }
-            )
+            quote!()
         };
+        let block = quote!(
+            {
+                let __span__ = #crate_path::Span::start_with_local_parent( #name ) #properties;
+                #crate_path::future::FutureExt::in_span(
+                    async move {
+                        let __ret__: #output_ty_hint = #block;
+                        #[allow(unreachable_code)]
+                        __ret__
+                    },
+                    __span__,
+                )
+                #poll_span
+            }
+        );
 
         if async_keyword {
             quote!(
@@ -393,12 +394,12 @@ fn gen_block(
             block
         }
     } else {
-        if args.enter_on_poll {
-            abort_call_site!("`enter_on_poll` can not be applied on non-async function");
+        if args.poll_span {
+            abort_call_site!("`poll_span` can not be applied on non-async function");
         }
 
         quote!(
-            let __guard__ = #crate_path::local::LocalSpan::enter_with_local_parent( #name ) #properties;
+            let __guard__ = #crate_path::local::LocalSpan::start( #name ) #properties;
             #block
         )
     }

@@ -131,7 +131,7 @@ fn fastrace_harness(n: usize) {
 
     fn dummy_fastrace(n: usize) {
         for _ in 0..n {
-            let _guard = LocalSpan::enter_with_local_parent("child");
+            let _guard = LocalSpan::start("child");
         }
     }
 

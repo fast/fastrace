@@ -33,7 +33,7 @@ impl fmt::Debug for LocalSpan {
 }
 
 impl LocalSpan {
-    /// Create a new child span associated with the current local span in the current thread, and
+    /// Start a new child span associated with the current local span in the current thread, and
     /// then it will become the new local parent.
     ///
     /// If no local span is active, this function is no-op.
@@ -46,10 +46,10 @@ impl LocalSpan {
     /// let root = Span::root("root", SpanContext::random());
     /// let _g = root.set_local_parent();
     ///
-    /// let child = LocalSpan::enter_with_local_parent("child");
+    /// let child = LocalSpan::start("child");
     /// ```
     #[inline]
-    pub fn enter_with_local_parent(name: impl Into<Cow<'static, str>>) -> Self {
+    pub fn start(name: impl Into<Cow<'static, str>>) -> Self {
         #[cfg(not(feature = "enable"))]
         {
             LocalSpan::default()
@@ -72,8 +72,7 @@ impl LocalSpan {
     /// ```
     /// use fastrace::prelude::*;
     ///
-    /// let span =
-    ///     LocalSpan::enter_with_local_parent("a child span").with_property(|| ("key", "value"));
+    /// let span = LocalSpan::start("a child span").with_property(|| ("key", "value"));
     /// ```
     #[inline]
     pub fn with_property<K, V, F>(self, property: F) -> Self
@@ -99,7 +98,7 @@ impl LocalSpan {
     /// let link = SpanContext::new(TraceId(1), SpanId(2));
     /// let _g = root.set_local_parent();
     ///
-    /// let _span = LocalSpan::enter_with_local_parent("child").with_link(link);
+    /// let _span = LocalSpan::start("child").with_link(link);
     /// ```
     #[inline]
     pub fn with_link(self, link: SpanContext) -> Self {
@@ -119,7 +118,7 @@ impl LocalSpan {
     /// ```
     /// use fastrace::prelude::*;
     ///
-    /// let span = LocalSpan::enter_with_local_parent("a child span")
+    /// let span = LocalSpan::start("a child span")
     ///     .with_properties(|| [("key1", "value1"), ("key2", "value2")]);
     /// ```
     #[inline]
@@ -173,7 +172,7 @@ impl LocalSpan {
     /// let link = SpanContext::new(TraceId(1), SpanId(2));
     /// let _g = root.set_local_parent();
     ///
-    /// let _span = LocalSpan::enter_with_local_parent("child");
+    /// let _span = LocalSpan::start("child");
     /// LocalSpan::add_link(link);
     /// ```
     #[inline]
@@ -313,7 +312,7 @@ span1 []
 
     #[test]
     fn local_span_noop() {
-        let _span1 = LocalSpan::enter_with_local_parent("span1").with_property(|| ("k1", "v1"));
+        let _span1 = LocalSpan::start("span1").with_property(|| ("k1", "v1"));
     }
 
     #[test]

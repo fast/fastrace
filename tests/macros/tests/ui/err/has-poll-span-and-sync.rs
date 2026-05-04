@@ -1,6 +1,6 @@
 use fastrace::trace;
 
-#[trace(enter_on_poll = true)]
+#[trace(poll_span = true)]
 fn f() {}
 
 fn main() {}

@@ -1,6 +1,6 @@
 use fastrace::trace;
 
-#[trace(enter_on_poll = true)]
+#[trace(poll_span = true, properties = { "a": "argument a is {a:?}" })]
 async fn f(a: u32) -> u32 {
     a
 }
