@@ -364,7 +364,10 @@ impl<'de> serde::Deserialize<'de> for SpanContext {
 /// decoding W3C headers at RPC injection/extraction points. The `tracestate` field is
 /// **not** carried through fastrace's internal span machinery — converting to a
 /// [`SpanContext`] (e.g. via [`Span::root`] or field access) discards the tracestate.
-/// If you need to preserve tracestate across internal spans, store it separately.
+/// **If you extract the `span_context`, create spans, and later need to inject outgoing
+/// headers via `SpanContext::from_span` or `SpanContext::current_local_parent()`, the
+/// original `tracestate` will be lost.** Store the `W3CTraceContext` or `tracestate`
+/// value separately if you need to preserve it for outbound propagation.
 ///
 /// # Examples
 ///
@@ -533,6 +536,9 @@ impl W3CTraceContext {
     /// Decodes a `W3CTraceContext` from an iterator of header key-value pairs.
     ///
     /// The lookup is case-insensitive for the header names, per the W3C spec.
+    /// **If multiple `tracestate` headers are present, they are joined with commas
+    /// in the order encountered, per [W3C Trace Context §3.3.1.1](https://www.w3.org/TR/trace-context/#tracestate-header).**
+    /// Empty or whitespace-only `tracestate` values are ignored.
     /// Returns `None` if no valid `traceparent` header is found.
     ///
     /// # Examples
@@ -555,17 +561,26 @@ impl W3CTraceContext {
         headers: impl IntoIterator<Item = (&'a str, &'a str)>,
     ) -> Option<Self> {
         let mut traceparent = None;
-        let mut tracestate = None;
+        let mut tracestate_parts: Vec<&str> = Vec::new();
 
         for (key, value) in headers {
             if key.eq_ignore_ascii_case("traceparent") {
                 traceparent = Some(value);
             } else if key.eq_ignore_ascii_case("tracestate") {
-                tracestate = Some(value);
+                let trimmed = value.trim();
+                if !trimmed.is_empty() {
+                    tracestate_parts.push(trimmed);
+                }
             }
         }
 
-        Self::decode(traceparent?, tracestate)
+        let tracestate = if tracestate_parts.is_empty() {
+            None
+        } else {
+            Some(tracestate_parts.join(","))
+        };
+
+        Self::decode(traceparent?, tracestate.as_deref())
     }
 }
 
@@ -756,6 +771,53 @@ mod tests {
     fn w3c_trace_context_decode_headers_no_traceparent() {
         let headers = vec![("tracestate", "rw=frontend")];
         assert!(W3CTraceContext::decode_headers(headers).is_none());
+    }
+
+    #[test]
+    fn w3c_trace_context_decode_headers_repeated_tracestate() {
+        // Per W3C spec, multiple tracestate headers should be joined with commas.
+        let headers = vec![
+            (
+                "traceparent",
+                "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+            ),
+            ("tracestate", "rw=frontend"),
+            ("tracestate", "congo=t61rcWkgMzE"),
+        ];
+
+        let ctx = W3CTraceContext::decode_headers(headers).unwrap();
+        assert_eq!(ctx.tracestate(), Some("rw=frontend,congo=t61rcWkgMzE"));
+    }
+
+    #[test]
+    fn w3c_trace_context_decode_headers_repeated_empty_mixed() {
+        let headers = vec![
+            (
+                "traceparent",
+                "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+            ),
+            ("tracestate", ""),
+            ("tracestate", "rw=frontend"),
+            ("tracestate", "  "),
+        ];
+
+        let ctx = W3CTraceContext::decode_headers(headers).unwrap();
+        assert_eq!(ctx.tracestate(), Some("rw=frontend"));
+    }
+
+    #[test]
+    fn w3c_trace_context_decode_headers_all_empty_tracestate() {
+        let headers = vec![
+            (
+                "traceparent",
+                "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+            ),
+            ("tracestate", ""),
+            ("tracestate", "  "),
+        ];
+
+        let ctx = W3CTraceContext::decode_headers(headers).unwrap();
+        assert_eq!(ctx.tracestate(), None);
     }
 
     #[test]
