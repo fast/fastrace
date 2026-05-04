@@ -23,6 +23,7 @@ pub use global_collector::Reporter;
 pub use id::SpanContext;
 pub use id::SpanId;
 pub use id::TraceId;
+pub use id::W3CTraceContext;
 #[doc(hidden)]
 pub use test_reporter::TestReporter;
 

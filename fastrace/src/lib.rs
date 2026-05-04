@@ -397,6 +397,8 @@ pub mod prelude {
     #[doc(no_inline)]
     pub use crate::collector::TraceId;
     #[doc(no_inline)]
+    pub use crate::collector::W3CTraceContext;
+    #[doc(no_inline)]
     pub use crate::event::Event;
     #[doc(no_inline)]
     pub use crate::file_location;

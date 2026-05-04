@@ -352,6 +352,230 @@ impl<'de> serde::Deserialize<'de> for SpanContext {
     }
 }
 
+/// A complete [W3C Trace Context](https://www.w3.org/TR/trace-context/) representation
+/// carrying both the `traceparent` and `tracestate` headers.
+///
+/// [`SpanContext`] is `Copy` and only stores trace-id, span-id, and the sampled flag
+/// (the `traceparent` portion). `W3CTraceContext` extends it with an optional
+/// `tracestate` string so that vendor-specific key-value pairs survive propagation
+/// across process boundaries.
+///
+/// **Important:** `W3CTraceContext` is a **boundary/header wrapper** for encoding and
+/// decoding W3C headers at RPC injection/extraction points. The `tracestate` field is
+/// **not** carried through fastrace's internal span machinery — converting to a
+/// [`SpanContext`] (e.g. via [`Span::root`] or field access) discards the tracestate.
+/// If you need to preserve tracestate across internal spans, store it separately.
+///
+/// # Examples
+///
+/// ```
+/// use fastrace::collector::W3CTraceContext;
+/// use fastrace::prelude::*;
+///
+/// // Decode from incoming HTTP headers.
+/// let ctx = W3CTraceContext::decode(
+///     "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+///     Some("rw=frontend,congo=t61rcWkgMzE"),
+/// )
+/// .unwrap();
+///
+/// assert_eq!(
+///     ctx.span_context.trace_id,
+///     TraceId(0x0af7651916cd43dd8448eb211c80319c)
+/// );
+/// assert_eq!(ctx.tracestate(), Some("rw=frontend,congo=t61rcWkgMzE"));
+///
+/// // Encode for outgoing HTTP headers.
+/// let traceparent = ctx.encode_traceparent();
+/// let tracestate = ctx.encode_tracestate();
+/// assert_eq!(
+///     traceparent,
+///     "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01"
+/// );
+/// assert_eq!(tracestate, Some("rw=frontend,congo=t61rcWkgMzE"));
+///
+/// // Start a root span (note: tracestate is not retained in the span).
+/// let root = Span::root("server", ctx.span_context);
+/// ```
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct W3CTraceContext {
+    /// The core span context (trace-id, span-id, sampled flag).
+    pub span_context: SpanContext,
+    tracestate: Option<String>,
+}
+
+impl W3CTraceContext {
+    /// Creates a new `W3CTraceContext` from a [`SpanContext`] with no `tracestate`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use fastrace::collector::W3CTraceContext;
+    /// use fastrace::prelude::*;
+    ///
+    /// let ctx = W3CTraceContext::new(SpanContext::new(TraceId(12), SpanId(34)));
+    /// assert_eq!(ctx.tracestate(), None);
+    /// ```
+    pub fn new(span_context: SpanContext) -> Self {
+        Self {
+            span_context,
+            tracestate: None,
+        }
+    }
+
+    /// Attaches a `tracestate` string. Replaces any existing value.
+    ///
+    /// An empty string is normalized to `None` (no tracestate), consistent
+    /// with [`W3CTraceContext::decode`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use fastrace::collector::W3CTraceContext;
+    /// use fastrace::prelude::*;
+    ///
+    /// let ctx =
+    ///     W3CTraceContext::new(SpanContext::random()).with_tracestate("rw=frontend");
+    /// assert_eq!(ctx.tracestate(), Some("rw=frontend"));
+    ///
+    /// // Empty string is normalized to None.
+    /// let ctx = ctx.with_tracestate("");
+    /// assert_eq!(ctx.tracestate(), None);
+    /// ```
+    pub fn with_tracestate(mut self, tracestate: impl Into<String>) -> Self {
+        let ts = tracestate.into();
+        self.tracestate = if ts.is_empty() { None } else { Some(ts) };
+        self
+    }
+
+    /// Returns the `tracestate` value, if any.
+    pub fn tracestate(&self) -> Option<&str> {
+        self.tracestate.as_deref()
+    }
+
+    /// Encodes the `traceparent` header value.
+    ///
+    /// This delegates to [`SpanContext::encode_w3c_traceparent`].
+    pub fn encode_traceparent(&self) -> String {
+        self.span_context.encode_w3c_traceparent()
+    }
+
+    /// Returns the `tracestate` header value, if present.
+    ///
+    /// Returns `None` when no tracestate was set, meaning the header should be
+    /// omitted from the outgoing request.
+    pub fn encode_tracestate(&self) -> Option<&str> {
+        self.tracestate.as_deref()
+    }
+
+    /// Decodes a `W3CTraceContext` from `traceparent` and optional `tracestate`
+    /// header values.
+    ///
+    /// Returns `None` if the `traceparent` string is malformed.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use fastrace::collector::W3CTraceContext;
+    /// use fastrace::prelude::*;
+    ///
+    /// let ctx = W3CTraceContext::decode(
+    ///     "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+    ///     Some("rw=frontend"),
+    /// )
+    /// .unwrap();
+    ///
+    /// assert_eq!(ctx.tracestate(), Some("rw=frontend"));
+    ///
+    /// // Without tracestate.
+    /// let ctx2 = W3CTraceContext::decode(
+    ///     "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+    ///     None,
+    /// )
+    /// .unwrap();
+    /// assert_eq!(ctx2.tracestate(), None);
+    /// ```
+    pub fn decode(traceparent: &str, tracestate: Option<&str>) -> Option<Self> {
+        let span_context = SpanContext::decode_w3c_traceparent(traceparent)?;
+        Some(Self {
+            span_context,
+            tracestate: tracestate.filter(|s| !s.is_empty()).map(|s| s.to_string()),
+        })
+    }
+
+    /// Encodes both `traceparent` and `tracestate` into a list of header
+    /// key-value pairs suitable for HTTP propagation.
+    ///
+    /// The returned vector always contains the `traceparent` entry. The
+    /// `tracestate` entry is included only when a tracestate value is present.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use fastrace::collector::W3CTraceContext;
+    /// use fastrace::prelude::*;
+    ///
+    /// let ctx = W3CTraceContext::new(SpanContext::new(TraceId(1), SpanId(2)))
+    ///     .with_tracestate("rw=frontend");
+    /// let headers = ctx.encode_headers();
+    /// assert_eq!(headers.len(), 2);
+    /// assert_eq!(headers[0].0, "traceparent");
+    /// assert_eq!(headers[1].0, "tracestate");
+    /// assert_eq!(headers[1].1, "rw=frontend");
+    /// ```
+    pub fn encode_headers(&self) -> Vec<(String, String)> {
+        let mut headers = vec![("traceparent".to_string(), self.encode_traceparent())];
+        if let Some(ts) = &self.tracestate {
+            headers.push(("tracestate".to_string(), ts.clone()));
+        }
+        headers
+    }
+
+    /// Decodes a `W3CTraceContext` from an iterator of header key-value pairs.
+    ///
+    /// The lookup is case-insensitive for the header names, per the W3C spec.
+    /// Returns `None` if no valid `traceparent` header is found.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use fastrace::collector::W3CTraceContext;
+    ///
+    /// let headers = vec![
+    ///     (
+    ///         "traceparent",
+    ///         "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+    ///     ),
+    ///     ("tracestate", "rw=frontend,congo=t61rcWkgMzE"),
+    /// ];
+    ///
+    /// let ctx = W3CTraceContext::decode_headers(headers).unwrap();
+    /// assert_eq!(ctx.tracestate(), Some("rw=frontend,congo=t61rcWkgMzE"));
+    /// ```
+    pub fn decode_headers<'a>(
+        headers: impl IntoIterator<Item = (&'a str, &'a str)>,
+    ) -> Option<Self> {
+        let mut traceparent = None;
+        let mut tracestate = None;
+
+        for (key, value) in headers {
+            if key.eq_ignore_ascii_case("traceparent") {
+                traceparent = Some(value);
+            } else if key.eq_ignore_ascii_case("tracestate") {
+                tracestate = Some(value);
+            }
+        }
+
+        Self::decode(traceparent?, tracestate)
+    }
+}
+
+impl From<SpanContext> for W3CTraceContext {
+    fn from(span_context: SpanContext) -> Self {
+        Self::new(span_context)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::collections::HashSet;
@@ -377,5 +601,184 @@ mod tests {
             .collect::<HashSet<_>>();
 
         assert_eq!(k.len(), 32 * 1000);
+    }
+
+    #[test]
+    fn w3c_trace_context_decode_with_tracestate() {
+        let ctx = W3CTraceContext::decode(
+            "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+            Some("rw=frontend,congo=t61rcWkgMzE"),
+        )
+        .unwrap();
+
+        assert_eq!(
+            ctx.span_context.trace_id,
+            TraceId(0x0af7651916cd43dd8448eb211c80319c)
+        );
+        assert_eq!(ctx.span_context.span_id, SpanId(0xb7ad6b7169203331));
+        assert!(ctx.span_context.sampled);
+        assert_eq!(ctx.tracestate(), Some("rw=frontend,congo=t61rcWkgMzE"));
+    }
+
+    #[test]
+    fn w3c_trace_context_decode_without_tracestate() {
+        let ctx = W3CTraceContext::decode(
+            "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+            None,
+        )
+        .unwrap();
+
+        assert_eq!(ctx.tracestate(), None);
+    }
+
+    #[test]
+    fn w3c_trace_context_decode_empty_tracestate() {
+        let ctx = W3CTraceContext::decode(
+            "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+            Some(""),
+        )
+        .unwrap();
+
+        assert_eq!(ctx.tracestate(), None);
+    }
+
+    #[test]
+    fn w3c_trace_context_decode_invalid_traceparent() {
+        assert!(W3CTraceContext::decode("invalid", Some("rw=frontend")).is_none());
+    }
+
+    #[test]
+    fn w3c_trace_context_encode_roundtrip() {
+        let original = W3CTraceContext::decode(
+            "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+            Some("rw=frontend"),
+        )
+        .unwrap();
+
+        let traceparent = original.encode_traceparent();
+        let tracestate = original.encode_tracestate();
+
+        let decoded = W3CTraceContext::decode(&traceparent, tracestate).unwrap();
+
+        assert_eq!(original, decoded);
+    }
+
+    #[test]
+    fn w3c_trace_context_encode_roundtrip_no_tracestate() {
+        let original = W3CTraceContext::decode(
+            "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-00",
+            None,
+        )
+        .unwrap();
+
+        let traceparent = original.encode_traceparent();
+        let tracestate = original.encode_tracestate();
+
+        let decoded = W3CTraceContext::decode(&traceparent, tracestate).unwrap();
+
+        assert_eq!(original, decoded);
+        assert!(!decoded.span_context.sampled);
+    }
+
+    #[test]
+    fn w3c_trace_context_with_tracestate() {
+        let ctx = W3CTraceContext::new(SpanContext::new(TraceId(1), SpanId(2)));
+        assert_eq!(ctx.tracestate(), None);
+
+        let ctx = ctx.with_tracestate("rw=frontend");
+        assert_eq!(ctx.tracestate(), Some("rw=frontend"));
+
+        // Replace existing.
+        let ctx = ctx.with_tracestate("rw=backend");
+        assert_eq!(ctx.tracestate(), Some("rw=backend"));
+
+        // Empty string normalizes to None.
+        let ctx = ctx.with_tracestate("");
+        assert_eq!(ctx.tracestate(), None);
+    }
+
+    #[test]
+    fn w3c_trace_context_encode_headers() {
+        let ctx = W3CTraceContext::new(SpanContext::new(TraceId(1), SpanId(2)))
+            .with_tracestate("rw=frontend");
+
+        let headers = ctx.encode_headers();
+        assert_eq!(headers.len(), 2);
+        assert_eq!(headers[0].0, "traceparent");
+        assert_eq!(
+            headers[0].1,
+            "00-00000000000000000000000000000001-0000000000000002-01"
+        );
+        assert_eq!(headers[1].0, "tracestate");
+        assert_eq!(headers[1].1, "rw=frontend");
+    }
+
+    #[test]
+    fn w3c_trace_context_encode_headers_no_tracestate() {
+        let ctx = W3CTraceContext::new(SpanContext::new(TraceId(1), SpanId(2)));
+        let headers = ctx.encode_headers();
+        assert_eq!(headers.len(), 1);
+        assert_eq!(headers[0].0, "traceparent");
+    }
+
+    #[test]
+    fn w3c_trace_context_decode_headers() {
+        let headers = vec![
+            (
+                "traceparent",
+                "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+            ),
+            ("tracestate", "rw=frontend,congo=t61rcWkgMzE"),
+        ];
+
+        let ctx = W3CTraceContext::decode_headers(headers).unwrap();
+        assert_eq!(
+            ctx.span_context.trace_id,
+            TraceId(0x0af7651916cd43dd8448eb211c80319c)
+        );
+        assert_eq!(ctx.tracestate(), Some("rw=frontend,congo=t61rcWkgMzE"));
+    }
+
+    #[test]
+    fn w3c_trace_context_decode_headers_case_insensitive() {
+        let headers = vec![
+            (
+                "Traceparent",
+                "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+            ),
+            ("TraceState", "rw=frontend"),
+        ];
+
+        let ctx = W3CTraceContext::decode_headers(headers).unwrap();
+        assert_eq!(ctx.tracestate(), Some("rw=frontend"));
+    }
+
+    #[test]
+    fn w3c_trace_context_decode_headers_no_traceparent() {
+        let headers = vec![("tracestate", "rw=frontend")];
+        assert!(W3CTraceContext::decode_headers(headers).is_none());
+    }
+
+    #[test]
+    fn w3c_trace_context_header_roundtrip() {
+        let original = W3CTraceContext::new(SpanContext::new(TraceId(42), SpanId(99)))
+            .with_tracestate("vendor=value,other=data");
+
+        let headers = original.encode_headers();
+        let header_refs: Vec<(&str, &str)> = headers
+            .iter()
+            .map(|(k, v)| (k.as_str(), v.as_str()))
+            .collect();
+
+        let decoded = W3CTraceContext::decode_headers(header_refs).unwrap();
+        assert_eq!(original, decoded);
+    }
+
+    #[test]
+    fn w3c_trace_context_from_span_context() {
+        let span_ctx = SpanContext::new(TraceId(1), SpanId(2));
+        let w3c_ctx: W3CTraceContext = span_ctx.into();
+        assert_eq!(w3c_ctx.span_context, span_ctx);
+        assert_eq!(w3c_ctx.tracestate(), None);
     }
 }
