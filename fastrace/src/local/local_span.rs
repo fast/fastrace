@@ -72,8 +72,7 @@ impl LocalSpan {
     /// ```
     /// use fastrace::prelude::*;
     ///
-    /// let span =
-    ///     LocalSpan::start("a child span").with_property(|| ("key", "value"));
+    /// let span = LocalSpan::start("a child span").with_property(|| ("key", "value"));
     /// ```
     #[inline]
     pub fn with_property<K, V, F>(self, property: F) -> Self

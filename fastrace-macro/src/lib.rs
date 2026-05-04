@@ -37,8 +37,8 @@ use crate::visit_mut::VisitMut;
 /// * `name` - The name of the span. Defaults to the full path of the function.
 /// * `short_name` - Whether to use the function name without path as the span name. Defaults to
 ///   `false`.
-/// * `poll_span` - Whether to additionally create a span on each poll. Only available for
-///   `async fn`. Defaults to `false`.
+/// * `poll_span` - Whether to additionally create a span on each poll. Only available for `async
+///   fn`. Defaults to `false`.
 /// * `properties` - A list of key-value pairs to be added as properties to the span. The value can
 ///   be a format string, where the function arguments are accessible. Defaults to `{}`.
 /// * `crate` - The path to the fastrace crate. Defaults to `::fastrace`.
@@ -81,17 +81,23 @@ use crate::visit_mut::VisitMut;
 ///
 /// async fn simple_async() {
 ///     let __span__ = Span::start_with_local_parent("simple_async");
-///     fastrace::future::FutureExt::in_span(async {
-///         // ...
-///     }, __span__)
+///     fastrace::future::FutureExt::in_span(
+///         async {
+///             // ...
+///         },
+///         __span__,
+///     )
 ///     .await
 /// }
 ///
 /// async fn baz() {
 ///     let __span__ = Span::start_with_local_parent("qux");
-///     fastrace::future::FutureExt::in_span(async {
-///         // ...
-///     }, __span__)
+///     fastrace::future::FutureExt::in_span(
+///         async {
+///             // ...
+///         },
+///         __span__,
+///     )
 ///     .with_poll_span("qux")
 ///     .await
 /// }
@@ -106,9 +112,12 @@ use crate::visit_mut::VisitMut;
 ///             ),
 ///         ]
 ///     });
-///     fastrace::future::FutureExt::in_span(async {
-///         // ...
-///     }, __span__)
+///     fastrace::future::FutureExt::in_span(
+///         async {
+///             // ...
+///         },
+///         __span__,
+///     )
 ///     .await
 /// }
 /// ```
