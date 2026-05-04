@@ -2,11 +2,13 @@
 
 #![doc = include_str!("../README.md")]
 
+use std::borrow::Cow;
 use std::pin::Pin;
 use std::task::Context;
 use std::task::Poll;
 
 use fastrace::Span;
+use fastrace::local::LocalSpan;
 use futures_core::Stream;
 use futures_sink::Sink;
 
@@ -49,6 +51,68 @@ pub trait StreamExt: Stream + Sized {
         InSpan {
             inner: self,
             span: Some(span),
+        }
+    }
+
+    /// Starts a [`LocalSpan`] at every [`Stream::poll_next()`].
+    ///
+    /// This is useful for tracing each **poll** of a stream (not each yielded item),
+    /// e.g. to observe how often an async stream is woken. If you need a single span
+    /// that covers the whole stream lifecycle, use [`StreamExt::in_span`] instead.
+    ///
+    /// The span name can be any `impl Into<Cow<'static, str>>`.
+    ///
+    /// # Important: Local parent required
+    ///
+    /// `enter_on_poll` creates [`LocalSpan`]s, which require an existing local parent
+    /// context at the time of each poll. Without one, the spans will be no-ops.
+    ///
+    /// The typical way to provide a local parent is to wrap the stream with
+    /// [`StreamExt::in_span`] **after** `enter_on_poll`:
+    ///
+    /// ```text
+    /// stream.enter_on_poll("poll").in_span(span)
+    /// ```
+    ///
+    /// ⚠️ Do **not** reverse the order:
+    ///
+    /// ```text
+    /// // WRONG: in_span sets the local parent *after* enter_on_poll tries to create
+    /// // the LocalSpan, so the poll spans will be no-ops.
+    /// stream.in_span(span).enter_on_poll("poll")
+    /// ```
+    ///
+    /// # Examples:
+    ///
+    /// ```
+    /// # #[tokio::main]
+    /// # async fn main() {
+    /// use async_stream::stream;
+    /// use fastrace::prelude::*;
+    /// use fastrace_futures::StreamExt as _;
+    /// use futures::StreamExt;
+    ///
+    /// let root = Span::root("root", SpanContext::random());
+    ///
+    /// let s = stream! {
+    ///     for i in 0..2 {
+    ///         yield i;
+    ///     }
+    /// }
+    /// .enter_on_poll("poll")
+    /// .in_span(Span::enter_with_parent("stream", &root));
+    ///
+    /// tokio::pin!(s);
+    ///
+    /// assert_eq!(s.next().await.unwrap(), 0);
+    /// assert_eq!(s.next().await.unwrap(), 1);
+    /// assert_eq!(s.next().await, None);
+    /// # }
+    /// ```
+    fn enter_on_poll(self, name: impl Into<Cow<'static, str>>) -> EnterOnPollStream<Self> {
+        EnterOnPollStream {
+            inner: self,
+            name: name.into(),
         }
     }
 }
@@ -162,5 +226,100 @@ where T: Sink<I>
                 other
             }
         }
+    }
+}
+
+/// Adapter for [`StreamExt::enter_on_poll()`](StreamExt::enter_on_poll).
+#[pin_project::pin_project]
+pub struct EnterOnPollStream<T> {
+    #[pin]
+    inner: T,
+    name: Cow<'static, str>,
+}
+
+impl<T> Stream for EnterOnPollStream<T>
+where T: Stream
+{
+    type Item = T::Item;
+
+    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        let this = self.project();
+        let _guard = LocalSpan::enter_with_local_parent(this.name.clone());
+        this.inner.poll_next(cx)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use fastrace::local::LocalCollector;
+    use fastrace::prelude::*;
+    use futures::StreamExt as _;
+    use futures::stream;
+
+    use crate::StreamExt as _;
+
+    #[tokio::test]
+    async fn test_enter_on_poll_creates_spans() {
+        let collector = LocalCollector::start();
+
+        let s = stream::iter(vec![1, 2]).enter_on_poll("poll");
+        tokio::pin!(s);
+        assert_eq!(s.next().await, Some(1));
+        assert_eq!(s.next().await, Some(2));
+        assert_eq!(s.next().await, None);
+
+        let local_spans = collector.collect();
+        let parent_ctx = SpanContext::random();
+        let spans = local_spans.to_span_records(parent_ctx);
+
+        let poll_count = spans.iter().filter(|s| s.name == "poll").count();
+        assert!(
+            poll_count >= 2,
+            "expected at least 2 poll spans, got {}",
+            poll_count
+        );
+    }
+
+    #[tokio::test]
+    async fn test_enter_on_poll_pending_then_ready() {
+        use std::pin::Pin;
+        use std::task::Context;
+        use std::task::Poll;
+
+        use futures::stream::Stream;
+
+        struct PendOnce {
+            polled: bool,
+        }
+
+        impl Stream for PendOnce {
+            type Item = i32;
+            fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<i32>> {
+                if self.polled {
+                    Poll::Ready(Some(42))
+                } else {
+                    self.polled = true;
+                    cx.waker().wake_by_ref();
+                    Poll::Pending
+                }
+            }
+        }
+
+        let collector = LocalCollector::start();
+
+        let s = PendOnce { polled: false }.enter_on_poll("poll");
+        tokio::pin!(s);
+        assert_eq!(s.next().await, Some(42));
+
+        let local_spans = collector.collect();
+        let parent_ctx = SpanContext::random();
+        let spans = local_spans.to_span_records(parent_ctx);
+
+        let poll_count = spans.iter().filter(|s| s.name == "poll").count();
+        assert!(
+            poll_count >= 2,
+            "expected at least 2 poll spans (pending + ready), got {}",
+            poll_count
+        );
     }
 }
