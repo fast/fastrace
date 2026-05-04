@@ -41,6 +41,7 @@ opentelemetry_sdk = { workspace = true }
 pollster = { version = "0.4.0" }
 rand = "0.10.0"
 serial_test = "3.1"
+serde_json = "1.0"
 tokio = { workspace = true }
 tracing = { version = "0.1" }
 tracing-opentelemetry = { version = "0.32.0" }

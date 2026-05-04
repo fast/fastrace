@@ -178,16 +178,19 @@ fn map_trace_state(trace_state: Option<&str>) -> OtelTraceState {
 fn map_links(links: Vec<SpanContext>) -> SpanLinks {
     let links = links
         .into_iter()
-        .filter_map(|link| {
-            let span_id = link.span_id()?;
+        .map(|link| {
+            let span_id = link
+                .span_id()
+                .map(|span_id| OtelSpanId::from_bytes(span_id.to_bytes()))
+                .unwrap_or(OtelSpanId::INVALID);
             let span_context = OtelSpanContext::new(
                 OtelTraceId::from_bytes(link.trace_id().to_bytes()),
-                OtelSpanId::from_bytes(span_id.to_bytes()),
+                span_id,
                 map_trace_flags(link.trace_flags()),
                 false,
                 map_trace_state(link.trace_state()),
             );
-            Some(Link::with_context(span_context))
+            Link::with_context(span_context)
         })
         .collect();
 
@@ -406,6 +409,9 @@ mod tests {
         )
         .with_trace_flags(fastrace::collector::TraceFlags::SAMPLED)
         .with_trace_state("vendor=value");
+        let root_link = SpanContext::root(trace_id("abc"))
+            .with_trace_flags(fastrace::collector::TraceFlags::SAMPLED)
+            .with_trace_state("root=value");
 
         let spans = reporter.convert(vec![SpanRecord {
             trace_id: trace_id("0af7651916cd43dd8448eb211c80319c"),
@@ -418,7 +424,7 @@ mod tests {
             name: Cow::Borrowed("span"),
             properties: vec![],
             events: vec![],
-            links: vec![link],
+            links: vec![link, root_link],
         }]);
 
         assert_eq!(spans.len(), 1);
@@ -432,10 +438,19 @@ mod tests {
         assert_eq!(span.span_context.trace_flags().to_u8(), 0x03);
         assert_eq!(span.span_context.trace_state().header(), "vendor=value");
 
-        assert_eq!(span.links.links.len(), 1);
+        assert_eq!(span.links.links.len(), 2);
         let link = &span.links.links[0].span_context;
         assert_eq!(link.span_id().to_string(), "1111111111111111");
         assert!(link.is_sampled());
         assert_eq!(link.trace_state().header(), "vendor=value");
+
+        let root_link = &span.links.links[1].span_context;
+        assert_eq!(
+            root_link.trace_id().to_string(),
+            "00000000000000000000000000000abc"
+        );
+        assert_eq!(root_link.span_id(), OtelSpanId::INVALID);
+        assert!(root_link.is_sampled());
+        assert_eq!(root_link.trace_state().header(), "root=value");
     }
 }

@@ -6,6 +6,8 @@ use std::rc::Rc;
 use std::str::FromStr;
 use std::sync::Arc;
 
+use serde::ser::SerializeStruct;
+
 use crate::Span;
 use crate::local::local_span_stack::LOCAL_SPAN_STACK;
 
@@ -534,18 +536,36 @@ impl SpanContext {
 
 impl serde::Serialize for SpanContext {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        let traceparent = self.encode_traceparent().ok_or_else(|| {
-            serde::ser::Error::custom("span context has no span id for traceparent")
-        })?;
-        traceparent.serialize(serializer)
+        let mut fields = serializer.serialize_struct("SpanContext", 4)?;
+        fields.serialize_field("trace_id", &self.trace_id)?;
+        fields.serialize_field("span_id", &self.span_id)?;
+        fields.serialize_field("trace_flags", &self.trace_flags.to_u8())?;
+        fields.serialize_field("trace_state", &self.trace_state.as_header_value())?;
+        fields.end()
     }
 }
 
 impl<'de> serde::Deserialize<'de> for SpanContext {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let s = String::deserialize(deserializer)?;
-        SpanContext::decode_traceparent(&s)
-            .ok_or_else(|| serde::de::Error::custom("invalid w3c traceparent"))
+        #[derive(serde::Deserialize)]
+        struct Fields {
+            trace_id: TraceId,
+            span_id: Option<SpanId>,
+            trace_flags: u8,
+            trace_state: Option<String>,
+        }
+
+        let fields = Fields::deserialize(deserializer)?;
+
+        Ok(SpanContext {
+            trace_id: fields.trace_id,
+            span_id: fields.span_id,
+            trace_flags: TraceFlags::new(fields.trace_flags),
+            trace_state: fields
+                .trace_state
+                .map(TraceState::from_header_value)
+                .unwrap_or(TraceState::EMPTY),
+        })
     }
 }
 
@@ -754,5 +774,36 @@ mod tests {
     fn root_span_context_cannot_encode_traceparent() {
         let root_ctx = SpanContext::root(trace_id(1));
         assert!(root_ctx.encode_traceparent().is_none());
+    }
+
+    #[test]
+    fn span_context_serde_preserves_trace_state_and_root() {
+        let ctx = SpanContext::root(trace_id(1))
+            .with_trace_flags(TraceFlags::new(0x03))
+            .with_trace_state("vendor=value");
+
+        let json = serde_json::to_string(&ctx).unwrap();
+        let decoded: SpanContext = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(decoded, ctx);
+        assert_eq!(decoded.span_id(), None);
+        assert_eq!(decoded.trace_flags().to_u8(), 0x03);
+        assert_eq!(decoded.trace_state(), Some("vendor=value"));
+    }
+
+    #[test]
+    fn span_context_serde_rejects_zero_ids() {
+        assert!(
+            serde_json::from_str::<SpanContext>(
+                r#"{"trace_id":"0","span_id":null,"trace_flags":1,"trace_state":null}"#
+            )
+            .is_err()
+        );
+        assert!(
+            serde_json::from_str::<SpanContext>(
+                r#"{"trace_id":"1","span_id":"0","trace_flags":1,"trace_state":null}"#
+            )
+            .is_err()
+        );
     }
 }
