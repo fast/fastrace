@@ -14,6 +14,7 @@ All significant changes to this project will be documented in this file.
   `in_span(Span::start(...)).with_poll_span(name)` for future and stream polling.
 - Rename span constructors from `Span::enter_with_parent` and
   `Span::enter_with_local_parent` to `Span::start` and `Span::start_with_local_parent`.
+- Remove deprecated `Span::enter_with_parents`; use `Span::start(...).with_link(...)` instead.
 - Rename `LocalSpan::enter_with_local_parent` to `LocalSpan::start`.
 - Rename the macro option `enter_on_poll` to `poll_span`; it now creates the async function
   lifecycle span and adds a poll span on each poll.

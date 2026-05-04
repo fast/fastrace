@@ -99,10 +99,13 @@ impl<T: std::future::Future> std::future::Future for InSpan<T> {
         let this = self.project();
 
         let guard = this.span.as_ref().map(|s| s.set_local_parent());
-        let poll_span = this
-            .poll_span
-            .as_ref()
-            .map(|name| LocalSpan::start(name.clone()));
+        let poll_span = if this.span.is_some() {
+            this.poll_span
+                .as_ref()
+                .map(|name| LocalSpan::start(name.clone()))
+        } else {
+            None
+        };
         let res = this.inner.poll(cx);
         drop(poll_span);
         drop(guard);
@@ -110,6 +113,7 @@ impl<T: std::future::Future> std::future::Future for InSpan<T> {
         match res {
             r @ Poll::Pending => r,
             other => {
+                this.poll_span.take();
                 this.span.take();
                 other
             }

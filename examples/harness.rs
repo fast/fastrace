@@ -56,9 +56,11 @@ mod test_util {
             .enable_all()
             .build()
             .unwrap();
-        let root = Span::root(closure_name::<F>(), SpanContext::random());
-        rt.block_on(test().in_span(Span::start("test", &root)))
-            .unwrap();
+        {
+            let root = Span::root(closure_name::<F>(), SpanContext::random());
+            rt.block_on(test().in_span(Span::start("test", &root)))
+                .unwrap();
+        }
         fastrace::flush();
     }
 

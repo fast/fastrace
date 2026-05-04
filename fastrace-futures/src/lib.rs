@@ -157,10 +157,13 @@ where T: Stream
         let this = self.project();
 
         let guard = this.span.as_ref().map(|s| s.set_local_parent());
-        let poll_span = this
-            .poll_span
-            .as_ref()
-            .map(|name| LocalSpan::start(name.clone()));
+        let poll_span = if this.span.is_some() {
+            this.poll_span
+                .as_ref()
+                .map(|name| LocalSpan::start(name.clone()))
+        } else {
+            None
+        };
         let res = this.inner.poll_next(cx);
         drop(poll_span);
         drop(guard);
@@ -169,6 +172,7 @@ where T: Stream
             Poll::Pending => Poll::Pending,
             Poll::Ready(None) => {
                 // finished
+                this.poll_span.take();
                 this.span.take();
                 Poll::Ready(None)
             }
