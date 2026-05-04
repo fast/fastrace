@@ -434,8 +434,7 @@ impl W3CTraceContext {
     /// use fastrace::collector::W3CTraceContext;
     /// use fastrace::prelude::*;
     ///
-    /// let ctx =
-    ///     W3CTraceContext::new(SpanContext::random()).with_tracestate("rw=frontend");
+    /// let ctx = W3CTraceContext::new(SpanContext::random()).with_tracestate("rw=frontend");
     /// assert_eq!(ctx.tracestate(), Some("rw=frontend"));
     ///
     /// // Empty string is normalized to None.
