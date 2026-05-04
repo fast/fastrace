@@ -105,9 +105,10 @@
 //! - A set of key-value properties
 //! - A reference to a parent `Span`
 //!
-//! A new `Span` can be started through [`Span::root()`], requiring the trace id and the
-//! parent span id from a remote source. If there's no remote parent span, the parent span
-//! id is typically set to its default value of zero.
+//! A new `Span` can be started through [`Span::root()`] with a [`SpanContext`]. Use
+//! [`SpanContext::random()`] for a new local root, or use
+//! [`SpanContext::decode_traceparent()`] to decode an incoming W3C traceparent value. A root with no
+//! remote parent is represented without a parent span id rather than with an all-zero `SpanId`.
 //!
 //! Once we have the root `Span`, we can create a child `Span` using [`Span::enter_with_parent()`],
 //! thereby establishing the reference relationship between the spans.
@@ -395,9 +396,11 @@ pub mod prelude {
     #[doc(no_inline)]
     pub use crate::collector::SpanRecord;
     #[doc(no_inline)]
+    pub use crate::collector::TraceFlags;
+    #[doc(no_inline)]
     pub use crate::collector::TraceId;
     #[doc(no_inline)]
-    pub use crate::collector::W3CTraceContext;
+    pub use crate::collector::TraceState;
     #[doc(no_inline)]
     pub use crate::event::Event;
     #[doc(no_inline)]

@@ -85,7 +85,8 @@ impl Span {
 
         #[cfg(feature = "enable")]
         {
-            let collect_id = if parent.sampled {
+            let is_sampled = parent.is_sampled();
+            let collect_id = if is_sampled {
                 current_collect().start_collect()
             } else {
                 NOT_SAMPLED_COLLECT_ID
@@ -94,9 +95,11 @@ impl Span {
             let token = CollectToken {
                 trace_id: parent.trace_id,
                 parent_id: parent.span_id,
+                trace_flags: parent.trace_flags,
+                trace_state: parent.trace_state,
                 collect_id,
                 is_root: true,
-                is_sampled: parent.sampled,
+                is_sampled,
             };
 
             Self::new(token, name, Some(collect_id))
@@ -623,7 +626,9 @@ impl SpanInner {
     pub(crate) fn issue_collect_token(&self) -> CollectToken {
         CollectToken {
             trace_id: self.collect_token.trace_id,
-            parent_id: self.raw_span.id,
+            parent_id: Some(self.raw_span.id),
+            trace_flags: self.collect_token.trace_flags,
+            trace_state: self.collect_token.trace_state.clone(),
             collect_id: self.collect_token.collect_id,
             is_root: false,
             is_sampled: self.collect_token.is_sampled,
@@ -736,9 +741,15 @@ mod tests {
     use super::*;
     use crate::collector::ConsoleReporter;
     use crate::collector::MockGlobalCollect;
+    use crate::collector::TraceFlags;
+    use crate::collector::TraceState;
     use crate::local::LocalSpan;
     use crate::prelude::TraceId;
     use crate::util::tree::tree_str_from_span_sets;
+
+    fn trace_id(value: u128) -> TraceId {
+        TraceId::from_bytes(value.to_be_bytes()).unwrap()
+    }
 
     #[test]
     fn noop_basic() {
@@ -753,7 +764,7 @@ mod tests {
         crate::set_reporter(ConsoleReporter, crate::collector::Config::default());
 
         let routine = || {
-            let _root = Span::root("root", SpanContext::new(TraceId(12), SpanId::default()));
+            let _root = Span::root("root", SpanContext::root(trace_id(12)));
 
             fastrace::flush();
         };
@@ -770,8 +781,10 @@ mod tests {
             .with(
                 predicate::always(),
                 predicate::eq::<CollectToken>(CollectToken {
-                    trace_id: TraceId(12),
-                    parent_id: SpanId::default(),
+                    trace_id: trace_id(12),
+                    parent_id: None,
+                    trace_flags: TraceFlags::SAMPLED,
+                    trace_state: TraceState::EMPTY,
                     collect_id: 42,
                     is_root: true,
                     is_sampled: true,
@@ -912,10 +925,10 @@ root []
 
         let routine = || {
             let parent_ctx = SpanContext::random();
-            let parent1 = Span::root("parent1", parent_ctx);
-            let parent2 = Span::root("parent2", parent_ctx);
-            let parent3 = Span::root("parent3", parent_ctx);
-            let parent4 = Span::root("parent4", parent_ctx);
+            let parent1 = Span::root("parent1", parent_ctx.clone());
+            let parent2 = Span::root("parent2", parent_ctx.clone());
+            let parent3 = Span::root("parent3", parent_ctx.clone());
+            let parent4 = Span::root("parent4", parent_ctx.clone());
             let parent5 = Span::root("parent5", parent_ctx);
 
             let stack = Rc::new(RefCell::new(LocalSpanStack::with_capacity(16)));

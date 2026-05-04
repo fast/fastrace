@@ -54,9 +54,9 @@ impl DatadogReporter {
                     )
                 },
                 error_code: 0,
-                span_id: s.span_id.0,
-                trace_id: s.trace_id.0 as u64,
-                parent_id: s.parent_id.0,
+                span_id: datadog_span_id(s.span_id),
+                trace_id: trace_id_low(s.trace_id),
+                parent_id: s.parent_id.map_or(0, datadog_span_id),
             })
             .collect()
     }
@@ -108,4 +108,13 @@ struct DatadogSpan<'a> {
     span_id: u64,
     trace_id: u64,
     parent_id: u64,
+}
+
+fn trace_id_low(trace_id: TraceId) -> u64 {
+    let bytes = trace_id.to_bytes();
+    u64::from_be_bytes(bytes[8..].try_into().expect("trace id has 16 bytes"))
+}
+
+fn datadog_span_id(span_id: SpanId) -> u64 {
+    u64::from_be_bytes(span_id.to_bytes())
 }

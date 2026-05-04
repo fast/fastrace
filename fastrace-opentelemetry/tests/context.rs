@@ -70,6 +70,6 @@ fn otel_span_can_be_parented_by_fastrace_local_parent() {
     );
     assert_eq!(
         span.parent_span_id.to_string(),
-        root_context.span_id.to_string()
+        root_context.span_id.unwrap().to_string()
     );
 }

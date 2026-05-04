@@ -125,10 +125,9 @@ impl SpanLine {
     pub fn current_collect_token(&self) -> Option<CollectToken> {
         self.collect_token.as_ref().map(|item| CollectToken {
             trace_id: item.trace_id,
-            parent_id: self
-                .span_queue
-                .current_parent_id()
-                .unwrap_or(item.parent_id),
+            parent_id: self.span_queue.current_parent_id().or(item.parent_id),
+            trace_flags: item.trace_flags,
+            trace_state: item.trace_state.clone(),
             collect_id: item.collect_id,
             is_root: item.is_root,
             is_sampled: item.is_sampled,
@@ -151,8 +150,26 @@ pub struct LocalSpanHandle {
 mod tests {
     use super::*;
     use crate::collector::SpanId;
+    use crate::collector::TraceFlags;
+    use crate::collector::TraceState;
     use crate::prelude::TraceId;
     use crate::util::tree::tree_str_from_raw_spans;
+
+    fn trace_id(value: u128) -> TraceId {
+        TraceId::from_bytes(value.to_be_bytes()).unwrap()
+    }
+
+    fn token(trace: u128, parent_id: Option<SpanId>, collect_id: usize) -> CollectToken {
+        CollectToken {
+            trace_id: trace_id(trace),
+            parent_id,
+            trace_flags: TraceFlags::SAMPLED,
+            trace_state: TraceState::EMPTY,
+            collect_id,
+            is_root: false,
+            is_sampled: true,
+        }
+    }
 
     #[test]
     fn span_line_basic() {
@@ -184,27 +201,18 @@ span1 []
 
     #[test]
     fn current_collect_token() {
-        let token = CollectToken {
-            trace_id: TraceId(1234),
-            parent_id: SpanId::default(),
-            collect_id: 42,
-            is_root: false,
-            is_sampled: true,
-        };
-        let mut span_line = SpanLine::new(16, 1, Some(token));
+        let token = token(1234, None, 42);
+        let mut span_line = SpanLine::new(16, 1, Some(token.clone()));
 
         let current_token = span_line.current_collect_token().unwrap();
         assert_eq!(current_token, token);
 
         let span = span_line.start_span("span").unwrap();
         let current_token = span_line.current_collect_token().unwrap();
-        assert_eq!(current_token, CollectToken {
-            trace_id: TraceId(1234),
-            parent_id: span_line.span_queue.current_parent_id().unwrap(),
-            collect_id: 42,
-            is_root: false,
-            is_sampled: true,
-        });
+        assert_eq!(
+            current_token,
+            self::token(1234, span_line.span_queue.current_parent_id(), 42)
+        );
         span_line.finish_span(span);
 
         let current_token = span_line.current_collect_token().unwrap();
@@ -241,14 +249,8 @@ span []
 
     #[test]
     fn unmatched_epoch_finish_span() {
-        let item = CollectToken {
-            trace_id: TraceId(1234),
-            parent_id: SpanId::default(),
-            collect_id: 42,
-            is_root: false,
-            is_sampled: true,
-        };
-        let mut span_line1 = SpanLine::new(16, 1, Some(item));
+        let item = token(1234, None, 42);
+        let mut span_line1 = SpanLine::new(16, 1, Some(item.clone()));
         let mut span_line2 = SpanLine::new(16, 2, None);
         assert_eq!(span_line1.span_line_epoch(), 1);
         assert_eq!(span_line2.span_line_epoch(), 2);

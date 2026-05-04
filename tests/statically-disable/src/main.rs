@@ -34,15 +34,18 @@ fn main() {
     use fastrace::local::LocalCollector;
     use fastrace::prelude::*;
 
+    let trace_id = |value: u128| TraceId::from_bytes(value.to_be_bytes()).unwrap();
+    let span_id = |value: u64| SpanId::from_bytes(value.to_be_bytes()).unwrap();
+
     fastrace::set_reporter(
         ConsoleReporter,
         Config::default().report_interval(Duration::from_millis(10)),
     );
 
-    let root = Span::root("root", SpanContext::new(TraceId(0), SpanId(0)))
+    let root = Span::root("root", SpanContext::root(trace_id(1)))
         .with_property(|| ("k0", "v0"))
         .with_properties(|| [("k1", "v1")])
-        .with_link(SpanContext::new(TraceId(1), SpanId(1)));
+        .with_link(SpanContext::new(trace_id(2), span_id(1)));
 
     root.add_property(|| ("k1.5", "v1.5"));
     root.add_properties(|| [("k2", "v2")]);
@@ -51,7 +54,7 @@ fn main() {
             .with_property(|| ("k0", "v0"))
             .with_properties(|| [("k1", "v1")]),
     );
-    root.add_link(SpanContext::new(TraceId(1), SpanId(1)));
+    root.add_link(SpanContext::new(trace_id(2), span_id(1)));
 
     let _g = root.set_local_parent();
 
@@ -66,11 +69,11 @@ fn main() {
         .with_property(|| ("k1", "v1"))
         .with_properties(|| [("k", "v")]);
     let _span3 = LocalSpan::enter_with_local_parent("span3")
-        .with_link(SpanContext::new(TraceId(1), SpanId(1)));
+        .with_link(SpanContext::new(trace_id(2), span_id(1)));
 
     LocalSpan::add_property(|| ("k0", "v0"));
     LocalSpan::add_properties(|| [("k", "v")]);
-    LocalSpan::add_link(SpanContext::new(TraceId(1), SpanId(1)));
+    LocalSpan::add_link(SpanContext::new(trace_id(2), span_id(1)));
 
     let local_collector = LocalCollector::start();
     let _ = LocalSpan::enter_with_local_parent("span3");

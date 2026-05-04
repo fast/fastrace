@@ -116,7 +116,7 @@ impl Tree {
             collect
                 .entry(token.collect_id)
                 .or_default()
-                .insert(Some(SpanId(0)), ("".into(), vec![], vec![], vec![]));
+                .insert(None, ("".into(), vec![], vec![], vec![]));
             match span_set {
                 SpanSet::Span(span) => {
                     collect.entry(token.collect_id).or_default().insert(
@@ -170,12 +170,12 @@ impl Tree {
         for (span_set, token) in span_sets {
             match span_set {
                 SpanSet::Span(span) => {
-                    let parent_id = span.parent_id.unwrap_or(token.parent_id);
+                    let parent_id = span.parent_id.or(token.parent_id);
                     collect
                         .get_mut(&token.collect_id)
                         .as_mut()
                         .unwrap()
-                        .get_mut(&Some(parent_id))
+                        .get_mut(&parent_id)
                         .as_mut()
                         .unwrap()
                         .1
@@ -183,12 +183,12 @@ impl Tree {
                 }
                 SpanSet::LocalSpansInner(spans) => {
                     for span in spans.spans.iter() {
-                        let parent_id = span.parent_id.unwrap_or(token.parent_id);
+                        let parent_id = span.parent_id.or(token.parent_id);
                         collect
                             .get_mut(&token.collect_id)
                             .as_mut()
                             .unwrap()
-                            .get_mut(&Some(parent_id))
+                            .get_mut(&parent_id)
                             .as_mut()
                             .unwrap()
                             .1
@@ -197,12 +197,12 @@ impl Tree {
                 }
                 SpanSet::SharedLocalSpans(spans) => {
                     for span in spans.spans.iter() {
-                        let parent_id = span.parent_id.unwrap_or(token.parent_id);
+                        let parent_id = span.parent_id.or(token.parent_id);
                         collect
                             .get_mut(&token.collect_id)
                             .as_mut()
                             .unwrap()
-                            .get_mut(&Some(parent_id))
+                            .get_mut(&parent_id)
                             .as_mut()
                             .unwrap()
                             .1
@@ -215,7 +215,7 @@ impl Tree {
         let mut res = collect
             .into_iter()
             .map(|(id, mut children)| {
-                let mut tree = Self::build_tree(Some(SpanId(0)), &mut children);
+                let mut tree = Self::build_tree(None, &mut children);
                 tree.sort();
                 assert_eq!(tree.children.len(), 1);
                 (id, tree.children.pop().unwrap())
@@ -228,7 +228,7 @@ impl Tree {
     pub fn from_span_records(span_records: Vec<SpanRecord>) -> Tree {
         let mut children: TreeChildren = HashMap::new();
 
-        children.insert(Some(SpanId(0)), ("".into(), vec![], vec![], vec![]));
+        children.insert(None, ("".into(), vec![], vec![], vec![]));
         for span in &span_records {
             children.insert(
                 Some(span.span_id),
@@ -256,14 +256,14 @@ impl Tree {
         }
         for span in &span_records {
             children
-                .get_mut(&Some(span.parent_id))
+                .get_mut(&span.parent_id)
                 .as_mut()
                 .unwrap()
                 .1
                 .push(span.span_id);
         }
 
-        let mut t = Self::build_tree(Some(SpanId(0)), &mut children);
+        let mut t = Self::build_tree(None, &mut children);
         t.sort();
         assert_eq!(t.children.len(), 1);
         t.children.remove(0)

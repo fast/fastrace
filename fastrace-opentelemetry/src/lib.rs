@@ -35,10 +35,12 @@ use opentelemetry::KeyValue;
 use opentelemetry::trace::Event;
 use opentelemetry::trace::Link;
 use opentelemetry::trace::SpanContext as OtelSpanContext;
+use opentelemetry::trace::SpanId as OtelSpanId;
 use opentelemetry::trace::SpanKind;
 use opentelemetry::trace::Status;
-use opentelemetry::trace::TraceFlags;
-use opentelemetry::trace::TraceState;
+use opentelemetry::trace::TraceFlags as OtelTraceFlags;
+use opentelemetry::trace::TraceId as OtelTraceId;
+use opentelemetry::trace::TraceState as OtelTraceState;
 use opentelemetry_sdk::Resource;
 use opentelemetry_sdk::error::OTelSdkResult;
 use opentelemetry_sdk::trace::SpanData;
@@ -112,18 +114,14 @@ pub struct OpenTelemetryReporter {
 pub fn current_opentelemetry_context() -> Option<OtelSpanContext> {
     let span_context = fastrace::collector::SpanContext::current_local_parent()?;
 
-    let trace_flags = if span_context.sampled {
-        TraceFlags::SAMPLED
-    } else {
-        TraceFlags::default()
-    };
+    let span_id = span_context.span_id()?;
 
     Some(OtelSpanContext::new(
-        span_context.trace_id.0.into(),
-        span_context.span_id.0.into(),
-        trace_flags,
+        OtelTraceId::from_bytes(span_context.trace_id().to_bytes()),
+        OtelSpanId::from_bytes(span_id.to_bytes()),
+        map_trace_flags(span_context.trace_flags()),
         false,
-        TraceState::default(),
+        map_trace_state(span_context.trace_state()),
     ))
 }
 
@@ -167,23 +165,29 @@ fn map_events(events: Vec<EventRecord>) -> SpanEvents {
     queue
 }
 
+fn map_trace_flags(trace_flags: fastrace::collector::TraceFlags) -> OtelTraceFlags {
+    OtelTraceFlags::new(trace_flags.to_u8())
+}
+
+fn map_trace_state(trace_state: Option<&str>) -> OtelTraceState {
+    trace_state
+        .and_then(|header| header.parse().ok())
+        .unwrap_or_default()
+}
+
 fn map_links(links: Vec<SpanContext>) -> SpanLinks {
     let links = links
         .into_iter()
-        .map(|link| {
-            let trace_flags = if link.sampled {
-                TraceFlags::SAMPLED
-            } else {
-                TraceFlags::default()
-            };
+        .filter_map(|link| {
+            let span_id = link.span_id()?;
             let span_context = OtelSpanContext::new(
-                link.trace_id.0.into(),
-                link.span_id.0.into(),
-                trace_flags,
+                OtelTraceId::from_bytes(link.trace_id().to_bytes()),
+                OtelSpanId::from_bytes(span_id.to_bytes()),
+                map_trace_flags(link.trace_flags()),
                 false,
-                TraceState::default(),
+                map_trace_state(link.trace_state()),
             );
-            Link::with_context(span_context)
+            Some(Link::with_context(span_context))
         })
         .collect();
 
@@ -194,7 +198,7 @@ fn map_links(links: Vec<SpanContext>) -> SpanLinks {
 
 type ExportFuture<'a> = Pin<Box<dyn Future<Output = OTelSdkResult> + Send + 'a>>;
 
-fn default_block_on<'a>(future: ExportFuture<'a>) -> OTelSdkResult {
+fn default_block_on(future: ExportFuture<'_>) -> OTelSdkResult {
     pollster::block_on(future)
 }
 
@@ -237,9 +241,11 @@ impl OpenTelemetryReporter {
     ///     .with_block_on(move |future| handle.block_on(future));
     /// ```
     pub fn with_block_on<F>(mut self, block_on: F) -> Self
-    where F: for<'a> FnMut(Pin<Box<dyn Future<Output = OTelSdkResult> + Send + 'a>>) -> OTelSdkResult
+    where
+        F: for<'a> FnMut(Pin<Box<dyn Future<Output = OTelSdkResult> + Send + 'a>>) -> OTelSdkResult
             + Send
-            + 'static {
+            + 'static,
+    {
         self.block_on = Box::new(block_on);
         self
     }
@@ -252,6 +258,8 @@ impl OpenTelemetryReporter {
                      trace_id,
                      span_id,
                      parent_id,
+                     trace_flags,
+                     trace_state,
                      begin_time_unix_ns,
                      duration_ns,
                      name,
@@ -259,7 +267,9 @@ impl OpenTelemetryReporter {
                      events,
                      links,
                  }| {
-                    let parent_span_id = parent_id.0.into();
+                    let parent_span_id = parent_id.map_or(OtelSpanId::INVALID, |id| {
+                        OtelSpanId::from_bytes(id.to_bytes())
+                    });
                     let span_kind = span_kind(&properties);
                     let status = span_status(&properties);
                     let parent_span_is_remote = parent_span_is_remote(&properties);
@@ -274,11 +284,11 @@ impl OpenTelemetryReporter {
 
                     SpanData {
                         span_context: OtelSpanContext::new(
-                            trace_id.0.into(),
-                            span_id.0.into(),
-                            TraceFlags::default(),
+                            OtelTraceId::from_bytes(trace_id.to_bytes()),
+                            OtelSpanId::from_bytes(span_id.to_bytes()),
+                            map_trace_flags(trace_flags),
                             parent_span_is_remote,
-                            TraceState::default(),
+                            map_trace_state(trace_state.as_header_value()),
                         ),
                         parent_span_id,
                         parent_span_is_remote,
@@ -358,4 +368,74 @@ fn parent_span_is_remote(properties: &[(Cow<'static, str>, Cow<'static, str>)]) 
         .find(|(k, _)| k == SPAN_PARENT_SPAN_IS_REMOTE)
         .map(|(_, v)| v.to_lowercase().as_str() == "true")
         .unwrap_or(false)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[derive(Debug)]
+    struct NoopExporter;
+
+    impl SpanExporter for NoopExporter {
+        fn export(&self, _batch: Vec<SpanData>) -> impl Future<Output = OTelSdkResult> + Send {
+            std::future::ready(Ok(()))
+        }
+    }
+
+    fn trace_id(hex: &str) -> TraceId {
+        TraceId::from_hex(hex).unwrap()
+    }
+
+    fn span_id(hex: &str) -> SpanId {
+        SpanId::from_hex(hex).unwrap()
+    }
+
+    #[test]
+    fn convert_preserves_ids_flags_and_tracestate() {
+        let reporter = OpenTelemetryReporter::new(
+            NoopExporter,
+            Cow::Owned(Resource::builder_empty().build()),
+            InstrumentationScope::builder("test").build(),
+        );
+
+        let trace_state = fastrace::collector::TraceState::from_header_value("vendor=value");
+        let link = SpanContext::new(
+            trace_id("0af7651916cd43dd8448eb211c80319c"),
+            span_id("1111111111111111"),
+        )
+        .with_trace_flags(fastrace::collector::TraceFlags::SAMPLED)
+        .with_trace_state("vendor=value");
+
+        let spans = reporter.convert(vec![SpanRecord {
+            trace_id: trace_id("0af7651916cd43dd8448eb211c80319c"),
+            span_id: span_id("b7ad6b7169203331"),
+            parent_id: Some(span_id("2222222222222222")),
+            trace_flags: fastrace::collector::TraceFlags::new(0x03),
+            trace_state,
+            begin_time_unix_ns: 1,
+            duration_ns: 2,
+            name: Cow::Borrowed("span"),
+            properties: vec![],
+            events: vec![],
+            links: vec![link],
+        }]);
+
+        assert_eq!(spans.len(), 1);
+        let span = &spans[0];
+        assert_eq!(
+            span.span_context.trace_id().to_string(),
+            "0af7651916cd43dd8448eb211c80319c"
+        );
+        assert_eq!(span.span_context.span_id().to_string(), "b7ad6b7169203331");
+        assert_eq!(span.parent_span_id.to_string(), "2222222222222222");
+        assert_eq!(span.span_context.trace_flags().to_u8(), 0x03);
+        assert_eq!(span.span_context.trace_state().header(), "vendor=value");
+
+        assert_eq!(span.links.links.len(), 1);
+        let link = &span.links.links[0].span_context;
+        assert_eq!(link.span_id().to_string(), "1111111111111111");
+        assert!(link.is_sampled());
+        assert_eq!(link.trace_state().header(), "vendor=value");
+    }
 }

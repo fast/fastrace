@@ -19,7 +19,9 @@ use crate::collector::SpanContext;
 use crate::collector::SpanId;
 use crate::collector::SpanRecord;
 use crate::collector::SpanSet;
+use crate::collector::TraceFlags;
 use crate::collector::TraceId;
+use crate::collector::TraceState;
 use crate::collector::command::CancelCollect;
 use crate::collector::command::CollectCommand;
 use crate::collector::command::DropCollect;
@@ -145,8 +147,15 @@ impl GlobalCollect {
 
 struct SpanCollection {
     spans: SpanSet,
+    context: TraceRecordContext,
+}
+
+#[derive(Clone)]
+struct TraceRecordContext {
     trace_id: TraceId,
-    parent_id: SpanId,
+    parent_id: Option<SpanId>,
+    trace_flags: TraceFlags,
+    trace_state: TraceState,
 }
 
 #[derive(Default)]
@@ -263,15 +272,23 @@ impl GlobalCollector {
                 if !active_collector.canceled {
                     active_collector.span_collections.push(SpanCollection {
                         spans,
-                        trace_id: collect_token.trace_id,
-                        parent_id: collect_token.parent_id,
+                        context: TraceRecordContext {
+                            trace_id: collect_token.trace_id,
+                            parent_id: collect_token.parent_id,
+                            trace_flags: collect_token.trace_flags,
+                            trace_state: collect_token.trace_state,
+                        },
                     });
                 }
             } else {
                 self.stale_spans.push(SpanCollection {
                     spans,
-                    trace_id: collect_token.trace_id,
-                    parent_id: collect_token.parent_id,
+                    context: TraceRecordContext {
+                        trace_id: collect_token.trace_id,
+                        parent_id: collect_token.parent_id,
+                        trace_flags: collect_token.trace_flags,
+                        trace_state: collect_token.trace_state,
+                    },
                 });
             }
         }
@@ -292,9 +309,12 @@ impl GlobalCollector {
             }
         }
 
-        self.stale_spans.sort_by_key(|spans| spans.trace_id);
+        self.stale_spans.sort_by_key(|spans| spans.context.trace_id);
 
-        for spans in self.stale_spans.chunk_by(|a, b| a.trace_id == b.trace_id) {
+        for spans in self
+            .stale_spans
+            .chunk_by(|a, b| a.context.trace_id == b.context.trace_id)
+        {
             postprocess_span_collection(
                 spans,
                 &anchor,
@@ -314,14 +334,13 @@ impl LocalSpansInner {
         let anchor: Anchor = Anchor::new();
         let mut danglings = HashMap::new();
         let mut records = Vec::new();
-        amend_local_span(
-            self,
-            parent.trace_id,
-            parent.span_id,
-            &mut records,
-            &mut danglings,
-            &anchor,
-        );
+        let context = TraceRecordContext {
+            trace_id: parent.trace_id,
+            parent_id: parent.span_id,
+            trace_flags: parent.trace_flags,
+            trace_state: parent.trace_state,
+        };
+        amend_local_span(self, &context, &mut records, &mut danglings, &anchor);
         mount_danglings(&mut records, &mut danglings);
         records
     }
@@ -345,24 +364,21 @@ fn postprocess_span_collection<'a>(
         match &span_collection.spans {
             SpanSet::Span(raw_span) => amend_span(
                 raw_span,
-                span_collection.trace_id,
-                span_collection.parent_id,
+                &span_collection.context,
                 committed_records,
                 danglings,
                 anchor,
             ),
             SpanSet::LocalSpansInner(local_spans) => amend_local_span(
                 local_spans,
-                span_collection.trace_id,
-                span_collection.parent_id,
+                &span_collection.context,
                 committed_records,
                 danglings,
                 anchor,
             ),
             SpanSet::SharedLocalSpans(local_spans) => amend_local_span(
                 local_spans,
-                span_collection.trace_id,
-                span_collection.parent_id,
+                &span_collection.context,
                 committed_records,
                 danglings,
                 anchor,
@@ -375,14 +391,13 @@ fn postprocess_span_collection<'a>(
 
 fn amend_local_span(
     local_spans: &LocalSpansInner,
-    trace_id: TraceId,
-    parent_id: SpanId,
+    context: &TraceRecordContext,
     spans: &mut Vec<SpanRecord>,
     dangling: &mut HashMap<SpanId, Vec<DanglingItem>>,
     anchor: &Anchor,
 ) {
     for span in local_spans.spans.iter() {
-        let parent_id = span.parent_id.unwrap_or(parent_id);
+        let parent_id = span.parent_id.or(context.parent_id);
         match span.raw_kind {
             RawKind::Span => {
                 let begin_time_unix_ns = span.begin_instant.as_unix_nanos(anchor);
@@ -392,9 +407,11 @@ fn amend_local_span(
                     span.end_instant.as_unix_nanos(anchor)
                 };
                 spans.push(SpanRecord {
-                    trace_id,
+                    trace_id: context.trace_id,
                     span_id: span.id,
                     parent_id,
+                    trace_flags: context.trace_flags,
+                    trace_state: context.trace_state.clone(),
                     begin_time_unix_ns,
                     duration_ns: end_time_unix_ns.saturating_sub(begin_time_unix_ns),
                     name: span.name.clone(),
@@ -410,22 +427,28 @@ fn amend_local_span(
                     timestamp_unix_ns: begin_time_unix_ns,
                     properties: span.properties.clone(),
                 };
-                dangling
-                    .entry(parent_id)
-                    .or_default()
-                    .push(DanglingItem::Event(event));
+                if let Some(parent_id) = parent_id {
+                    dangling
+                        .entry(parent_id)
+                        .or_default()
+                        .push(DanglingItem::Event(event));
+                }
             }
             RawKind::Properties => {
-                dangling
-                    .entry(parent_id)
-                    .or_default()
-                    .push(DanglingItem::Properties(span.properties.clone()));
+                if let Some(parent_id) = parent_id {
+                    dangling
+                        .entry(parent_id)
+                        .or_default()
+                        .push(DanglingItem::Properties(span.properties.clone()));
+                }
             }
             RawKind::Link => {
-                dangling
-                    .entry(parent_id)
-                    .or_default()
-                    .push(DanglingItem::Links(span.links.clone()));
+                if let Some(parent_id) = parent_id {
+                    dangling
+                        .entry(parent_id)
+                        .or_default()
+                        .push(DanglingItem::Links(span.links.clone()));
+                }
             }
         }
     }
@@ -433,8 +456,7 @@ fn amend_local_span(
 
 fn amend_span(
     span: &RawSpan,
-    trace_id: TraceId,
-    parent_id: SpanId,
+    context: &TraceRecordContext,
     spans: &mut Vec<SpanRecord>,
     dangling: &mut HashMap<SpanId, Vec<DanglingItem>>,
     anchor: &Anchor,
@@ -444,9 +466,11 @@ fn amend_span(
             let begin_time_unix_ns = span.begin_instant.as_unix_nanos(anchor);
             let end_time_unix_ns = span.end_instant.as_unix_nanos(anchor);
             spans.push(SpanRecord {
-                trace_id,
+                trace_id: context.trace_id,
                 span_id: span.id,
-                parent_id,
+                parent_id: context.parent_id,
+                trace_flags: context.trace_flags,
+                trace_state: context.trace_state.clone(),
                 begin_time_unix_ns,
                 duration_ns: end_time_unix_ns.saturating_sub(begin_time_unix_ns),
                 name: span.name.clone(),
@@ -462,22 +486,28 @@ fn amend_span(
                 timestamp_unix_ns: begin_time_unix_ns,
                 properties: span.properties.clone(),
             };
-            dangling
-                .entry(parent_id)
-                .or_default()
-                .push(DanglingItem::Event(event));
+            if let Some(parent_id) = context.parent_id {
+                dangling
+                    .entry(parent_id)
+                    .or_default()
+                    .push(DanglingItem::Event(event));
+            }
         }
         RawKind::Properties => {
-            dangling
-                .entry(parent_id)
-                .or_default()
-                .push(DanglingItem::Properties(span.properties.clone()));
+            if let Some(parent_id) = context.parent_id {
+                dangling
+                    .entry(parent_id)
+                    .or_default()
+                    .push(DanglingItem::Properties(span.properties.clone()));
+            }
         }
         RawKind::Link => {
-            dangling
-                .entry(parent_id)
-                .or_default()
-                .push(DanglingItem::Links(span.links.clone()));
+            if let Some(parent_id) = context.parent_id {
+                dangling
+                    .entry(parent_id)
+                    .or_default()
+                    .push(DanglingItem::Links(span.links.clone()));
+            }
         }
     }
 }

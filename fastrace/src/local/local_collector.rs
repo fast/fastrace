@@ -239,11 +239,24 @@ impl LocalSpans {
 mod tests {
     use super::*;
     use crate::collector::CollectToken;
-    use crate::collector::SpanId;
+    use crate::collector::TraceFlags;
+    use crate::collector::TraceState;
     use crate::prelude::LocalSpan;
     use crate::prelude::TraceId;
     use crate::util::tree::tree_str_from_raw_spans;
     use crate::util::tree::tree_str_from_span_records;
+
+    fn token(trace: u128, collect_id: usize) -> CollectToken {
+        CollectToken {
+            trace_id: TraceId::from_bytes(trace.to_be_bytes()).unwrap(),
+            parent_id: None,
+            trace_flags: TraceFlags::SAMPLED,
+            trace_state: TraceState::EMPTY,
+            collect_id,
+            is_root: false,
+            is_sampled: true,
+        }
+    }
 
     #[test]
     fn local_collector_basic() {
@@ -252,14 +265,8 @@ mod tests {
 
         let span1 = stack.borrow_mut().enter_span("span1").unwrap();
         {
-            let token2 = CollectToken {
-                trace_id: TraceId(1234),
-                parent_id: SpanId::default(),
-                collect_id: 42,
-                is_root: false,
-                is_sampled: true,
-            };
-            let collector2 = LocalCollector::new(Some(token2), stack.clone());
+            let token2 = token(1234, 42);
+            let collector2 = LocalCollector::new(Some(token2.clone()), stack.clone());
             let span2 = stack.borrow_mut().enter_span("span2").unwrap();
             let span3 = stack.borrow_mut().enter_span("span3").unwrap();
             stack.borrow_mut().exit_span(span3);
@@ -292,13 +299,7 @@ span1 []
 
         let span1 = stack.borrow_mut().enter_span("span1").unwrap();
         {
-            let token2 = CollectToken {
-                trace_id: TraceId(1234),
-                parent_id: SpanId::default(),
-                collect_id: 42,
-                is_root: false,
-                is_sampled: true,
-            };
+            let token2 = token(1234, 42);
             let collector2 = LocalCollector::new(Some(token2), stack.clone());
             let span2 = stack.borrow_mut().enter_span("span2").unwrap();
             let span3 = stack.borrow_mut().enter_span("span3").unwrap();

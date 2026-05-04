@@ -18,7 +18,7 @@ fn concurrent(bencher: Bencher, len: usize) {
                 std::thread::spawn(move || {
                     for _ in 0..len {
                         let _ =
-                            Span::root("root", SpanContext::new(TraceId(12), SpanId::default()));
+                            Span::root("root", SpanContext::root(TraceId::from_hex("c").unwrap()));
                     }
                 })
             })
@@ -43,7 +43,7 @@ fn wide_raw(bencher: Bencher, len: usize) {
 fn wide(bencher: Bencher, len: usize) {
     init_fastrace();
     bencher.bench(|| {
-        let root = Span::root("root", SpanContext::new(TraceId(12), SpanId::default()));
+        let root = Span::root("root", SpanContext::root(TraceId::from_hex("c").unwrap()));
         let _sg = root.set_local_parent();
         dummy_iter(len - 1);
     });
@@ -62,7 +62,7 @@ fn deep_raw(bencher: Bencher, len: usize) {
 fn deep(bencher: Bencher, len: usize) {
     init_fastrace();
     bencher.bench(|| {
-        let root = Span::root("root", SpanContext::new(TraceId(12), SpanId::default()));
+        let root = Span::root("root", SpanContext::root(TraceId::from_hex("c").unwrap()));
         let _sg = root.set_local_parent();
         dummy_rec(len - 1);
     });
@@ -79,7 +79,7 @@ fn future(bencher: Bencher, len: u32) {
     }
 
     bencher.bench(|| {
-        let root = Span::root("root", SpanContext::new(TraceId(12), SpanId::default()));
+        let root = Span::root("root", SpanContext::root(TraceId::from_hex("c").unwrap()));
         pollster::block_on(f(len).in_span(root));
     });
 }
