@@ -35,7 +35,9 @@ mod test_util {
     use fastrace::prelude::*;
 
     pub fn setup_fastrace<F>(test: F)
-    where F: FnOnce() -> anyhow::Result<()> + 'static {
+    where
+        F: FnOnce() -> anyhow::Result<()> + 'static,
+    {
         fastrace::set_reporter(ConsoleReporter, Config::default());
         {
             let root = Span::root(closure_name::<F>(), SpanContext::random());
@@ -57,7 +59,8 @@ mod test_util {
             .build()
             .unwrap();
         let root = Span::root(closure_name::<F>(), SpanContext::random());
-        rt.block_on(test().in_span(root)).unwrap();
+        rt.block_on(test().in_span(Span::start("test", &root)))
+            .unwrap();
         fastrace::flush();
     }
 

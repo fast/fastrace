@@ -103,7 +103,7 @@ impl Span {
         }
     }
 
-    /// Create a new child span associated with the specified parent span.
+    /// Start a new child span associated with the specified parent span.
     ///
     /// # Examples
     ///
@@ -112,9 +112,10 @@ impl Span {
     ///
     /// let root = Span::root("root", SpanContext::random());
     ///
-    /// let child = Span::enter_with_parent("child", &root);
+    /// let child = Span::start("child", &root);
+    /// ```
     #[inline]
-    pub fn enter_with_parent(name: impl Into<Cow<'static, str>>, parent: &Span) -> Self {
+    pub fn start(name: impl Into<Cow<'static, str>>, parent: &Span) -> Self {
         #[cfg(not(feature = "enable"))]
         {
             Self::noop()
@@ -129,71 +130,7 @@ impl Span {
         }
     }
 
-    /// Create a new child span associated with multiple parent spans.
-    ///
-    /// This API is deprecated. The first non-noop parent becomes the primary parent; any additional
-    /// parents are attached as links.
-    ///
-    /// Use [`Span::enter_with_parent`] plus [`Span::with_link`] instead.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use fastrace::prelude::*;
-    ///
-    /// let parent1 = Span::root("parent1", SpanContext::random());
-    /// let parent2 = Span::root("parent2", SpanContext::random());
-    ///
-    /// let child = Span::enter_with_parent("child", &parent1)
-    ///     .with_link(SpanContext::from_span(&parent2).unwrap());
-    #[inline]
-    #[deprecated(
-        note = "Multiple-parent spans are deprecated. Use `enter_with_parent` and link other parents with `with_link`."
-    )]
-    pub fn enter_with_parents<'a>(
-        name: impl Into<Cow<'static, str>>,
-        parents: impl IntoIterator<Item = &'a Span>,
-    ) -> Self {
-        #[cfg(not(feature = "enable"))]
-        {
-            Self::noop()
-        }
-
-        #[cfg(feature = "enable")]
-        {
-            let mut main: Option<&Span> = None;
-            let mut links = Vec::new();
-            for parent in parents.into_iter() {
-                if parent.inner.is_none() {
-                    continue;
-                }
-
-                if main.is_none() {
-                    main = Some(parent);
-                } else if let Some(ctx) = SpanContext::from_span(parent) {
-                    links.push(ctx);
-                }
-            }
-
-            let Some(main) = main else {
-                return Self::noop();
-            };
-
-            let mut span = Self::new(
-                main.inner.as_ref().unwrap().issue_collect_token(),
-                name,
-                None,
-            );
-
-            for link in links {
-                span = span.with_link(link);
-            }
-
-            span
-        }
-    }
-
-    /// Create a new child span associated with the current local span in the current thread.
+    /// Start a new child span associated with the current local span in the current thread.
     ///
     /// If no local span is active, this function returns a no-op span.
     ///
@@ -205,10 +142,10 @@ impl Span {
     /// let root = Span::root("root", SpanContext::random());
     /// let _g = root.set_local_parent();
     ///
-    /// let child = Span::enter_with_local_parent("child");
+    /// let child = Span::start_with_local_parent("child");
     /// ```
     #[inline]
-    pub fn enter_with_local_parent(name: impl Into<Cow<'static, str>>) -> Self {
+    pub fn start_with_local_parent(name: impl Into<Cow<'static, str>>) -> Self {
         #[cfg(not(feature = "enable"))]
         {
             Self::noop()
@@ -227,8 +164,7 @@ impl Span {
     /// This method is used to establish a `Span` as the local parent within the current scope.
     ///
     /// A local parent is necessary for creating a [`LocalSpan`] using
-    /// [`LocalSpan::enter_with_local_parent()`]. If no local parent is set,
-    /// `enter_with_local_parent()` will not perform any action.
+    /// [`LocalSpan::start()`]. If no local parent is set, `start()` will not perform any action.
     ///
     /// # Examples
     ///
@@ -239,11 +175,11 @@ impl Span {
     /// let _guard = root.set_local_parent(); // root is now the local parent
     ///
     /// // Now we can create a LocalSpan with root as the local parent.
-    /// let _span = LocalSpan::enter_with_local_parent("a child span");
+    /// let _span = LocalSpan::start("a child span");
     /// ```
     ///
     /// [`LocalSpan`]: crate::local::LocalSpan
-    /// [`LocalSpan::enter_with_local_parent()`]: crate::local::LocalSpan::enter_with_local_parent
+    /// [`LocalSpan::start()`]: crate::local::LocalSpan::start
     #[inline]
     pub fn set_local_parent(&self) -> LocalParentGuard {
         #[cfg(not(feature = "enable"))]
@@ -349,7 +285,7 @@ impl Span {
     {
         #[cfg(feature = "enable")]
         {
-            let mut span = Span::enter_with_parent("", self).with_properties(properties);
+            let mut span = Span::start("", self).with_properties(properties);
             if let Some(mut inner) = span.inner.take() {
                 inner.raw_span.raw_kind = RawKind::Properties;
                 inner.submit_spans();
@@ -372,7 +308,7 @@ impl Span {
     pub fn add_event(&self, event: Event) {
         #[cfg(feature = "enable")]
         {
-            let mut span = Span::enter_with_parent(event.name, self);
+            let mut span = Span::start(event.name, self);
             if let Some(mut inner) = span.inner.take() {
                 inner.raw_span.raw_kind = RawKind::Event;
                 inner.raw_span.properties = event.properties;
@@ -395,7 +331,7 @@ impl Span {
     /// let other = Span::root("other", SpanContext::random());
     /// let link = SpanContext::from_span(&other).unwrap();
     ///
-    /// let _span = Span::enter_with_parent("child", &root).with_link(link);
+    /// let _span = Span::start("child", &root).with_link(link);
     /// ```
     #[inline]
     pub fn with_link(mut self, link: SpanContext) -> Self {
@@ -417,14 +353,14 @@ impl Span {
     /// let other = Span::root("other", SpanContext::random());
     /// let link = SpanContext::from_span(&other).unwrap();
     ///
-    /// let child = Span::enter_with_parent("child", &root);
+    /// let child = Span::start("child", &root);
     /// child.add_link(link);
     /// ```
     #[inline]
     pub fn add_link(&self, link: SpanContext) {
         #[cfg(feature = "enable")]
         {
-            let mut span = Span::enter_with_parent("", self);
+            let mut span = Span::start("", self);
             if let Some(mut inner) = span.inner.take() {
                 inner.raw_span.raw_kind = RawKind::Link;
                 inner.raw_span.links.push(link);
@@ -447,7 +383,7 @@ impl Span {
     ///
     /// // Collect local spans manually without a parent
     /// let collector = LocalCollector::start();
-    /// let span = LocalSpan::enter_with_local_parent("a child span");
+    /// let span = LocalSpan::start("a child span");
     /// drop(span);
     /// let local_spans = collector.collect();
     ///
@@ -849,10 +785,9 @@ root []
         let routine = || {
             let parent_ctx = SpanContext::random();
             let root = Span::root("root", parent_ctx);
-            let child1 =
-                Span::enter_with_parent("child1", &root).with_properties(|| [("k1", "v1")]);
-            let grandchild = Span::enter_with_parent("grandchild", &child1);
-            let child2 = Span::enter_with_parent("child2", &root);
+            let child1 = Span::start("child1", &root).with_properties(|| [("k1", "v1")]);
+            let grandchild = Span::start("grandchild", &child1);
+            let child2 = Span::start("child2", &root);
 
             crossbeam::scope(move |scope| {
                 let mut rng = rng();

@@ -2,9 +2,8 @@
 
 //! This module provides tools to trace a `Future`.
 //!
-//! The [`FutureExt`] trait extends `Future` with two methods: [`in_span()`] and
-//! [`enter_on_poll()`]. It is crucial that the outermost future uses `in_span()`,
-//! otherwise, the traces inside the `Future` will be lost.
+//! The [`FutureExt`] trait extends `Future` with [`in_span()`]. It is crucial that the
+//! outermost future uses `in_span()`, otherwise, the traces inside the `Future` will be lost.
 //!
 //! # Example
 //!
@@ -13,22 +12,18 @@
 //!
 //! let root = Span::root("root", SpanContext::random());
 //!
-//! // Instrument the a task
+//! // Instrument a task.
 //! let task = async {
-//!     async {
-//!         // ...
-//!     }
-//!     .enter_on_poll("future is polled")
-//!     .await;
+//!     // ...
 //! }
-//! .in_span(Span::enter_with_parent("task", &root));
+//! .in_span(Span::start("task", &root))
+//! .with_poll_span("future is polled");
 //!
 //!     # let runtime = tokio::runtime::Runtime::new().unwrap();
 //! runtime.spawn(task);
 //! ```
 //!
 //! [`in_span()`]:(FutureExt::in_span)
-//! [`enter_on_poll()`]:(FutureExt::enter_on_poll)
 
 use std::borrow::Cow;
 use std::task::Poll;
@@ -44,7 +39,7 @@ pub trait FutureExt: std::future::Future + Sized {
     ///
     /// In addition, it sets the span as the local parent at every poll so that `LocalSpan`
     /// becomes available within the future. Internally, it calls [`Span::set_local_parent`] when
-    /// the executor [`poll`](std::future::Future::poll) it.
+    /// the executor [`polls`](std::future::Future::poll) it.
     ///
     /// # Examples
     ///
@@ -57,7 +52,7 @@ pub trait FutureExt: std::future::Future + Sized {
     /// let task = async {
     ///     // ...
     /// }
-    /// .in_span(Span::enter_with_parent("Task", &root));
+    /// .in_span(Span::start("Task", &root));
     ///
     /// tokio::spawn(task);
     /// # }
@@ -69,39 +64,7 @@ pub trait FutureExt: std::future::Future + Sized {
         InSpan {
             inner: self,
             span: Some(span),
-        }
-    }
-
-    /// Starts a [`LocalSpan`] at every [`Future::poll()`]. If the future gets polled multiple
-    /// times, it will create multiple _short_ spans.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # #[tokio::main]
-    /// # async fn main() {
-    /// use fastrace::prelude::*;
-    ///
-    /// let root = Span::root("Root", SpanContext::random());
-    /// let task = async {
-    ///     async {
-    ///         // ...
-    ///     }
-    ///     .enter_on_poll("Sub Task")
-    ///     .await
-    /// }
-    /// .in_span(Span::enter_with_parent("Task", &root));
-    ///
-    /// tokio::spawn(task);
-    /// # }
-    /// ```
-    ///
-    /// [`Future::poll()`]:(std::future::Future::poll)
-    #[inline]
-    fn enter_on_poll(self, name: impl Into<Cow<'static, str>>) -> EnterOnPoll<Self> {
-        EnterOnPoll {
-            inner: self,
-            name: name.into(),
+            poll_span: None,
         }
     }
 }
@@ -112,6 +75,21 @@ pub struct InSpan<T> {
     #[pin]
     inner: T,
     span: Option<Span>,
+    poll_span: Option<Cow<'static, str>>,
+}
+
+impl<T> InSpan<T> {
+    /// Starts a [`LocalSpan`] at every [`Future::poll()`].
+    ///
+    /// If the future gets polled multiple times, it will create multiple short spans.
+    /// The poll span is always created under the future span.
+    ///
+    /// [`Future::poll()`]:(std::future::Future::poll)
+    #[inline]
+    pub fn with_poll_span(mut self, name: impl Into<Cow<'static, str>>) -> Self {
+        self.poll_span = Some(name.into());
+        self
+    }
 }
 
 impl<T: std::future::Future> std::future::Future for InSpan<T> {
@@ -120,8 +98,14 @@ impl<T: std::future::Future> std::future::Future for InSpan<T> {
     fn poll(self: std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> Poll<Self::Output> {
         let this = self.project();
 
-        let _guard = this.span.as_ref().map(|s| s.set_local_parent());
+        let guard = this.span.as_ref().map(|s| s.set_local_parent());
+        let poll_span = this
+            .poll_span
+            .as_ref()
+            .map(|name| LocalSpan::start(name.clone()));
         let res = this.inner.poll(cx);
+        drop(poll_span);
+        drop(guard);
 
         match res {
             r @ Poll::Pending => r,
@@ -130,23 +114,5 @@ impl<T: std::future::Future> std::future::Future for InSpan<T> {
                 other
             }
         }
-    }
-}
-
-/// Adapter for [`FutureExt::enter_on_poll()`](FutureExt::enter_on_poll).
-#[pin_project::pin_project]
-pub struct EnterOnPoll<T> {
-    #[pin]
-    inner: T,
-    name: Cow<'static, str>,
-}
-
-impl<T: std::future::Future> std::future::Future for EnterOnPoll<T> {
-    type Output = T::Output;
-
-    fn poll(self: std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> Poll<Self::Output> {
-        let this = self.project();
-        let _guard = LocalSpan::enter_with_local_parent(this.name.clone());
-        this.inner.poll(cx)
     }
 }

@@ -72,15 +72,18 @@ fn deep(bencher: Bencher, len: usize) {
 fn future(bencher: Bencher, len: u32) {
     init_fastrace();
 
-    async fn f(i: u32) {
+    async fn f(i: u32, parent: &Span) {
         for _ in 0..i - 1 {
-            async {}.enter_on_poll(black_box("")).await
+            async {}
+                .in_span(Span::start("", parent))
+                .with_poll_span("")
+                .await
         }
     }
 
     bencher.bench(|| {
         let root = Span::root("root", SpanContext::new(TraceId(12), SpanId::default()));
-        pollster::block_on(f(len).in_span(root));
+        pollster::block_on(f(len, &root));
     });
 }
 

@@ -109,7 +109,7 @@
 //! parent span id from a remote source. If there's no remote parent span, the parent span
 //! id is typically set to its default value of zero.
 //!
-//! Once we have the root `Span`, we can create a child `Span` using [`Span::enter_with_parent()`],
+//! Once we have the root `Span`, we can start a child `Span` using [`Span::start()`],
 //! thereby establishing the reference relationship between the spans.
 //!
 //! `Span` is thread-safe and can be sent across threads.
@@ -124,7 +124,7 @@
 //!     let root_span = Span::root("root", SpanContext::random());
 //!
 //!     {
-//!         let child_span = Span::enter_with_parent("a child span", &root_span);
+//!         let child_span = Span::start("a child span", &root_span);
 //!
 //!         // ...
 //!
@@ -139,12 +139,12 @@
 //!
 //! Sometimes, passing a `Span` through a function to create a child `Span` can be inconvenient.
 //! We can employ a thread-local approach to avoid an explicit argument passing in the function.
-//! In fastrace, [`Span::set_local_parent()`] and [`Span::enter_with_local_parent()`] serve this
+//! In fastrace, [`Span::set_local_parent()`] and [`Span::start_with_local_parent()`] serve this
 //! purpose.
 //!
 //! [`Span::set_local_parent()`] method sets __a local context of the `Span`__ for the current
-//! thread. [`Span::enter_with_local_parent()`] accesses the parent `Span` from the local context
-//! and creates a child `Span` with it.
+//! thread. [`Span::start_with_local_parent()`] accesses the parent `Span` from the local context
+//! and starts a child `Span` with it.
 //!
 //! ```
 //! use fastrace::prelude::*;
@@ -160,7 +160,7 @@
 //!
 //! fn foo() {
 //!     // The parent of this span is `root`.
-//!     let _child_span = Span::enter_with_local_parent("a child span");
+//!     let _child_span = Span::start_with_local_parent("a child span");
 //!
 //!     // ...
 //!
@@ -187,10 +187,9 @@
 //! [`Span::set_local_parent()`] immediately after the creation of `Span`.
 //!
 //! After __a local context of a `Span`__ is set using [`Span::set_local_parent()`],
-//! use [`LocalSpan::enter_with_local_parent()`] to start a `LocalSpan`, which then
-//! becomes the new local parent.
+//! use [`LocalSpan::start()`] to start a `LocalSpan`, which then becomes the new local parent.
 //!
-//! If no local context is set, the [`LocalSpan::enter_with_local_parent()`] will do nothing.
+//! If no local context is set, [`LocalSpan::start()`] will do nothing.
 //! ```
 //! use fastrace::collector::Config;
 //! use fastrace::collector::ConsoleReporter;
@@ -204,7 +203,7 @@
 //!
 //!     {
 //!         // The parent of this span is `root`.
-//!         let _span1 = LocalSpan::enter_with_local_parent("a child span");
+//!         let _span1 = LocalSpan::start("a child span");
 //!
 //!         foo();
 //!     }
@@ -212,7 +211,7 @@
 //!
 //! fn foo() {
 //!     // The parent of this span is `span1`.
-//!     let _span2 = LocalSpan::enter_with_local_parent("a child span of child span");
+//!     let _span2 = LocalSpan::start("a child span of child span");
 //! }
 //!
 //! fastrace::flush();
@@ -238,7 +237,7 @@
 //!     root.add_event(Event::new("event in root"));
 //!
 //!     {
-//!         let _span1 = LocalSpan::enter_with_local_parent("a child span");
+//!         let _span1 = LocalSpan::start("a child span");
 //!
 //!         LocalSpan::add_event(Event::new("event in span1"));
 //!     }
@@ -284,7 +283,7 @@
 //!         async {
 //!             do_something_async(100).await;
 //!         }
-//!         .in_span(Span::enter_with_local_parent("async_job")),
+//!         .in_span(Span::start("async_job", &root)),
 //!     );
 //! }
 //!
@@ -352,9 +351,9 @@
 //! [`Span::root()`]: crate::Span::root
 //! [`Span::noop()`]: crate::Span::noop
 //! [`Span::cancel()`]: crate::Span::cancel
-//! [`Span::enter_with_parent()`]: crate::Span::enter_with_parent
+//! [`Span::start()`]: crate::Span::start
 //! [`Span::set_local_parent()`]: crate::Span::set_local_parent
-//! [`LocalSpan::enter_with_local_parent()`]: crate::local::LocalSpan::enter_with_local_parent
+//! [`LocalSpan::start()`]: crate::local::LocalSpan::start
 //! [`Event`]: crate::Event
 //! [`Reporter`]: crate::collector::Reporter
 //! [`ConsoleReporter`]: crate::collector::ConsoleReporter

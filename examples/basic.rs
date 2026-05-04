@@ -26,7 +26,7 @@ fn do_main() {
     let parent = SpanContext::random();
     let root = Span::root("root", parent);
     let _g = root.set_local_parent();
-    let _g = LocalSpan::enter_with_local_parent("child");
+    let _g = LocalSpan::start("child");
 
     // do business
 }

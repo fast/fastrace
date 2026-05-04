@@ -15,7 +15,7 @@ fn four_spans() {
     {
         // wide
         for i in 0..2 {
-            let _span = LocalSpan::enter_with_local_parent(format!("iter-span-{i}"))
+            let _span = LocalSpan::start(format!("iter-span-{i}"))
                 .with_property(|| ("tmp_property", "tmp_value"));
         }
     }
@@ -70,7 +70,7 @@ fn span_links() {
     let root2 = Span::root("root2", SpanContext::new(TraceId(2), SpanId(0)));
     let link = SpanContext::from_span(&root2).unwrap();
 
-    let child = Span::enter_with_parent("child", &root1).with_link(link);
+    let child = Span::start("child", &root1).with_link(link);
     child.add_link(link);
 
     drop(child);
@@ -96,7 +96,7 @@ fn local_span_links() {
 
     {
         let _g = root.set_local_parent();
-        let _span = LocalSpan::enter_with_local_parent("local").with_link(link1);
+        let _span = LocalSpan::start("local").with_link(link1);
         LocalSpan::add_link(link2);
     }
 
@@ -194,7 +194,7 @@ fn multiple_threads_single_span() {
         let mut handles = vec![];
 
         for _ in 0..4 {
-            let child_span = Span::enter_with_local_parent("cross-thread");
+            let child_span = Span::start_with_local_parent("cross-thread");
             let h = scope.spawn(move |_| {
                 let _g = child_span.set_local_parent();
                 four_spans();
@@ -305,39 +305,31 @@ fn test_macro() {
     impl Foo for Bar {
         #[trace(name = "run")]
         async fn run(&self, millis: &u64) {
-            let _g = Span::enter_with_local_parent("run-inner");
+            let _g = Span::start_with_local_parent("run-inner");
             work(millis).await;
-            let _g = LocalSpan::enter_with_local_parent("local-span");
+            let _g = LocalSpan::start("local-span");
         }
     }
 
-    #[trace(short_name = true, enter_on_poll = true)]
+    #[trace(short_name = true, poll_span = true)]
     async fn work(millis: &u64) {
-        let _g = Span::enter_with_local_parent("work-inner");
-        tokio::time::sleep(Duration::from_millis(*millis))
-            .enter_on_poll("sleep")
-            .await;
+        let _g = Span::start_with_local_parent("work-inner");
+        tokio::time::sleep(Duration::from_millis(*millis)).await;
     }
 
     impl Bar {
         #[trace(short_name = true)]
         async fn work2(&self, millis: &u64) {
-            let _g = Span::enter_with_local_parent("work-inner");
-            tokio::time::sleep(Duration::from_millis(*millis))
-                .enter_on_poll("sleep")
-                .await;
+            let _g = Span::start_with_local_parent("work-inner");
+            tokio::time::sleep(Duration::from_millis(*millis)).await;
         }
     }
 
     #[trace(short_name = true)]
     async fn work3(millis1: &u64, millis2: &u64) {
-        let _g = Span::enter_with_local_parent("work-inner");
-        tokio::time::sleep(Duration::from_millis(*millis1))
-            .enter_on_poll("sleep")
-            .await;
-        tokio::time::sleep(Duration::from_millis(*millis2))
-            .enter_on_poll("sleep")
-            .await;
+        let _g = Span::start_with_local_parent("work-inner");
+        tokio::time::sleep(Duration::from_millis(*millis1)).await;
+        tokio::time::sleep(Duration::from_millis(*millis2)).await;
     }
 
     let (reporter, collected_spans) = TestReporter::new();
@@ -359,7 +351,7 @@ fn test_macro() {
                     Bar.work2(&100).await;
                     work3(&100, &100).await;
                 }
-                .in_span(root),
+                .in_span(Span::start("task", &root)),
             ),
         )
         .unwrap();
@@ -370,24 +362,18 @@ fn test_macro() {
     let graph = tree_str_from_span_records(collected_spans.lock().clone());
     insta::assert_snapshot!(graph, @r###"
     root []
-        run []
-            local-span []
-            run-inner []
-            work []
-                sleep []
-            work []
-                sleep []
+        task []
+            run []
+                local-span []
+                run-inner []
+                work []
+                    work []
+                    work []
+                        work-inner []
+            work2 []
                 work-inner []
-        work2 []
-            sleep []
-            sleep []
-            work-inner []
-        work3 []
-            sleep []
-            sleep []
-            sleep []
-            sleep []
-            work-inner []
+            work3 []
+                work-inner []
     "###);
 }
 
@@ -447,13 +433,13 @@ fn multiple_local_parent() {
     {
         let root = Span::root("root", SpanContext::random());
         let _g = root.set_local_parent();
-        let _g = LocalSpan::enter_with_local_parent("span1");
-        let span2 = Span::enter_with_local_parent("span2");
+        let _g = LocalSpan::start("span1");
+        let span2 = Span::start_with_local_parent("span2");
         {
             let _g = span2.set_local_parent();
-            let _g = LocalSpan::enter_with_local_parent("span3");
+            let _g = LocalSpan::start("span3");
         }
-        let _g = LocalSpan::enter_with_local_parent("span4");
+        let _g = LocalSpan::start("span4");
     }
 
     fastrace::flush();
@@ -476,8 +462,8 @@ fn early_local_collect() {
 
     {
         let local_collector = LocalCollector::start();
-        let _g1 = LocalSpan::enter_with_local_parent("span1");
-        let _g2 = LocalSpan::enter_with_local_parent("span2");
+        let _g1 = LocalSpan::start("span1");
+        let _g2 = LocalSpan::start("span2");
         drop(_g2);
         let local_spans = local_collector.collect();
 
@@ -526,7 +512,7 @@ fn test_property() {
         let _g = root.set_local_parent();
         LocalSpan::add_property(|| ("k7", "v7"));
         LocalSpan::add_properties(|| [("k8", "v8"), ("k9", "v9")]);
-        let _span = LocalSpan::enter_with_local_parent("span")
+        let _span = LocalSpan::start("span")
             .with_property(|| ("k10", "v10"))
             .with_properties(|| [("k11", "v11"), ("k12", "v12")]);
         LocalSpan::add_property(|| ("k13", "v13"));
@@ -561,7 +547,7 @@ fn test_event() {
                 .with_property(|| ("k4", "v4"))
                 .with_properties(|| [("k5", "v5"), ("k6", "v6")]),
         );
-        let _span = LocalSpan::enter_with_local_parent("span");
+        let _span = LocalSpan::start("span");
         LocalSpan::add_event(
             Event::new("event3 in span")
                 .with_property(|| ("k7", "v7"))
@@ -623,7 +609,7 @@ fn test_macro_properties() {
                     foo_async(1, &Bar, Bar).await;
                     bar_async().await;
                 }
-                .in_span(root),
+                .in_span(Span::start("task", &root)),
             ),
         )
         .unwrap();
@@ -635,9 +621,10 @@ fn test_macro_properties() {
     insta::assert_snapshot!(graph, @r###"
     root []
         bar []
-        bar_async []
         foo [("k1", "v1"), ("a", "argument a is 1"), ("b", "Bar"), ("escaped1", "Bar{}"), ("escaped2", "{ \"a\": \"b\"}")]
-        foo_async [("k1", "v1"), ("a", "argument a is 1"), ("b", "Bar"), ("escaped1", "Bar{}"), ("escaped2", "{ \"a\": \"b\"}")]
+        task []
+            bar_async []
+            foo_async [("k1", "v1"), ("a", "argument a is 1"), ("b", "Bar"), ("escaped1", "Bar{}"), ("escaped2", "{ \"a\": \"b\"}")]
     "###);
 }
 
@@ -649,7 +636,7 @@ fn test_not_sampled() {
     {
         let root = Span::root("root", SpanContext::random().sampled(true));
         let _g = root.set_local_parent();
-        let _span = LocalSpan::enter_with_local_parent("span");
+        let _span = LocalSpan::start("span");
     }
     fastrace::flush();
 
@@ -664,7 +651,7 @@ fn test_not_sampled() {
     {
         let root = Span::root("root", SpanContext::random().sampled(false));
         let _g = root.set_local_parent();
-        let _span = LocalSpan::enter_with_local_parent("span");
+        let _span = LocalSpan::start("span");
     }
     fastrace::flush();
     assert!(collected_spans.lock().is_empty());

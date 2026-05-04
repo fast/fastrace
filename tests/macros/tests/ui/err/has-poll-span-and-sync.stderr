@@ -1,0 +1,7 @@
+error: `poll_span` can not be applied on non-async function
+ --> tests/ui/err/has-poll-span-and-sync.rs:3:1
+  |
+3 | #[trace(poll_span = true)]
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: this error originates in the attribute macro `trace` (in Nightly builds, run with -Z macro-backtrace for more info)
