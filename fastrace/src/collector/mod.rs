@@ -20,8 +20,6 @@ pub(crate) use global_collector::GlobalCollect;
 #[cfg(test)]
 pub(crate) use global_collector::MockGlobalCollect;
 pub use global_collector::Reporter;
-pub use id::InvalidSpanId;
-pub use id::InvalidTraceId;
 pub use id::SpanContext;
 pub use id::SpanId;
 pub use id::TraceFlags;

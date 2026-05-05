@@ -3,7 +3,6 @@
 use std::cell::Cell;
 use std::fmt;
 use std::rc::Rc;
-use std::str::FromStr;
 use std::sync::Arc;
 
 use serde::ser::SerializeStruct;
@@ -14,30 +13,6 @@ use crate::local::local_span_stack::LOCAL_SPAN_STACK;
 thread_local! {
     static LOCAL_ID_GENERATOR: Cell<(u32, u32)> = Cell::new((rand::random(), 0))
 }
-
-/// Error returned when a trace id is malformed.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct InvalidTraceId;
-
-impl fmt::Display for InvalidTraceId {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("invalid trace id")
-    }
-}
-
-impl std::error::Error for InvalidTraceId {}
-
-/// Error returned when a span id is malformed.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct InvalidSpanId;
-
-impl fmt::Display for InvalidSpanId {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("invalid span id")
-    }
-}
-
-impl std::error::Error for InvalidSpanId {}
 
 /// An identifier for a trace, which groups a set of related spans together.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -64,30 +39,26 @@ impl TraceId {
 
     /// Creates a `TraceId` from bytes.
     ///
-    /// Returns an error if the bytes are all zeroes.
-    pub const fn from_bytes(bytes: [u8; 16]) -> Result<Self, InvalidTraceId> {
+    /// Returns `None` if the bytes are all zeroes.
+    pub const fn from_bytes(bytes: [u8; 16]) -> Option<Self> {
         let value = u128::from_be_bytes(bytes);
-        if value == 0 {
-            Err(InvalidTraceId)
-        } else {
-            Ok(Self(value))
-        }
+        if value == 0 { None } else { Some(Self(value)) }
     }
 
     /// Creates a `TraceId` from a hexadecimal string.
     ///
     /// The input may contain fewer than 32 hexadecimal characters. Short inputs
-    /// are interpreted as if they were left-padded with zeroes. Returns an error
+    /// are interpreted as if they were left-padded with zeroes. Returns `None`
     /// if the input is empty, longer than 32 hexadecimal characters, all zeroes,
     /// or contains non-hexadecimal characters.
-    pub fn from_hex(hex: &str) -> Result<Self, InvalidTraceId> {
+    pub fn from_hex(hex: &str) -> Option<Self> {
         if hex.is_empty() || hex.len() > 32 {
-            return Err(InvalidTraceId);
+            return None;
         }
 
         match u128::from_str_radix(hex, 16) {
-            Ok(0) | Err(_) => Err(InvalidTraceId),
-            Ok(value) => Ok(Self(value)),
+            Ok(0) | Err(_) => None,
+            Ok(value) => Some(Self(value)),
         }
     }
 
@@ -109,14 +80,6 @@ impl fmt::Debug for TraceId {
     }
 }
 
-impl FromStr for TraceId {
-    type Err = InvalidTraceId;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Self::from_hex(s)
-    }
-}
-
 impl serde::Serialize for TraceId {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         serializer.serialize_str(&self.to_string())
@@ -126,7 +89,7 @@ impl serde::Serialize for TraceId {
 impl<'de> serde::Deserialize<'de> for TraceId {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         let s = String::deserialize(deserializer)?;
-        TraceId::from_hex(&s).map_err(serde::de::Error::custom)
+        TraceId::from_hex(&s).ok_or_else(|| serde::de::Error::custom("invalid trace id"))
     }
 }
 
@@ -155,29 +118,29 @@ impl SpanId {
 
     /// Creates a `SpanId` from bytes.
     ///
-    /// Returns an error if the bytes are all zeroes.
-    pub const fn from_bytes(bytes: [u8; 8]) -> Result<Self, InvalidSpanId> {
+    /// Returns `None` if the bytes are all zeroes.
+    pub const fn from_bytes(bytes: [u8; 8]) -> Option<Self> {
         if u64::from_be_bytes(bytes) == 0 {
-            Err(InvalidSpanId)
+            None
         } else {
-            Ok(Self(bytes))
+            Some(Self(bytes))
         }
     }
 
     /// Creates a `SpanId` from a hexadecimal string.
     ///
     /// The input may contain fewer than 16 hexadecimal characters. Short inputs
-    /// are interpreted as if they were left-padded with zeroes. Returns an error
+    /// are interpreted as if they were left-padded with zeroes. Returns `None`
     /// if the input is empty, longer than 16 hexadecimal characters, all zeroes,
     /// or contains non-hexadecimal characters.
-    pub fn from_hex(hex: &str) -> Result<Self, InvalidSpanId> {
+    pub fn from_hex(hex: &str) -> Option<Self> {
         if hex.is_empty() || hex.len() > 16 {
-            return Err(InvalidSpanId);
+            return None;
         }
 
         match u64::from_str_radix(hex, 16) {
-            Ok(0) | Err(_) => Err(InvalidSpanId),
-            Ok(value) => Ok(Self(value.to_be_bytes())),
+            Ok(0) | Err(_) => None,
+            Ok(value) => Some(Self(value.to_be_bytes())),
         }
     }
 
@@ -215,14 +178,6 @@ impl fmt::Display for SpanId {
     }
 }
 
-impl FromStr for SpanId {
-    type Err = InvalidSpanId;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Self::from_hex(s)
-    }
-}
-
 impl serde::Serialize for SpanId {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         serializer.serialize_str(&self.to_string())
@@ -232,7 +187,7 @@ impl serde::Serialize for SpanId {
 impl<'de> serde::Deserialize<'de> for SpanId {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         let s = String::deserialize(deserializer)?;
-        SpanId::from_hex(&s).map_err(serde::de::Error::custom)
+        SpanId::from_hex(&s).ok_or_else(|| serde::de::Error::custom("invalid span id"))
     }
 }
 
@@ -423,8 +378,8 @@ impl SpanContext {
                 if trace_id.len() != 32 || span_id.len() != 16 || trace_flags.len() != 2 {
                     return None;
                 }
-                let trace_id = TraceId::from_hex(trace_id).ok()?;
-                let span_id = SpanId::from_hex(span_id).ok()?;
+                let trace_id = TraceId::from_hex(trace_id)?;
+                let span_id = SpanId::from_hex(span_id)?;
                 Some(Self {
                     trace_id,
                     span_id: Some(span_id),
@@ -577,26 +532,20 @@ mod tests {
 
     #[test]
     fn zero_ids_are_rejected() {
-        assert!(TraceId::from_bytes([0; 16]).is_err());
-        assert!(SpanId::from_bytes([0; 8]).is_err());
-        assert!(TraceId::from_hex("0").is_err());
-        assert!(SpanId::from_hex("0").is_err());
-        assert!(TraceId::from_hex("00000000000000000000000000000000").is_err());
-        assert!(SpanId::from_hex("0000000000000000").is_err());
-        assert!(
-            "00000000000000000000000000000000"
-                .parse::<TraceId>()
-                .is_err()
-        );
-        assert!("0000000000000000".parse::<SpanId>().is_err());
+        assert!(TraceId::from_bytes([0; 16]).is_none());
+        assert!(SpanId::from_bytes([0; 8]).is_none());
+        assert!(TraceId::from_hex("0").is_none());
+        assert!(SpanId::from_hex("0").is_none());
+        assert!(TraceId::from_hex("00000000000000000000000000000000").is_none());
+        assert!(SpanId::from_hex("0000000000000000").is_none());
     }
 
     #[test]
     fn malformed_ids_are_rejected() {
-        assert!(TraceId::from_hex("").is_err());
-        assert!(SpanId::from_hex("").is_err());
-        assert!(TraceId::from_hex("g").is_err());
-        assert!(SpanId::from_hex("g").is_err());
+        assert!(TraceId::from_hex("").is_none());
+        assert!(SpanId::from_hex("").is_none());
+        assert!(TraceId::from_hex("g").is_none());
+        assert!(SpanId::from_hex("g").is_none());
     }
 
     #[test]
@@ -612,8 +561,8 @@ mod tests {
         assert_eq!(span.to_string(), "0000000000000abc");
         assert_eq!(SpanId::from_bytes(0x0abcu64.to_be_bytes()).unwrap(), span);
 
-        assert!(TraceId::from_hex("000000000000000000000000000000001").is_err());
-        assert!(SpanId::from_hex("00000000000000001").is_err());
+        assert!(TraceId::from_hex("000000000000000000000000000000001").is_none());
+        assert!(SpanId::from_hex("00000000000000001").is_none());
     }
 
     #[test]
