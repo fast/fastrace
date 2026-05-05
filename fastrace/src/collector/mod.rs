@@ -22,8 +22,9 @@ pub(crate) use global_collector::MockGlobalCollect;
 pub use global_collector::Reporter;
 pub use id::SpanContext;
 pub use id::SpanId;
+pub use id::TraceFlags;
 pub use id::TraceId;
-pub use id::W3CTraceContext;
+pub use id::TraceState;
 #[doc(hidden)]
 pub use test_reporter::TestReporter;
 
@@ -43,11 +44,13 @@ pub enum SpanSet {
 
 /// A record of a span that includes all the information about the span,
 /// such as its identifiers, timing information, name, and associated properties.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct SpanRecord {
     pub trace_id: TraceId,
     pub span_id: SpanId,
-    pub parent_id: SpanId,
+    pub parent_id: Option<SpanId>,
+    pub trace_flags: TraceFlags,
+    pub trace_state: TraceState,
     pub begin_time_unix_ns: u64,
     pub duration_ns: u64,
     pub name: Cow<'static, str>,
@@ -65,10 +68,12 @@ pub struct EventRecord {
 }
 
 #[doc(hidden)]
-#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct CollectToken {
     pub trace_id: TraceId,
-    pub parent_id: SpanId,
+    pub parent_id: Option<SpanId>,
+    pub trace_flags: TraceFlags,
+    pub trace_state: TraceState,
     pub collect_id: usize,
     pub is_root: bool,
     pub is_sampled: bool,
@@ -136,45 +141,55 @@ mod tests {
 
     #[test]
     fn w3c_traceparent() {
-        let span_context = SpanContext::decode_w3c_traceparent(
+        let span_context = SpanContext::decode_traceparent(
             "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
         )
         .unwrap();
         assert_eq!(
             span_context.trace_id,
-            TraceId(0x0af7651916cd43dd8448eb211c80319c)
+            TraceId::from_hex("0af7651916cd43dd8448eb211c80319c").unwrap()
         );
-        assert_eq!(span_context.span_id, SpanId(0xb7ad6b7169203331));
+        assert_eq!(
+            span_context.span_id,
+            Some(SpanId::from_hex("b7ad6b7169203331").unwrap())
+        );
 
         assert_eq!(
-            span_context.encode_w3c_traceparent(),
+            span_context.encode_traceparent().unwrap(),
             "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01"
         );
         assert_eq!(
-            span_context.sampled(false).encode_w3c_traceparent(),
+            span_context
+                .clone()
+                .with_trace_flags(TraceFlags::NOT_SAMPLED)
+                .encode_traceparent()
+                .unwrap(),
             "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-00"
         );
 
         assert!(
-            !SpanContext::decode_w3c_traceparent(
+            !SpanContext::decode_traceparent(
                 "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-00",
             )
             .unwrap()
-            .sampled
+            .trace_flags
+            .is_sampled()
         );
         assert!(
-            SpanContext::decode_w3c_traceparent(
+            SpanContext::decode_traceparent(
                 "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
             )
             .unwrap()
-            .sampled
+            .trace_flags
+            .is_sampled()
         );
         assert!(
-            !SpanContext::decode_w3c_traceparent(
+            !SpanContext::decode_traceparent(
                 "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-10",
             )
             .unwrap()
-            .sampled
+            .trace_flags
+            .is_sampled()
         );
     }
 }

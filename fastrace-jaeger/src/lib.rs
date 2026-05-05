@@ -51,39 +51,48 @@ impl JaegerReporter {
     fn convert(&self, spans: &[SpanRecord]) -> Vec<JaegerSpan> {
         spans
             .iter()
-            .map(move |s| JaegerSpan {
-                trace_id_high: (s.trace_id.0 >> 64) as i64,
-                trace_id_low: s.trace_id.0 as i64,
-                span_id: s.span_id.0 as i64,
-                parent_span_id: s.parent_id.0 as i64,
-                operation_name: s.name.to_string(),
-                references: vec![],
-                flags: 1,
-                start_time: (s.begin_time_unix_ns / 1_000) as i64,
-                duration: (s.duration_ns / 1_000) as i64,
-                tags: s
-                    .properties
-                    .iter()
-                    .map(|(k, v)| Tag::String {
-                        key: k.to_string(),
-                        value: v.to_string(),
-                    })
-                    .collect(),
-                logs: s
-                    .events
-                    .iter()
-                    .map(|event| Log {
-                        timestamp: (event.timestamp_unix_ns / 1_000) as i64,
-                        fields: [("name".into(), event.name.clone())]
-                            .iter()
-                            .chain(&event.properties)
-                            .map(|(k, v)| Tag::String {
-                                key: k.to_string(),
-                                value: v.to_string(),
-                            })
-                            .collect(),
-                    })
-                    .collect(),
+            .map(move |s| {
+                let trace_id = s.trace_id.to_bytes();
+                JaegerSpan {
+                    trace_id_high: i64::from_be_bytes(
+                        trace_id[..8].try_into().expect("trace id has 16 bytes"),
+                    ),
+                    trace_id_low: i64::from_be_bytes(
+                        trace_id[8..].try_into().expect("trace id has 16 bytes"),
+                    ),
+                    span_id: i64::from_be_bytes(s.span_id.to_bytes()),
+                    parent_span_id: s
+                        .parent_id
+                        .map_or(0, |parent_id| i64::from_be_bytes(parent_id.to_bytes())),
+                    operation_name: s.name.to_string(),
+                    references: vec![],
+                    flags: 1,
+                    start_time: (s.begin_time_unix_ns / 1_000) as i64,
+                    duration: (s.duration_ns / 1_000) as i64,
+                    tags: s
+                        .properties
+                        .iter()
+                        .map(|(k, v)| Tag::String {
+                            key: k.to_string(),
+                            value: v.to_string(),
+                        })
+                        .collect(),
+                    logs: s
+                        .events
+                        .iter()
+                        .map(|event| Log {
+                            timestamp: (event.timestamp_unix_ns / 1_000) as i64,
+                            fields: [("name".into(), event.name.clone())]
+                                .iter()
+                                .chain(&event.properties)
+                                .map(|(k, v)| Tag::String {
+                                    key: k.to_string(),
+                                    value: v.to_string(),
+                                })
+                                .collect(),
+                        })
+                        .collect(),
+                }
             })
             .collect()
     }

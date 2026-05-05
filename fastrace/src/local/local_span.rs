@@ -96,7 +96,7 @@ impl LocalSpan {
     /// use fastrace::prelude::*;
     ///
     /// let root = Span::root("root", SpanContext::random());
-    /// let link = SpanContext::new(TraceId(1), SpanId(2));
+    /// let link = SpanContext::random();
     /// let _g = root.set_local_parent();
     ///
     /// let _span = LocalSpan::enter_with_local_parent("child").with_link(link);
@@ -170,7 +170,7 @@ impl LocalSpan {
     /// use fastrace::prelude::*;
     ///
     /// let root = Span::root("root", SpanContext::random());
-    /// let link = SpanContext::new(TraceId(1), SpanId(2));
+    /// let link = SpanContext::random();
     /// let _g = root.set_local_parent();
     ///
     /// let _span = LocalSpan::enter_with_local_parent("child");
@@ -274,23 +274,30 @@ impl Drop for LocalSpan {
 mod tests {
     use super::*;
     use crate::collector::CollectToken;
-    use crate::collector::SpanId;
+    use crate::collector::TraceFlags;
+    use crate::collector::TraceState;
     use crate::local::LocalCollector;
     use crate::prelude::TraceId;
     use crate::util::tree::tree_str_from_raw_spans;
+
+    fn token(trace: u128, collect_id: usize) -> CollectToken {
+        CollectToken {
+            trace_id: TraceId::from_bytes(trace.to_be_bytes()).unwrap(),
+            parent_id: None,
+            trace_flags: TraceFlags::SAMPLED,
+            trace_state: TraceState::EMPTY,
+            collect_id,
+            is_root: false,
+            is_sampled: true,
+        }
+    }
 
     #[test]
     fn local_span_basic() {
         let stack = Rc::new(RefCell::new(LocalSpanStack::with_capacity(16)));
 
-        let token = CollectToken {
-            trace_id: TraceId(1234),
-            parent_id: SpanId::default(),
-            collect_id: 42,
-            is_root: false,
-            is_sampled: true,
-        };
-        let collector = LocalCollector::new(Some(token), stack.clone());
+        let token = token(1234, 42);
+        let collector = LocalCollector::new(Some(token.clone()), stack.clone());
 
         {
             let _g = LocalSpan::enter_with_stack("span1", stack.clone());
@@ -321,13 +328,7 @@ span1 []
     fn drop_out_of_order() {
         let stack = Rc::new(RefCell::new(LocalSpanStack::with_capacity(16)));
 
-        let token = CollectToken {
-            trace_id: TraceId(1234),
-            parent_id: SpanId::default(),
-            collect_id: 42,
-            is_root: false,
-            is_sampled: true,
-        };
+        let token = token(1234, 42);
         let collector = LocalCollector::new(Some(token), stack.clone());
 
         {

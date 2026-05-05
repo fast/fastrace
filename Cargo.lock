@@ -436,6 +436,7 @@ dependencies = [
  "rand 0.10.0",
  "rtrb",
  "serde",
+ "serde_json",
  "serial_test",
  "tokio",
  "tracing",

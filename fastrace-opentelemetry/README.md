@@ -101,13 +101,11 @@ use fastrace_opentelemetry::current_opentelemetry_context;
 use opentelemetry::trace::TraceContextExt;
 use opentelemetry::Context;
 
-fn main() {
-    let span = Span::root("root", SpanContext::random());
-    let _guard = span.set_local_parent();
+let span = Span::root("root", SpanContext::random());
+let _guard = span.set_local_parent();
 
-    let _otel_guard = current_opentelemetry_context()
-        .map(|cx| Context::current().with_remote_span_context(cx).attach());
+let _otel_guard = current_opentelemetry_context()
+    .map(|cx| Context::current().with_remote_span_context(cx).attach());
 
-    // Call library code that uses `Context::current()`.
-}
+// Call library code that uses `Context::current()`.
 ```

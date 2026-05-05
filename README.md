@@ -103,6 +103,41 @@ Fastrace supports multiple out-of-box reporters to export spans:
 - [`fastrace-datadog`](https://crates.io/crates/fastrace-datadog): Export spans to [Datadog](https://www.datadoghq.com/)
 - [`fastrace-opentelemetry`](https://crates.io/crates/fastrace-opentelemetry): Export spans to [OpenTelemetry](https://opentelemetry.io/)
 
+## W3C Trace Context
+
+`Span` is the live timed span. `SpanContext` is the cheap parent or link context used by fastrace
+internally and at W3C propagation boundaries. It can parse and format `traceparent` values and
+carry a pass-through `tracestate` value, while the surrounding carrier shape is left to HTTP,
+gRPC, or message-queue integration code.
+
+Use `SpanContext::random()` for a new root without a remote parent. Use
+`SpanContext::decode_traceparent()` when extracting an incoming W3C `traceparent` value:
+
+```rust
+use fastrace::prelude::*;
+
+let incoming =
+    SpanContext::decode_traceparent("00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01")
+        .unwrap()
+        .with_trace_state("vendor=value");
+
+let root = Span::root("request", incoming.clone());
+let _guard = root.set_local_parent();
+
+let outgoing = SpanContext::from_span(&root)
+    .unwrap()
+    .with_trace_state(incoming.trace_state.as_header_value().unwrap());
+let traceparent_header = ("traceparent", outgoing.encode_traceparent().unwrap());
+let tracestate_header = outgoing
+    .trace_state
+    .as_header_value()
+    .map(|value| ("tracestate", value));
+```
+
+`TraceId` and `SpanId` are opaque values. Construct them with `from_bytes` or `from_hex`.
+Hex input may be shorter than the full id width and is left-padded with zeroes.
+All-zero ids are rejected by checked constructors and W3C `traceparent` decoding.
+
 ## Integrations
 
 Fastrace provides integrations with popular libraries to handle context propagation automatically:

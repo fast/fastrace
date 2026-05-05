@@ -11,6 +11,23 @@ use fastrace::util::tree::tree_str_from_span_records;
 use serial_test::serial;
 use tokio::runtime::Builder;
 
+fn trace_id(value: u128) -> TraceId {
+    TraceId::from_bytes(value.to_be_bytes()).unwrap()
+}
+
+fn span_id(value: u64) -> SpanId {
+    SpanId::from_bytes(value.to_be_bytes()).unwrap()
+}
+
+fn root_context(value: u128) -> SpanContext {
+    SpanContext {
+        trace_id: trace_id(value),
+        span_id: None,
+        trace_flags: TraceFlags::SAMPLED,
+        trace_state: TraceState::EMPTY,
+    }
+}
+
 fn four_spans() {
     {
         // wide
@@ -66,12 +83,12 @@ fn span_links() {
     let (reporter, collected_spans) = TestReporter::new();
     fastrace::set_reporter(reporter, Config::default());
 
-    let root1 = Span::root("root1", SpanContext::new(TraceId(1), SpanId(0)));
-    let root2 = Span::root("root2", SpanContext::new(TraceId(2), SpanId(0)));
+    let root1 = Span::root("root1", root_context(1));
+    let root2 = Span::root("root2", root_context(2));
     let link = SpanContext::from_span(&root2).unwrap();
 
-    let child = Span::enter_with_parent("child", &root1).with_link(link);
-    child.add_link(link);
+    let child = Span::enter_with_parent("child", &root1).with_link(link.clone());
+    child.add_link(link.clone());
 
     drop(child);
     drop(root1);
@@ -81,7 +98,7 @@ fn span_links() {
 
     let spans = collected_spans.lock();
     let child_record = spans.iter().find(|span| span.name == "child").unwrap();
-    assert_eq!(child_record.links, vec![link, link]);
+    assert_eq!(child_record.links, vec![link.clone(), link]);
 }
 
 #[test]
@@ -90,14 +107,14 @@ fn local_span_links() {
     let (reporter, collected_spans) = TestReporter::new();
     fastrace::set_reporter(reporter, Config::default());
 
-    let root = Span::root("root", SpanContext::new(TraceId(1), SpanId(0)));
-    let link1 = SpanContext::new(TraceId(2), SpanId(1));
-    let link2 = SpanContext::new(TraceId(3), SpanId(2));
+    let root = Span::root("root", root_context(1));
+    let link1 = SpanContext::new(trace_id(2), span_id(1));
+    let link2 = SpanContext::new(trace_id(3), span_id(2));
 
     {
         let _g = root.set_local_parent();
-        let _span = LocalSpan::enter_with_local_parent("local").with_link(link1);
-        LocalSpan::add_link(link2);
+        let _span = LocalSpan::enter_with_local_parent("local").with_link(link1.clone());
+        LocalSpan::add_link(link2.clone());
     }
 
     drop(root);
@@ -115,9 +132,9 @@ fn single_thread_multiple_spans() {
     fastrace::set_reporter(reporter, Config::default());
 
     {
-        let root1 = Span::root("root1", SpanContext::new(TraceId(12), SpanId(0)));
-        let root2 = Span::root("root2", SpanContext::new(TraceId(13), SpanId(0)));
-        let root3 = Span::root("root3", SpanContext::new(TraceId(14), SpanId(0)));
+        let root1 = Span::root("root1", root_context(12));
+        let root2 = Span::root("root2", root_context(13));
+        let root3 = Span::root("root3", root_context(14));
 
         let local_collector = LocalCollector::start();
 
@@ -136,7 +153,7 @@ fn single_thread_multiple_spans() {
         collected_spans
             .lock()
             .iter()
-            .filter(|s| s.trace_id == TraceId(12))
+            .filter(|s| s.trace_id == trace_id(12))
             .cloned()
             .collect(),
     );
@@ -152,7 +169,7 @@ fn single_thread_multiple_spans() {
         collected_spans
             .lock()
             .iter()
-            .filter(|s| s.trace_id == TraceId(13))
+            .filter(|s| s.trace_id == trace_id(13))
             .cloned()
             .collect(),
     );
@@ -168,7 +185,7 @@ fn single_thread_multiple_spans() {
         collected_spans
             .lock()
             .iter()
-            .filter(|s| s.trace_id == TraceId(14))
+            .filter(|s| s.trace_id == trace_id(14))
             .cloned()
             .collect(),
     );
@@ -247,9 +264,9 @@ fn multiple_spans_without_local_spans() {
     fastrace::set_reporter(reporter, Config::default());
 
     {
-        let root1 = Span::root("root1", SpanContext::new(TraceId(12), SpanId::default()));
-        let root2 = Span::root("root2", SpanContext::new(TraceId(13), SpanId::default()));
-        let root3 = Span::root("root3", SpanContext::new(TraceId(14), SpanId::default()));
+        let root1 = Span::root("root1", root_context(12));
+        let root2 = Span::root("root2", root_context(13));
+        let root3 = Span::root("root3", root_context(14));
 
         let local_collector = LocalCollector::start();
 
@@ -267,7 +284,7 @@ fn multiple_spans_without_local_spans() {
         collected_spans
             .lock()
             .iter()
-            .filter(|s| s.trace_id == TraceId(12))
+            .filter(|s| s.trace_id == trace_id(12))
             .count(),
         1
     );
@@ -275,7 +292,7 @@ fn multiple_spans_without_local_spans() {
         collected_spans
             .lock()
             .iter()
-            .filter(|s| s.trace_id == TraceId(13))
+            .filter(|s| s.trace_id == trace_id(13))
             .count(),
         1
     );
@@ -283,7 +300,7 @@ fn multiple_spans_without_local_spans() {
         collected_spans
             .lock()
             .iter()
-            .filter(|s| s.trace_id == TraceId(14))
+            .filter(|s| s.trace_id == trace_id(14))
             .count(),
         0
     );

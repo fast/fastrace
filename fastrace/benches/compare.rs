@@ -135,7 +135,15 @@ fn fastrace_harness(n: usize) {
         }
     }
 
-    let root = Span::root("parent", SpanContext::new(TraceId(12), SpanId::default()));
+    let root = Span::root(
+        "parent",
+        SpanContext {
+            trace_id: TraceId::from_hex("c").unwrap(),
+            span_id: None,
+            trace_flags: TraceFlags::SAMPLED,
+            trace_state: TraceState::EMPTY,
+        },
+    );
     let _g = root.set_local_parent();
 
     dummy_fastrace(n);
