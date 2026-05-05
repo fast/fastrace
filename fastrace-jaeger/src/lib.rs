@@ -52,12 +52,18 @@ impl JaegerReporter {
         spans
             .iter()
             .map(move |s| {
-                let (trace_id_high, trace_id_low) = trace_id_halves(s.trace_id);
+                let trace_id = s.trace_id.to_bytes();
                 JaegerSpan {
-                    trace_id_high,
-                    trace_id_low,
-                    span_id: span_id_to_i64(s.span_id),
-                    parent_span_id: s.parent_id.map_or(0, span_id_to_i64),
+                    trace_id_high: i64::from_be_bytes(
+                        trace_id[..8].try_into().expect("trace id has 16 bytes"),
+                    ),
+                    trace_id_low: i64::from_be_bytes(
+                        trace_id[8..].try_into().expect("trace id has 16 bytes"),
+                    ),
+                    span_id: i64::from_be_bytes(s.span_id.to_bytes()),
+                    parent_span_id: s
+                        .parent_id
+                        .map_or(0, |parent_id| i64::from_be_bytes(parent_id.to_bytes())),
                     operation_name: s.name.to_string(),
                     references: vec![],
                     flags: 1,
@@ -133,17 +139,6 @@ impl JaegerReporter {
 
         Ok(())
     }
-}
-
-fn trace_id_halves(trace_id: TraceId) -> (i64, i64) {
-    let bytes = trace_id.to_bytes();
-    let high = i64::from_be_bytes(bytes[..8].try_into().expect("trace id has 16 bytes"));
-    let low = i64::from_be_bytes(bytes[8..].try_into().expect("trace id has 16 bytes"));
-    (high, low)
-}
-
-fn span_id_to_i64(span_id: SpanId) -> i64 {
-    i64::from_be_bytes(span_id.to_bytes())
 }
 
 impl Reporter for JaegerReporter {
