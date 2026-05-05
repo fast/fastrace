@@ -146,11 +146,11 @@ mod tests {
         )
         .unwrap();
         assert_eq!(
-            span_context.trace_id(),
+            span_context.trace_id,
             TraceId::from_hex("0af7651916cd43dd8448eb211c80319c").unwrap()
         );
         assert_eq!(
-            span_context.span_id(),
+            span_context.span_id,
             Some(SpanId::from_hex("b7ad6b7169203331").unwrap())
         );
 
@@ -172,6 +172,7 @@ mod tests {
                 "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-00",
             )
             .unwrap()
+            .trace_flags
             .is_sampled()
         );
         assert!(
@@ -179,6 +180,7 @@ mod tests {
                 "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
             )
             .unwrap()
+            .trace_flags
             .is_sampled()
         );
         assert!(
@@ -186,6 +188,7 @@ mod tests {
                 "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-10",
             )
             .unwrap()
+            .trace_flags
             .is_sampled()
         );
     }

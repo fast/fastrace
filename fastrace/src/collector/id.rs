@@ -305,11 +305,6 @@ impl TraceState {
     /// An empty tracestate.
     pub const EMPTY: TraceState = TraceState(None);
 
-    /// Creates an empty tracestate.
-    pub const fn empty() -> Self {
-        Self::EMPTY
-    }
-
     /// Creates a tracestate from a header value.
     ///
     /// Empty strings are normalized to `None`.
@@ -325,11 +320,6 @@ impl TraceState {
     /// Returns the header value if this tracestate is present.
     pub fn as_header_value(&self) -> Option<&str> {
         self.0.as_deref()
-    }
-
-    /// Returns `true` when no tracestate is present.
-    pub fn is_empty(&self) -> bool {
-        self.0.is_none()
     }
 }
 
@@ -384,31 +374,6 @@ impl SpanContext {
     pub fn random() -> Self {
         Self::root(TraceId::random())
             .with_trace_flags(TraceFlags::SAMPLED.with_random_trace_id(true))
-    }
-
-    /// Returns the trace id.
-    pub fn trace_id(&self) -> TraceId {
-        self.trace_id
-    }
-
-    /// Returns the parent or linked span id, if present.
-    pub fn span_id(&self) -> Option<SpanId> {
-        self.span_id
-    }
-
-    /// Returns the trace flags.
-    pub fn trace_flags(&self) -> TraceFlags {
-        self.trace_flags
-    }
-
-    /// Returns the tracestate header value, if present.
-    pub fn trace_state(&self) -> Option<&str> {
-        self.trace_state.as_header_value()
-    }
-
-    /// Returns `true` when the sampled trace flag is set.
-    pub fn is_sampled(&self) -> bool {
-        self.trace_flags.is_sampled()
     }
 
     /// Sets the sampled flag of the `SpanContext`.
@@ -695,8 +660,11 @@ mod tests {
 
         assert_eq!(ctx.trace_id, trace_id(0x0af7651916cd43dd8448eb211c80319c));
         assert_eq!(ctx.span_id, Some(span_id(0xb7ad6b7169203331)));
-        assert!(ctx.is_sampled());
-        assert_eq!(ctx.trace_state(), Some("rw=frontend,congo=t61rcWkgMzE"));
+        assert!(ctx.trace_flags.is_sampled());
+        assert_eq!(
+            ctx.trace_state.as_header_value(),
+            Some("rw=frontend,congo=t61rcWkgMzE")
+        );
     }
 
     #[test]
@@ -706,14 +674,14 @@ mod tests {
         )
         .unwrap();
 
-        assert_eq!(ctx.trace_state(), None);
+        assert_eq!(ctx.trace_state.as_header_value(), None);
     }
 
     #[test]
     fn span_context_empty_tracestate() {
         let ctx = SpanContext::new(trace_id(1), span_id(2)).with_trace_state("");
 
-        assert_eq!(ctx.trace_state(), None);
+        assert_eq!(ctx.trace_state.as_header_value(), None);
     }
 
     #[test]
@@ -745,13 +713,13 @@ mod tests {
         .unwrap()
         .with_trace_state("rw=frontend");
 
-        assert!(original.trace_flags().is_sampled());
-        assert!(original.trace_flags().is_random_trace_id());
+        assert!(original.trace_flags.is_sampled());
+        assert!(original.trace_flags.is_random_trace_id());
 
         let traceparent = original.encode_traceparent().unwrap();
         let decoded = SpanContext::decode_traceparent(&traceparent)
             .unwrap()
-            .with_trace_state(original.trace_state().unwrap());
+            .with_trace_state(original.trace_state.as_header_value().unwrap());
 
         assert_eq!(original, decoded);
     }
@@ -762,7 +730,7 @@ mod tests {
             "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
         )
         .unwrap();
-        assert!(sampled.trace_flags().is_sampled());
+        assert!(sampled.trace_flags.is_sampled());
         assert_eq!(
             sampled.encode_traceparent().unwrap(),
             "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01"
@@ -772,7 +740,7 @@ mod tests {
             "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-00",
         )
         .unwrap();
-        assert!(!not_sampled.trace_flags().is_sampled());
+        assert!(!not_sampled.trace_flags.is_sampled());
         assert_eq!(
             not_sampled.encode_traceparent().unwrap(),
             "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-00"
@@ -782,16 +750,16 @@ mod tests {
     #[test]
     fn span_context_with_tracestate() {
         let ctx = SpanContext::new(trace_id(1), span_id(2));
-        assert_eq!(ctx.trace_state(), None);
+        assert_eq!(ctx.trace_state.as_header_value(), None);
 
         let ctx = ctx.with_trace_state("rw=frontend");
-        assert_eq!(ctx.trace_state(), Some("rw=frontend"));
+        assert_eq!(ctx.trace_state.as_header_value(), Some("rw=frontend"));
 
         let ctx = ctx.with_trace_state("rw=backend");
-        assert_eq!(ctx.trace_state(), Some("rw=backend"));
+        assert_eq!(ctx.trace_state.as_header_value(), Some("rw=backend"));
 
         let ctx = ctx.with_trace_state("");
-        assert_eq!(ctx.trace_state(), None);
+        assert_eq!(ctx.trace_state.as_header_value(), None);
     }
 
     #[test]
@@ -835,9 +803,9 @@ mod tests {
         let decoded: SpanContext = serde_json::from_str(&json).unwrap();
 
         assert_eq!(decoded, ctx);
-        assert_eq!(decoded.span_id(), None);
-        assert_eq!(decoded.trace_flags().to_u8(), 0x03);
-        assert_eq!(decoded.trace_state(), Some("vendor=value"));
+        assert_eq!(decoded.span_id, None);
+        assert_eq!(decoded.trace_flags.to_u8(), 0x03);
+        assert_eq!(decoded.trace_state.as_header_value(), Some("vendor=value"));
     }
 
     #[test]
@@ -847,7 +815,7 @@ mod tests {
         let decoded: SpanContext = serde_json::from_str(&json).unwrap();
 
         assert_eq!(decoded, ctx);
-        assert_eq!(decoded.trace_id(), TraceId::INVALID);
-        assert_eq!(decoded.span_id(), Some(SpanId::INVALID));
+        assert_eq!(decoded.trace_id, TraceId::INVALID);
+        assert_eq!(decoded.span_id, Some(SpanId::INVALID));
     }
 }

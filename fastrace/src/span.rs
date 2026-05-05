@@ -85,7 +85,7 @@ impl Span {
 
         #[cfg(feature = "enable")]
         {
-            let is_sampled = parent.is_sampled();
+            let is_sampled = parent.trace_flags.is_sampled();
             let collect_id = if is_sampled {
                 current_collect().start_collect()
             } else {

@@ -124,13 +124,16 @@ let incoming =
 let root = Span::root("request", incoming.clone());
 let _guard = root.set_local_parent();
 
-let outgoing = SpanContext::from_span(&root).unwrap().with_trace_state(incoming.trace_state().unwrap());
+let outgoing = SpanContext::from_span(&root)
+    .unwrap()
+    .with_trace_state(incoming.trace_state.as_header_value().unwrap());
 let traceparent_header = (
     SpanContext::TRACEPARENT_HEADER_NAME,
     outgoing.encode_traceparent().unwrap(),
 );
 let tracestate_header = outgoing
-    .trace_state()
+    .trace_state
+    .as_header_value()
     .map(|value| (SpanContext::TRACESTATE_HEADER_NAME, value));
 ```
 

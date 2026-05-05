@@ -114,14 +114,14 @@ pub struct OpenTelemetryReporter {
 pub fn current_opentelemetry_context() -> Option<OtelSpanContext> {
     let span_context = fastrace::collector::SpanContext::current_local_parent()?;
 
-    let span_id = span_context.span_id()?;
+    let span_id = span_context.span_id?;
 
     Some(OtelSpanContext::new(
-        OtelTraceId::from_bytes(span_context.trace_id().to_bytes()),
+        OtelTraceId::from_bytes(span_context.trace_id.to_bytes()),
         OtelSpanId::from_bytes(span_id.to_bytes()),
-        map_trace_flags(span_context.trace_flags()),
+        map_trace_flags(span_context.trace_flags),
         false,
-        map_trace_state(span_context.trace_state()),
+        map_trace_state(span_context.trace_state.as_header_value()),
     ))
 }
 
@@ -180,15 +180,15 @@ fn map_links(links: Vec<SpanContext>) -> SpanLinks {
         .into_iter()
         .map(|link| {
             let span_id = link
-                .span_id()
+                .span_id
                 .map(|span_id| OtelSpanId::from_bytes(span_id.to_bytes()))
                 .unwrap_or(OtelSpanId::INVALID);
             let span_context = OtelSpanContext::new(
-                OtelTraceId::from_bytes(link.trace_id().to_bytes()),
+                OtelTraceId::from_bytes(link.trace_id.to_bytes()),
                 span_id,
-                map_trace_flags(link.trace_flags()),
+                map_trace_flags(link.trace_flags),
                 false,
-                map_trace_state(link.trace_state()),
+                map_trace_state(link.trace_state.as_header_value()),
             );
             Link::with_context(span_context)
         })
