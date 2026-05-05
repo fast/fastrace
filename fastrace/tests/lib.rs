@@ -12,11 +12,11 @@ use serial_test::serial;
 use tokio::runtime::Builder;
 
 fn trace_id(value: u128) -> TraceId {
-    TraceId::from_bytes(value.to_be_bytes())
+    TraceId::from_bytes(value.to_be_bytes()).unwrap()
 }
 
 fn span_id(value: u64) -> SpanId {
-    SpanId::from_bytes(value.to_be_bytes())
+    SpanId::from_bytes(value.to_be_bytes()).unwrap()
 }
 
 fn four_spans() {

@@ -139,8 +139,7 @@ let tracestate_header = outgoing
 
 `TraceId` and `SpanId` are opaque values. Construct them with `from_bytes`, `from_hex`, or
 `FromStr`. Hex input may be shorter than the full id width and is left-padded with zeroes.
-All-zero ids are represented as `TraceId::INVALID` and `SpanId::INVALID`; W3C `traceparent`
-decode and encode reject those invalid ids.
+All-zero ids are rejected by checked constructors and W3C `traceparent` decoding.
 
 ## Integrations
 

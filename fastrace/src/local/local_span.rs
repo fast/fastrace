@@ -282,7 +282,7 @@ mod tests {
 
     fn token(trace: u128, collect_id: usize) -> CollectToken {
         CollectToken {
-            trace_id: TraceId::from_bytes(trace.to_be_bytes()),
+            trace_id: TraceId::from_bytes(trace.to_be_bytes()).unwrap(),
             parent_id: None,
             trace_flags: TraceFlags::SAMPLED,
             trace_state: TraceState::EMPTY,

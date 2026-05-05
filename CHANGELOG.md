@@ -8,8 +8,9 @@ All significant changes to this project will be documented in this file.
 
 - Upgrade MSRV to 1.85 and Edition to 2024.
 - Reworked trace propagation for 0.8: `TraceId` and `SpanId` are now opaque ids with explicit
-  `INVALID` values, root parents use `Option<SpanId>` instead of all-zero ids, and `SpanContext`
-  now carries the W3C value model with explicit `TraceFlags` and pass-through `TraceState`.
+  checked constructors, root parents use `Option<SpanId>` instead of all-zero ids, and
+  `SpanContext` now carries the W3C value model with explicit `TraceFlags` and pass-through
+  `TraceState`.
 
 ## v0.7.17
 

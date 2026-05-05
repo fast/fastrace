@@ -34,8 +34,8 @@ fn main() {
     use fastrace::local::LocalCollector;
     use fastrace::prelude::*;
 
-    let trace_id = |value: u128| TraceId::from_bytes(value.to_be_bytes());
-    let span_id = |value: u64| SpanId::from_bytes(value.to_be_bytes());
+    let trace_id = |value: u128| TraceId::from_bytes(value.to_be_bytes()).unwrap();
+    let span_id = |value: u64| SpanId::from_bytes(value.to_be_bytes()).unwrap();
 
     fastrace::set_reporter(
         ConsoleReporter,
