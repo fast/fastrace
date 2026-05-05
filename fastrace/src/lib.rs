@@ -105,10 +105,11 @@
 //! - A set of key-value properties
 //! - A reference to a parent `Span`
 //!
-//! A new `Span` can be started through [`Span::root()`] with a [`SpanContext`]. Use
-//! [`SpanContext::random()`] for a new local root, or use
-//! [`SpanContext::decode_traceparent()`] to decode an incoming W3C traceparent value. A root with no
-//! remote parent is represented without a parent span id rather than with an all-zero `SpanId`.
+//! A new `Span` can be started through [`Span::root()`] with a [`collector::SpanContext`]. Use
+//! [`collector::SpanContext::random()`] for a new local root, or use
+//! [`collector::SpanContext::decode_traceparent()`] to decode an incoming W3C traceparent value. A
+//! root with no remote parent is represented without a parent span id rather than with an all-zero
+//! `SpanId`.
 //!
 //! Once we have the root `Span`, we can create a child `Span` using [`Span::enter_with_parent()`],
 //! thereby establishing the reference relationship between the spans.
