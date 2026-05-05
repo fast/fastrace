@@ -409,9 +409,12 @@ mod tests {
         )
         .with_trace_flags(fastrace::collector::TraceFlags::SAMPLED)
         .with_trace_state("vendor=value");
-        let root_link = SpanContext::root(trace_id("abc"))
-            .with_trace_flags(fastrace::collector::TraceFlags::SAMPLED)
-            .with_trace_state("root=value");
+        let root_link = SpanContext {
+            trace_id: trace_id("abc"),
+            span_id: None,
+            trace_flags: fastrace::collector::TraceFlags::SAMPLED,
+            trace_state: fastrace::collector::TraceState::from_header_value("root=value"),
+        };
 
         let spans = reporter.convert(vec![SpanRecord {
             trace_id: trace_id("0af7651916cd43dd8448eb211c80319c"),

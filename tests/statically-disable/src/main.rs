@@ -42,10 +42,18 @@ fn main() {
         Config::default().report_interval(Duration::from_millis(10)),
     );
 
-    let root = Span::root("root", SpanContext::root(trace_id(1)))
-        .with_property(|| ("k0", "v0"))
-        .with_properties(|| [("k1", "v1")])
-        .with_link(SpanContext::new(trace_id(2), span_id(1)));
+    let root = Span::root(
+        "root",
+        SpanContext {
+            trace_id: trace_id(1),
+            span_id: None,
+            trace_flags: TraceFlags::SAMPLED,
+            trace_state: TraceState::EMPTY,
+        },
+    )
+    .with_property(|| ("k0", "v0"))
+    .with_properties(|| [("k1", "v1")])
+    .with_link(SpanContext::new(trace_id(2), span_id(1)));
 
     root.add_property(|| ("k1.5", "v1.5"));
     root.add_properties(|| [("k2", "v2")]);

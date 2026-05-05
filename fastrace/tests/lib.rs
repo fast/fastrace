@@ -19,6 +19,15 @@ fn span_id(value: u64) -> SpanId {
     SpanId::from_bytes(value.to_be_bytes()).unwrap()
 }
 
+fn root_context(value: u128) -> SpanContext {
+    SpanContext {
+        trace_id: trace_id(value),
+        span_id: None,
+        trace_flags: TraceFlags::SAMPLED,
+        trace_state: TraceState::EMPTY,
+    }
+}
+
 fn four_spans() {
     {
         // wide
@@ -74,8 +83,8 @@ fn span_links() {
     let (reporter, collected_spans) = TestReporter::new();
     fastrace::set_reporter(reporter, Config::default());
 
-    let root1 = Span::root("root1", SpanContext::root(trace_id(1)));
-    let root2 = Span::root("root2", SpanContext::root(trace_id(2)));
+    let root1 = Span::root("root1", root_context(1));
+    let root2 = Span::root("root2", root_context(2));
     let link = SpanContext::from_span(&root2).unwrap();
 
     let child = Span::enter_with_parent("child", &root1).with_link(link.clone());
@@ -98,7 +107,7 @@ fn local_span_links() {
     let (reporter, collected_spans) = TestReporter::new();
     fastrace::set_reporter(reporter, Config::default());
 
-    let root = Span::root("root", SpanContext::root(trace_id(1)));
+    let root = Span::root("root", root_context(1));
     let link1 = SpanContext::new(trace_id(2), span_id(1));
     let link2 = SpanContext::new(trace_id(3), span_id(2));
 
@@ -123,9 +132,9 @@ fn single_thread_multiple_spans() {
     fastrace::set_reporter(reporter, Config::default());
 
     {
-        let root1 = Span::root("root1", SpanContext::root(trace_id(12)));
-        let root2 = Span::root("root2", SpanContext::root(trace_id(13)));
-        let root3 = Span::root("root3", SpanContext::root(trace_id(14)));
+        let root1 = Span::root("root1", root_context(12));
+        let root2 = Span::root("root2", root_context(13));
+        let root3 = Span::root("root3", root_context(14));
 
         let local_collector = LocalCollector::start();
 
@@ -255,9 +264,9 @@ fn multiple_spans_without_local_spans() {
     fastrace::set_reporter(reporter, Config::default());
 
     {
-        let root1 = Span::root("root1", SpanContext::root(trace_id(12)));
-        let root2 = Span::root("root2", SpanContext::root(trace_id(13)));
-        let root3 = Span::root("root3", SpanContext::root(trace_id(14)));
+        let root1 = Span::root("root1", root_context(12));
+        let root2 = Span::root("root2", root_context(13));
+        let root3 = Span::root("root3", root_context(14));
 
         let local_collector = LocalCollector::start();
 

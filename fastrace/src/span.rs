@@ -751,6 +751,15 @@ mod tests {
         TraceId::from_bytes(value.to_be_bytes()).unwrap()
     }
 
+    fn root_context(value: u128) -> SpanContext {
+        SpanContext {
+            trace_id: trace_id(value),
+            span_id: None,
+            trace_flags: TraceFlags::SAMPLED,
+            trace_state: TraceState::EMPTY,
+        }
+    }
+
     #[test]
     fn noop_basic() {
         let span = Span::noop();
@@ -764,7 +773,7 @@ mod tests {
         crate::set_reporter(ConsoleReporter, crate::collector::Config::default());
 
         let routine = || {
-            let _root = Span::root("root", SpanContext::root(trace_id(12)));
+            let _root = Span::root("root", root_context(12));
 
             fastrace::flush();
         };

@@ -294,8 +294,9 @@ impl SpanContext {
 
     /// Creates a `SpanContext` from a trace id and a parent span id.
     ///
-    /// Use [`SpanContext::root`] or [`SpanContext::random`] when starting a
-    /// trace without a remote parent.
+    /// Use [`SpanContext::random`] when starting a trace with a generated trace
+    /// id and no remote parent. If the trace id comes from another source, set
+    /// `span_id` to `None` explicitly.
     pub fn new(trace_id: TraceId, span_id: SpanId) -> Self {
         Self {
             trace_id,
@@ -305,17 +306,7 @@ impl SpanContext {
         }
     }
 
-    /// Creates a root `SpanContext` with no remote parent span.
-    pub fn root(trace_id: TraceId) -> Self {
-        Self {
-            trace_id,
-            span_id: None,
-            trace_flags: TraceFlags::SAMPLED,
-            trace_state: TraceState::EMPTY,
-        }
-    }
-
-    /// Create a new root `SpanContext` with a random trace id and no remote parent.
+    /// Creates a new `SpanContext` with a random trace id and no remote parent.
     ///
     /// # Examples
     ///
@@ -325,8 +316,12 @@ impl SpanContext {
     /// let root = Span::root("root", SpanContext::random());
     /// ```
     pub fn random() -> Self {
-        Self::root(TraceId::random())
-            .with_trace_flags(TraceFlags::SAMPLED.with_random_trace_id(true))
+        Self {
+            trace_id: TraceId::random(),
+            span_id: None,
+            trace_flags: TraceFlags::SAMPLED.with_random_trace_id(true),
+            trace_state: TraceState::EMPTY,
+        }
     }
 
     /// Sets the sampled flag of the `SpanContext`.
@@ -354,7 +349,7 @@ impl SpanContext {
 
     /// Encodes this span context into a W3C `traceparent` header value.
     ///
-    /// Returns `None` if this context represents a root with no remote parent span id.
+    /// Returns `None` if this context has no span id.
     pub fn encode_traceparent(&self) -> Option<String> {
         let span_id = self.span_id?;
         Some(format!(
@@ -703,16 +698,24 @@ mod tests {
     }
 
     #[test]
-    fn root_span_context_cannot_encode_traceparent() {
-        let root_ctx = SpanContext::root(trace_id(1));
+    fn span_context_without_span_id_cannot_encode_traceparent() {
+        let root_ctx = SpanContext {
+            trace_id: trace_id(1),
+            span_id: None,
+            trace_flags: TraceFlags::SAMPLED,
+            trace_state: TraceState::EMPTY,
+        };
         assert!(root_ctx.encode_traceparent().is_none());
     }
 
     #[test]
-    fn span_context_serde_preserves_trace_state_and_root() {
-        let ctx = SpanContext::root(trace_id(1))
-            .with_trace_flags(TraceFlags::new(0x03))
-            .with_trace_state("vendor=value");
+    fn span_context_serde_preserves_trace_state_and_missing_span_id() {
+        let ctx = SpanContext {
+            trace_id: trace_id(1),
+            span_id: None,
+            trace_flags: TraceFlags::new(0x03),
+            trace_state: TraceState::from_header_value("vendor=value"),
+        };
 
         let json = serde_json::to_string(&ctx).unwrap();
         let decoded: SpanContext = serde_json::from_str(&json).unwrap();
