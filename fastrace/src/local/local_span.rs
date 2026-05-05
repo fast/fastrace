@@ -96,10 +96,7 @@ impl LocalSpan {
     /// use fastrace::prelude::*;
     ///
     /// let root = Span::root("root", SpanContext::random());
-    /// let link = SpanContext::new(
-    ///     TraceId::from_hex("1").unwrap(),
-    ///     SpanId::from_hex("2").unwrap(),
-    /// );
+    /// let link = SpanContext::random();
     /// let _g = root.set_local_parent();
     ///
     /// let _span = LocalSpan::enter_with_local_parent("child").with_link(link);
@@ -173,10 +170,7 @@ impl LocalSpan {
     /// use fastrace::prelude::*;
     ///
     /// let root = Span::root("root", SpanContext::random());
-    /// let link = SpanContext::new(
-    ///     TraceId::from_hex("1").unwrap(),
-    ///     SpanId::from_hex("2").unwrap(),
-    /// );
+    /// let link = SpanContext::random();
     /// let _g = root.set_local_parent();
     ///
     /// let _span = LocalSpan::enter_with_local_parent("child");
