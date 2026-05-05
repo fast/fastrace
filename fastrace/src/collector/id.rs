@@ -286,12 +286,6 @@ pub struct SpanContext {
 }
 
 impl SpanContext {
-    /// W3C `traceparent` header name.
-    pub const TRACEPARENT_HEADER_NAME: &'static str = "traceparent";
-
-    /// W3C `tracestate` header name.
-    pub const TRACESTATE_HEADER_NAME: &'static str = "tracestate";
-
     /// Creates a `SpanContext` from a trace id and a parent span id.
     ///
     /// Use [`SpanContext::random`] when starting a trace with a generated trace
@@ -689,12 +683,6 @@ mod tests {
 
         let ctx = ctx.with_trace_state("");
         assert_eq!(ctx.trace_state.as_header_value(), None);
-    }
-
-    #[test]
-    fn span_context_header_name_constants() {
-        assert_eq!(SpanContext::TRACEPARENT_HEADER_NAME, "traceparent");
-        assert_eq!(SpanContext::TRACESTATE_HEADER_NAME, "tracestate");
     }
 
     #[test]
