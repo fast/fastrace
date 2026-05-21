@@ -4,6 +4,10 @@ All significant changes to this project will be documented in this file.
 
 ## Unreleased
 
+### Improvements
+
+* Upgraded `opentelemetry` to 0.32.0.
+
 ## v0.17.0
 
 ### Notable Changes
