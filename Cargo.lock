@@ -501,7 +501,7 @@ dependencies = [
 
 [[package]]
 name = "fastrace-opentelemetry"
-version = "0.17.0"
+version = "0.18.0"
 dependencies = [
  "fastrace 0.7.17",
  "log",
