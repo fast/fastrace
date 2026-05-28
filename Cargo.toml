@@ -51,3 +51,11 @@ tokio = { version = "1.45.0", features = ["full"] }
 [profile.bench]
 lto = true
 opt-level = 3
+
+[patch.crates-io]
+# Patch fastrace in crates.io because we import logforth in the examples, which
+# itself depends on fastrace from crates.io. If we don't do this, example break
+# because logforth brings in a different version of fastrace and the appender
+# stops working.
+fastrace = { path = "fastrace" }
+fastrace-macro = { path = "fastrace-macro" }

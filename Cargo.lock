@@ -373,7 +373,7 @@ name = "example"
 version = "0.0.0"
 dependencies = [
  "anyhow",
- "fastrace 0.7.17",
+ "fastrace",
  "fastrace-datadog",
  "fastrace-jaeger",
  "fastrace-opentelemetry",
@@ -399,29 +399,14 @@ dependencies = [
 
 [[package]]
 name = "fastrace"
-version = "0.7.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0c5a9b2e56fac2bf32bca26fdc509f674d0f2bdd15404b629ccee9c642453bb7"
-dependencies = [
- "fastant",
- "fastrace-macro 0.7.9",
- "parking_lot",
- "pin-project",
- "rand 0.9.0",
- "rtrb",
- "serde",
-]
-
-[[package]]
-name = "fastrace"
 version = "0.7.17"
 dependencies = [
  "async-trait",
  "crossbeam",
  "divan",
  "fastant",
- "fastrace 0.7.17",
- "fastrace-macro 0.7.17",
+ "fastrace",
+ "fastrace-macro",
  "fastrace-opentelemetry",
  "flume",
  "futures-timer",
@@ -447,7 +432,7 @@ dependencies = [
 name = "fastrace-datadog"
 version = "0.7.17"
 dependencies = [
- "fastrace 0.7.17",
+ "fastrace",
  "log",
  "reqwest",
  "rmp-serde",
@@ -459,7 +444,7 @@ name = "fastrace-futures"
 version = "0.7.17"
 dependencies = [
  "async-stream",
- "fastrace 0.7.17",
+ "fastrace",
  "futures",
  "futures-core",
  "futures-sink",
@@ -471,28 +456,16 @@ dependencies = [
 name = "fastrace-jaeger"
 version = "0.7.17"
 dependencies = [
- "fastrace 0.7.17",
+ "fastrace",
  "log",
  "thrift_codec",
 ]
 
 [[package]]
 name = "fastrace-macro"
-version = "0.7.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a9cdabd2b113942d0f771c11a7baf0edd24098b923ac546fd39b9811c82b4220"
-dependencies = [
- "proc-macro-error2",
- "proc-macro2",
- "quote",
- "syn 2.0.116",
-]
-
-[[package]]
-name = "fastrace-macro"
 version = "0.7.17"
 dependencies = [
- "fastrace 0.7.17",
+ "fastrace",
  "proc-macro-error2",
  "proc-macro2",
  "quote",
@@ -503,7 +476,7 @@ dependencies = [
 name = "fastrace-opentelemetry"
 version = "0.18.0"
 dependencies = [
- "fastrace 0.7.17",
+ "fastrace",
  "log",
  "opentelemetry",
  "opentelemetry-otlp",
@@ -1184,7 +1157,7 @@ checksum = "e7d12336d4771854b6fdbf75bab8257e62d4221d1f9d7187fc254b29aa3bd23b"
 dependencies = [
  "anyhow",
  "env_filter",
- "fastrace 0.7.9",
+ "fastrace",
  "jiff",
  "log",
 ]
@@ -2232,7 +2205,7 @@ version = "0.0.0"
 dependencies = [
  "async-stream",
  "async-trait",
- "fastrace 0.7.17",
+ "fastrace",
  "futures",
  "log",
  "logcall",
@@ -2244,7 +2217,7 @@ dependencies = [
 name = "test-statically-disable"
 version = "0.0.0"
 dependencies = [
- "fastrace 0.7.17",
+ "fastrace",
 ]
 
 [[package]]
