@@ -18,7 +18,7 @@ resolver = "2"
 edition = "2024"
 license = "Apache-2.0"
 repository = "https://github.com/fast/fastrace"
-rust-version = "1.85.0"
+rust-version = "1.91.0"
 
 [workspace.dependencies]
 # Workspace dependencies

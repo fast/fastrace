@@ -6,6 +6,10 @@ All significant changes to this project will be documented in this file.
 
 ## v0.18.0
 
+### Notable Changes
+
+* Upgraded MSRV to 1.91.
+
 ### Improvements
 
 * Upgraded `opentelemetry` to 0.32.0.
