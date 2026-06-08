@@ -527,10 +527,10 @@ impl Span {
     #[inline]
     pub fn cancel(&self) {
         #[cfg(feature = "enable")]
-        if let Some(inner) = &self.inner {
-            if let Some(collect_id) = inner.collect_id {
-                inner.collect.cancel_collect(collect_id);
-            }
+        if let Some(inner) = &self.inner
+            && let Some(collect_id) = inner.collect_id
+        {
+            inner.collect.cancel_collect(collect_id);
         }
     }
 }
@@ -640,18 +640,18 @@ impl SpanInner {
 impl Drop for Span {
     fn drop(&mut self) {
         #[cfg(feature = "enable")]
-        if let Some(mut inner) = self.inner.take() {
-            if inner.collect_token.is_sampled {
-                let collect_id = inner.collect_id.take();
-                let collect = inner.collect.clone();
+        if let Some(mut inner) = self.inner.take()
+            && inner.collect_token.is_sampled
+        {
+            let collect_id = inner.collect_id.take();
+            let collect = inner.collect.clone();
 
-                let end_instant = Instant::now();
-                inner.raw_span.end_with(end_instant);
-                inner.submit_spans();
+            let end_instant = Instant::now();
+            inner.raw_span.end_with(end_instant);
+            inner.submit_spans();
 
-                if let Some(collect_id) = collect_id {
-                    collect.drop_collect(collect_id);
-                }
+            if let Some(collect_id) = collect_id {
+                collect.drop_collect(collect_id);
             }
         }
     }
@@ -691,12 +691,12 @@ impl Drop for LocalParentGuard {
         if let Some(inner) = self.inner.take() {
             let (spans, token) = inner.collector.collect_spans_and_token();
             debug_assert!(token.is_some());
-            if let Some(token) = token {
-                if token.is_sampled {
-                    inner
-                        .collect
-                        .submit_spans(SpanSet::LocalSpansInner(spans), token);
-                }
+            if let Some(token) = token
+                && token.is_sampled
+            {
+                inner
+                    .collect
+                    .submit_spans(SpanSet::LocalSpansInner(spans), token);
             }
         }
     }

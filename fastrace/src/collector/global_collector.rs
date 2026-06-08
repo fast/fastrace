@@ -280,15 +280,15 @@ impl GlobalCollector {
         let mut committed_records = Vec::new();
 
         for DropCollect { collect_id } in self.drop_collects.drain(..) {
-            if let Some(mut active_collector) = self.active_collectors.remove(&collect_id) {
-                if !active_collector.canceled {
-                    postprocess_span_collection(
-                        &active_collector.span_collections,
-                        &anchor,
-                        &mut committed_records,
-                        &mut active_collector.danglings,
-                    );
-                }
+            if let Some(mut active_collector) = self.active_collectors.remove(&collect_id)
+                && !active_collector.canceled
+            {
+                postprocess_span_collection(
+                    &active_collector.span_collections,
+                    &anchor,
+                    &mut committed_records,
+                    &mut active_collector.danglings,
+                );
             }
         }
 
