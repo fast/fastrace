@@ -6,9 +6,6 @@
 #![cfg_attr(not(feature = "enable"), allow(dead_code))]
 #![cfg_attr(not(feature = "enable"), allow(unreachable_code))]
 
-#[macro_use]
-extern crate proc_macro_error2;
-
 use std::collections::HashSet;
 
 use proc_macro2::Span;
@@ -114,7 +111,6 @@ use crate::visit_mut::VisitMut;
 /// }
 /// ```
 #[proc_macro_attribute]
-#[proc_macro_error]
 pub fn trace(
     args: proc_macro::TokenStream,
     item: proc_macro::TokenStream,
@@ -127,6 +123,13 @@ pub fn trace(
 
     let args = parse_macro_input!(args as Args);
     let input = parse_macro_input!(item as ItemFn);
+    match gen_trace(args, input) {
+        Ok(tokens) => tokens.into(),
+        Err(err) => err.to_compile_error().into(),
+    }
+}
+
+fn gen_trace(args: Args, input: ItemFn) -> Result<proc_macro2::TokenStream> {
     let func_name = &input.sig.ident;
 
     // Check for async_trait-like patterns in the block, and instrument
@@ -144,9 +147,9 @@ pub fn trace(
             // async-trait >= 0.1.44
             AsyncTraitKind::Async(async_expr) => {
                 let instrumented_block =
-                    gen_block(func_name, &async_expr.block, true, false, &args, None);
+                    gen_block(func_name, &async_expr.block, true, false, &args, None)?;
                 let async_attrs = &async_expr.attrs;
-                quote::quote! {
+                quote! {
                     Box::pin(#(#async_attrs) * #instrumented_block)
                 }
             }
@@ -163,7 +166,7 @@ pub fn trace(
             input.sig.asyncness.is_some(),
             &args,
             Some(output_ty),
-        )
+        )?
     };
 
     let ItemFn {
@@ -188,7 +191,7 @@ pub fn trace(
     } = sig;
 
     let fn_span = ident.span();
-    quote::quote_spanned!(fn_span=>
+    Ok(quote::quote_spanned!(fn_span=>
         #(#attrs) *
         #vis #constness #unsafety #asyncness #abi fn #ident<#gen_params>(#params) #return_type
         #where_clause
@@ -196,7 +199,7 @@ pub fn trace(
             #func_body
         }
     )
-    .into()
+    .into())
 }
 
 struct Args {
@@ -297,32 +300,34 @@ impl Parse for Args {
     }
 }
 
-fn gen_name(func_name: &Ident, args: &Args) -> proc_macro2::TokenStream {
+fn gen_name(func_name: &Ident, args: &Args) -> Result<proc_macro2::TokenStream> {
     let crate_path = &args.crate_path;
     match &args.name {
         Some(name) if name.value().is_empty() => {
-            abort_call_site!("`name` can not be empty")
+            Err(Error::new(Span::call_site(), "`name` can not be empty"))
         }
-        Some(_) if args.short_name => {
-            abort_call_site!("`name` and `short_name` can not be used together")
-        }
-        Some(name) => name.into_token_stream(),
+        Some(_) if args.short_name => Err(Error::new(
+            Span::call_site(),
+            "`name` and `short_name` can not be used together",
+        )),
+        Some(name) => Ok(name.into_token_stream()),
         None if args.short_name => {
-            LitStr::new(&func_name.to_string(), func_name.span()).into_token_stream()
+            Ok(LitStr::new(&func_name.to_string(), func_name.span()).into_token_stream())
         }
-        None => {
-            quote!(#crate_path::func_path!())
-        }
+        None => Ok(quote!(#crate_path::func_path!())),
     }
 }
 
-fn gen_properties(args: &Args) -> proc_macro2::TokenStream {
+fn gen_properties(args: &Args) -> Result<proc_macro2::TokenStream> {
     if args.properties.is_empty() {
-        return quote::quote!();
+        return Ok(quote::quote!());
     }
 
     if args.enter_on_poll {
-        abort_call_site!("`enter_on_poll` can not be used with `properties`")
+        return Err(Error::new(
+            Span::call_site(),
+            "`enter_on_poll` can not be used with `properties`",
+        ));
     }
 
     let properties = args.properties.iter().map(|(k, v)| {
@@ -337,9 +342,9 @@ fn gen_properties(args: &Args) -> proc_macro2::TokenStream {
         )
     });
     let properties = Punctuated::<_, Token![,]>::from_iter(properties);
-    quote!(
+    Ok(quote!(
         .with_properties(|| [ #properties ])
-    )
+    ))
 }
 
 /// Instrument a block
@@ -350,9 +355,9 @@ fn gen_block(
     async_keyword: bool,
     args: &Args,
     output_ty: Option<Type>,
-) -> proc_macro2::TokenStream {
-    let name = gen_name(func_name, args);
-    let properties = gen_properties(args);
+) -> Result<proc_macro2::TokenStream> {
+    let name = gen_name(func_name, args)?;
+    let properties = gen_properties(args)?;
     let crate_path = &args.crate_path;
     let output_ty_hint = output_ty
         .map(erase_impl_trait)
@@ -386,21 +391,24 @@ fn gen_block(
         };
 
         if async_keyword {
-            quote!(
+            Ok(quote!(
                 #block.await
-            )
+            ))
         } else {
-            block
+            Ok(block)
         }
     } else {
         if args.enter_on_poll {
-            abort_call_site!("`enter_on_poll` can not be applied on non-async function");
+            Err(Error::new(
+                Span::call_site(),
+                "`enter_on_poll` can not be applied on non-async function",
+            ))
+        } else {
+            Ok(quote!(
+                let __guard__ = #crate_path::local::LocalSpan::enter_with_local_parent( #name ) #properties;
+                #block
+            ))
         }
-
-        quote!(
-            let __guard__ = #crate_path::local::LocalSpan::enter_with_local_parent( #name ) #properties;
-            #block
-        )
     }
 }
 

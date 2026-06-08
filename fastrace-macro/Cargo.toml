@@ -20,7 +20,6 @@ proc-macro = true
 enable = []
 
 [dependencies]
-proc-macro-error2 = "2.0.1"
 proc-macro2 = "1.0"
 quote = "1.0"
 syn = { version = "2.0", features = [
