@@ -11,6 +11,7 @@ use std::collections::HashSet;
 use proc_macro2::Span;
 use quote::ToTokens;
 use quote::quote;
+use quote::quote_spanned;
 use syn::parse::Parse;
 use syn::parse::ParseStream;
 use syn::punctuated::Punctuated;
@@ -191,15 +192,14 @@ fn gen_trace(args: Args, input: ItemFn) -> Result<proc_macro2::TokenStream> {
     } = sig;
 
     let fn_span = ident.span();
-    Ok(quote::quote_spanned!(fn_span=>
+    Ok(quote_spanned!(fn_span=>
         #(#attrs) *
         #vis #constness #unsafety #asyncness #abi fn #ident<#gen_params>(#params) #return_type
         #where_clause
         {
             #func_body
         }
-    )
-    .into())
+    ))
 }
 
 struct Args {
@@ -320,7 +320,7 @@ fn gen_name(func_name: &Ident, args: &Args) -> Result<proc_macro2::TokenStream> 
 
 fn gen_properties(args: &Args) -> Result<proc_macro2::TokenStream> {
     if args.properties.is_empty() {
-        return Ok(quote::quote!());
+        return Ok(quote!());
     }
 
     if args.enter_on_poll {
@@ -549,12 +549,12 @@ struct ImplTraitEraser;
 impl VisitMut for ImplTraitEraser {
     fn visit_type_mut(&mut self, t: &mut Type) {
         if let Type::ImplTrait(..) = t {
-            *t = syn::TypeInfer {
+            *t = TypeInfer {
                 underscore_token: Token![_](t.span()),
             }
             .into();
         } else {
-            syn::visit_mut::visit_type_mut(self, t);
+            visit_mut::visit_type_mut(self, t);
         }
     }
 }
