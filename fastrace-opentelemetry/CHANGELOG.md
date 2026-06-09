@@ -4,13 +4,13 @@ All significant changes to this project will be documented in this file.
 
 ## Unreleased
 
-## v0.18.0
-
 ### Notable Changes
 
 * Upgraded MSRV to 1.91.
 
-### Improvements
+## v0.18.0
+
+### Breaking Changes
 
 * Upgraded `opentelemetry` to 0.32.0.
 
@@ -49,7 +49,7 @@ All significant changes to this project will be documented in this file.
 
 ## v0.14.0
 
-### Improvements
+### Breaking Changes
 
 * Upgraded `opentelemetry` to 0.31.0.
 
@@ -71,19 +71,19 @@ All significant changes to this project will be documented in this file.
 
 ## v0.11.0
 
-### Improvements
+### Breaking Changes
 
 * Upgraded `opentelemetry` to 0.30.0.
 
 ## v0.10.0
 
-### Improvements
+### Breaking Changes
 
 * Upgraded `opentelemetry` to 0.29.0.
 
 ## v0.9.0
 
-### Improvements
+### Breaking Changes
 
 * Upgraded `opentelemetry` to 0.28.0.
 
@@ -95,6 +95,6 @@ All significant changes to this project will be documented in this file.
 
 ## v0.8.0
 
-### Improvements
+### Breaking Changes
 
 * Upgraded `opentelemetry` to 0.27.0.
