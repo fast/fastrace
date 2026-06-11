@@ -14,6 +14,7 @@
 
 use proc_macro2::Ident;
 use proc_macro2::Span;
+use proc_macro2::TokenStream;
 use quote::ToTokens;
 use quote::quote;
 use quote::quote_spanned;
@@ -42,7 +43,7 @@ use syn::visit_mut::VisitMut;
 
 use crate::args::Args;
 
-pub(crate) fn gen_trace(args: Args, input: ItemFn) -> Result<proc_macro2::TokenStream> {
+pub(crate) fn gen_trace(args: Args, input: ItemFn) -> Result<TokenStream> {
     let func_name = &input.sig.ident;
 
     // Check for async_trait-like patterns in the block, and instrument
@@ -68,8 +69,8 @@ pub(crate) fn gen_trace(args: Args, input: ItemFn) -> Result<proc_macro2::TokenS
             }
         }
     } else {
-        let output_ty = match input.sig.output {
-            ReturnType::Type(_, ref ty) => (**ty).clone(),
+        let output_ty = match &input.sig.output {
+            ReturnType::Type(_, ty) => (**ty).clone(),
             ReturnType::Default => parse_quote! { () },
         };
         gen_block(
@@ -114,25 +115,35 @@ pub(crate) fn gen_trace(args: Args, input: ItemFn) -> Result<proc_macro2::TokenS
     ))
 }
 
-fn gen_name(func_name: &Ident, args: &Args) -> Result<proc_macro2::TokenStream> {
-    let crate_path = &args.crate_path;
-    match &args.name {
-        Some(name) if name.value().is_empty() => {
+fn gen_span_name(func_name: &Ident, args: &Args) -> Result<TokenStream> {
+    let Args {
+        name,
+        short_name,
+        crate_path,
+        ..
+    } = args;
+
+    if let Some(span_name) = name {
+        if span_name.value().is_empty() {
             Err(Error::new(Span::call_site(), "`name` can not be empty"))
+        } else if *short_name {
+            Err(Error::new(
+                Span::call_site(),
+                "`name` and `short_name` can not be used together",
+            ))
+        } else {
+            Ok(name.into_token_stream())
         }
-        Some(_) if args.short_name => Err(Error::new(
-            Span::call_site(),
-            "`name` and `short_name` can not be used together",
-        )),
-        Some(name) => Ok(name.into_token_stream()),
-        None if args.short_name => {
+    } else {
+        if *short_name {
             Ok(LitStr::new(&func_name.to_string(), func_name.span()).into_token_stream())
+        } else {
+            Ok(quote!(#crate_path::func_path!()))
         }
-        None => Ok(quote!(#crate_path::func_path!())),
     }
 }
 
-fn gen_properties(args: &Args) -> Result<proc_macro2::TokenStream> {
+fn gen_properties(args: &Args) -> Result<TokenStream> {
     if args.properties.is_empty() {
         return Ok(quote!());
     }
@@ -163,7 +174,6 @@ fn gen_properties(args: &Args) -> Result<proc_macro2::TokenStream> {
     ))
 }
 
-/// Instrument a block
 fn gen_block(
     func_name: &Ident,
     block: &Block,
@@ -171,13 +181,33 @@ fn gen_block(
     async_keyword: bool,
     args: &Args,
     output_ty: Option<Type>,
-) -> Result<proc_macro2::TokenStream> {
-    let name = gen_name(func_name, args)?;
+) -> Result<TokenStream> {
+    let name = gen_span_name(func_name, args)?;
     let properties = gen_properties(args)?;
     let crate_path = &args.crate_path;
-    let output_ty_hint = output_ty
-        .map(erase_impl_trait)
-        .unwrap_or_else(|| parse_quote! { _ });
+
+    let output_ty_hint = if let Some(mut ty) = output_ty {
+        // Replaces `impl Trait` with `_`, so that it can be used as the type
+        // in the LHS of `let` statements.
+        struct EraseImplTrait;
+
+        impl VisitMut for EraseImplTrait {
+            fn visit_type_mut(&mut self, ty: &mut Type) {
+                if let Type::ImplTrait(..) = ty {
+                    *ty = Type::Infer(TypeInfer {
+                        underscore_token: Token![_](ty.span()),
+                    });
+                } else {
+                    visit_mut::visit_type_mut(self, ty);
+                }
+            }
+        }
+
+        visit_mut::visit_type_mut(&mut EraseImplTrait, &mut ty);
+        ty
+    } else {
+        parse_quote!(_)
+    };
 
     // Generate the instrumented function body.
     // If the function is an `async fn`, this will wrap it in an async block.
@@ -236,35 +266,43 @@ enum AsyncTraitKind<'a> {
 }
 
 struct AsyncTraitInfo<'a> {
-    // statement that must be patched
-    _source_stmt: &'a Stmt,
+    // source statement to be patched
+    #[expect(unused)]
+    stmt: &'a Stmt,
     kind: AsyncTraitKind<'a>,
 }
 
-// Get the AST of the inner function we need to hook, if it was generated
-// by async-trait.
-// When we are given a function annotated by async-trait, that function
-// is only a placeholder that returns a pinned future containing the
-// user logic, and it is that pinned future that needs to be instrumented.
-// Were we to instrument its parent, we would only collect information
-// regarding the allocation of that future, and not its own span of execution.
-// Depending on the version of async-trait, we inspect the block of the function
-// to find if it matches the pattern
-// `async fn foo<...>(...) {...}; Box::pin(foo<...>(...))` (<=0.1.43), or if
-// it matches `Box::pin(async move { ... }) (>=0.1.44). We the return the
-// statement that must be instrumented, along with some other information.
-// 'gen_body' will then be able to use that information to instrument the
-// proper function/future.
-// (this follows the approach suggested in
-// https://github.com/dtolnay/async-trait/issues/45#issuecomment-571245673)
+/// Get the AST of the inner function we need to hook, if it was generated by `async-trait`.
+///
+/// When we are given a function annotated by `async-trait`, that function is only a placeholder
+/// that returns a pinned future containing the user logic, and it is that pinned future that needs
+/// to be instrumented. Were we to instrument its parent, we would only collect information
+/// regarding the allocation of that future, and not its own span of execution.
+///
+/// Depending on the version of async-trait, we inspect the block of the function to find if it
+/// matches the pattern:
+///
+/// ```rust,ignore
+/// // for async-trait <=0.1.43
+/// async fn foo<...>(...) {...}
+/// Box::pin(foo<...>(...))
+///
+/// // for async-trait >= 0.1.44
+/// Box::pin(async move { ... })
+/// ```
+///
+/// We the return the statement to be instrumented, along with some other information. [`gen_block`]
+/// will then be able to use that information to instrument the proper function or future.
+///
+/// This follows the approach suggested in https://github.com/dtolnay/async-trait/issues/45#issuecomment-571245673.
 fn get_async_trait_info(block: &Block, block_is_async: bool) -> Option<AsyncTraitInfo<'_>> {
-    // are we in an async context? If yes, this isn't an async_trait-like pattern
+    // Are we in an async context? If yes, this isn't an async_trait-like pattern
     if block_is_async {
         return None;
     }
 
     // list of async functions declared inside the block
-    let inside_funs = block.stmts.iter().filter_map(|stmt| {
+    let inside_fns = block.stmts.iter().filter_map(|stmt| {
         if let Stmt::Item(Item::Fn(fun)) = &stmt {
             // If the function is async, this is a candidate
             if fun.sig.asyncness.is_some() {
@@ -274,10 +312,11 @@ fn get_async_trait_info(block: &Block, block_is_async: bool) -> Option<AsyncTrai
         None
     });
 
-    // last expression of the block (it determines the return value
-    // of the block, so that if we are working on a function whose
-    // `trait` or `impl` declaration is annotated by async_trait,
-    // this is quite likely the point where the future is pinned)
+    // Last expression of the block
+    //
+    // This determines the return value of the block. Thus, if we are working on a function whose
+    // `trait` or `impl` declaration is annotated by async_trait, this is quite likely the point
+    // where the future is pinned.
     let (last_expr_stmt, last_expr) = block.stmts.iter().rev().find_map(|stmt| {
         if let Stmt::Expr(expr, None) = stmt {
             Some((stmt, expr))
@@ -286,13 +325,13 @@ fn get_async_trait_info(block: &Block, block_is_async: bool) -> Option<AsyncTrai
         }
     })?;
 
-    // is the last expression a function call?
+    // Is the last expression a function call?
     let (outside_func, outside_args) = match last_expr {
         Expr::Call(ExprCall { func, args, .. }) => (func, args),
         _ => return None,
     };
 
-    // is it a call to `Box::pin()`?
+    // Is it a call to `Box::pin()`?
     let path = match outside_func.as_ref() {
         Expr::Path(path) => &path.path,
         _ => return None,
@@ -301,21 +340,21 @@ fn get_async_trait_info(block: &Block, block_is_async: bool) -> Option<AsyncTrai
         return None;
     }
 
-    // Does the call take an argument? If it doesn't,
-    // it's not going to compile anyway, but that's no reason
-    // to (try to) perform an out-of-bounds access
+    // Does the call take an argument?
+    //
+    // If it doesn't, it's not going to compile anyway, but that's no reason to perform an
+    // out-of-bounds access
     if outside_args.is_empty() {
         return None;
     }
 
-    // Is the argument to Box::pin an async block that
-    // captures its arguments?
+    // Is the argument to Box::pin an async block that captures its arguments?
     if let Expr::Async(async_expr) = &outside_args[0] {
         // check that the move 'keyword' is present
         async_expr.capture?;
 
         return Some(AsyncTraitInfo {
-            _source_stmt: last_expr_stmt,
+            stmt: last_expr_stmt,
             kind: AsyncTraitKind::Async(async_expr),
         });
     }
@@ -333,13 +372,14 @@ fn get_async_trait_info(block: &Block, block_is_async: bool) -> Option<AsyncTrai
     };
 
     // Was that function defined inside the current block?
-    // If so, retrieve the statement where it was declared and the function itself
-    let (stmt_func_declaration, _) = inside_funs
+    //
+    // If so, retrieve the statement where it was declared and the function itself.
+    let (stmt_func_declaration, _) = inside_fns
         .into_iter()
         .find(|(_, fun)| fun.sig.ident == func_name)?;
 
     Some(AsyncTraitInfo {
-        _source_stmt: stmt_func_declaration,
+        stmt: stmt_func_declaration,
         kind: AsyncTraitKind::Function,
     })
 }
@@ -356,26 +396,4 @@ fn path_to_string(path: &Path) -> String {
         }
     }
     res
-}
-
-/// Replaces any `impl Trait` with `_` so it can be used as the type in
-/// a `let` statement's LHS.
-struct ImplTraitEraser;
-
-impl VisitMut for ImplTraitEraser {
-    fn visit_type_mut(&mut self, t: &mut Type) {
-        if let Type::ImplTrait(..) = t {
-            *t = TypeInfer {
-                underscore_token: Token![_](t.span()),
-            }
-            .into();
-        } else {
-            visit_mut::visit_type_mut(self, t);
-        }
-    }
-}
-
-fn erase_impl_trait(mut ty: Type) -> Type {
-    ImplTraitEraser.visit_type_mut(&mut ty);
-    ty
 }

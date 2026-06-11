@@ -12,6 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// This crate is derived from [1] under the original license header:
+// Copyright 2020 TiKV Project Authors. Licensed under Apache-2.0.
+// [1]: https://github.com/tikv/minitrace-rust/blob/v0.6.4/minitrace-macro/src/lib.rs
+
 //! An attribute macro designed to eliminate boilerplate code for [`fastrace`].
 //!
 //! [`fastrace`]: https://crates.io/crates/fastrace
