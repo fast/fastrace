@@ -1,0 +1,5 @@
+error: expected boolean literal
+ --> tests/ui/err/short-name-is-not-bool.rs:3:22
+  |
+3 | #[trace(short_name = "true")]
+  |                      ^^^^^^

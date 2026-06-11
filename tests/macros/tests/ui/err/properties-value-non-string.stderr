@@ -1,0 +1,5 @@
+error: expected string literal
+ --> tests/ui/err/properties-value-non-string.rs:3:31
+  |
+3 | #[trace(properties = { "key": true })]
+  |                               ^^^^
