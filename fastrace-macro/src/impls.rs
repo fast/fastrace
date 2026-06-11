@@ -203,7 +203,7 @@ fn gen_block(
             }
         }
 
-        visit_mut::visit_type_mut(&mut EraseImplTrait, &mut ty);
+        EraseImplTrait.visit_type_mut(&mut ty);
         ty
     } else {
         parse_quote!(_)
@@ -291,8 +291,9 @@ struct AsyncTraitInfo<'a> {
 /// Box::pin(async move { ... })
 /// ```
 ///
-/// We then return the statement to be instrumented, along with some other information. [`gen_block`]
-/// will then be able to use that information to instrument the proper function or future.
+/// We then return the statement to be instrumented, along with some other information.
+/// [`gen_block`] will then be able to use that information to instrument the proper
+/// function or future.
 ///
 /// This follows the approach suggested in https://github.com/dtolnay/async-trait/issues/45#issuecomment-571245673.
 fn get_async_trait_info(block: &Block, block_is_async: bool) -> Option<AsyncTraitInfo<'_>> {
