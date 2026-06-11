@@ -13,8 +13,6 @@
 // limitations under the License.
 
 use std::collections::HashSet;
-use std::hash::Hash;
-use std::hash::Hasher;
 
 use proc_macro2::Span;
 use syn::Error;
@@ -35,20 +33,6 @@ pub struct Property {
     pub value: LitStr,
 }
 
-impl PartialEq for Property {
-    fn eq(&self, other: &Self) -> bool {
-        PartialEq::eq(&self.key, &other.key)
-    }
-}
-
-impl Eq for Property {}
-
-impl Hash for Property {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.key.hash(state);
-    }
-}
-
 impl Parse for Property {
     fn parse(input: ParseStream) -> Result<Self> {
         let key: LitStr = input.parse()?;
@@ -63,7 +47,7 @@ pub struct Args {
     pub name: Option<LitStr>,
     pub short_name: bool,
     pub enter_on_poll: bool,
-    pub properties: HashSet<Property>,
+    pub properties: Vec<Property>,
     pub crate_path: Path,
 }
 
@@ -72,7 +56,7 @@ impl Parse for Args {
         let mut name = None;
         let mut short_name = false;
         let mut enter_on_poll = false;
-        let mut properties = HashSet::new();
+        let mut properties = vec![];
         let mut crate_path = parse_quote!(::fastrace);
         let mut seen = HashSet::new();
 
@@ -104,13 +88,13 @@ impl Parse for Args {
                     let _brace_token = braced!(content in input);
                     let property_list = content.parse_terminated(Property::parse, Token![,])?;
                     for property in property_list {
-                        if properties.contains(&property) {
+                        if properties.iter().any(|p: &Property| p.key == property.key) {
                             return Err(Error::new(
                                 Span::call_site(),
                                 format!("duplicate property key: {}", property.key.value()),
                             ));
                         }
-                        properties.insert(property);
+                        properties.push(property);
                     }
                 }
                 "crate" => {

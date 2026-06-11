@@ -291,7 +291,7 @@ struct AsyncTraitInfo<'a> {
 /// Box::pin(async move { ... })
 /// ```
 ///
-/// We the return the statement to be instrumented, along with some other information. [`gen_block`]
+/// We then return the statement to be instrumented, along with some other information. [`gen_block`]
 /// will then be able to use that information to instrument the proper function or future.
 ///
 /// This follows the approach suggested in https://github.com/dtolnay/async-trait/issues/45#issuecomment-571245673.
