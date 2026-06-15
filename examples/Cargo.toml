@@ -18,7 +18,7 @@ fastrace-datadog = { workspace = true }
 fastrace-jaeger = { workspace = true }
 fastrace-opentelemetry = { workspace = true }
 log = { workspace = true }
-logcall = { version = "0.1.11" }
+logcall = { version = "0.2.0" }
 logforth = { version = "0.24.0", features = ["fastrace"] }
 opentelemetry = { workspace = true }
 opentelemetry-otlp = { workspace = true }
