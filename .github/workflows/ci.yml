@@ -15,7 +15,7 @@ jobs:
     env:
       FORCE_COLOR: 1
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: crate-ci/typos@master
       - uses: Swatinem/rust-cache@v2
       - run: rm rust-toolchain.toml
@@ -41,7 +41,7 @@ jobs:
     env:
       RUST_BACKTRACE: 1
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: Swatinem/rust-cache@v2
       - run: rm rust-toolchain.toml
       - uses: dtolnay/rust-toolchain@master

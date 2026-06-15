@@ -1,2 +1,4 @@
+[default.extend-words]
+
 [files]
-extend-exclude = ["*.svg", "CONTRIBUTORS"]
+extend-exclude = ["*.svg"]
