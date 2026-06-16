@@ -8,9 +8,11 @@
 
 > [!WARNING]
 >
-> **`fastrace-datadog` is deprecated** in favor of [`fastrace-opentelemetry`](https://crates.io/crates/fastrace-opentelemetry).
+> `fastrace-datadog` is deprecated in favor of [`fastrace-opentelemetry`](https://crates.io/crates/fastrace-opentelemetry).
 >
-> The Datadog Agent ingests OTLP natively, so traces can be sent through `fastrace-opentelemetry` instead. This crate will get one final release announcing the deprecation and will then be removed. See [Migration](#migration-to-fastrace-opentelemetry) below.
+> The Datadog Agent ingests OTLP natively, so traces can be sent through `fastrace-opentelemetry` instead.
+> 
+> See [Migration](#migration-to-fastrace-opentelemetry) below.
 
 ## Migration to fastrace-opentelemetry
 
@@ -21,10 +23,10 @@ Update your dependencies:
 ```toml
 [dependencies]
 fastrace = { version = "0.7", features = ["enable"] }
-fastrace-opentelemetry = "0.18"
-opentelemetry = "0.32"
-opentelemetry_sdk = "0.32"
-opentelemetry-otlp = "0.32"
+fastrace-opentelemetry = { version = "0.18.0" }
+opentelemetry = { version = "0.32.0", default-features = false, features = ["trace"] }
+opentelemetry-otlp = { version = "0.32.0", default-features = false, features = ["trace", "grpc-tonic"] }
+opentelemetry_sdk = { version = "0.32.0", default-features = false, features = ["trace"] }
 ```
 
 **Before** (deprecated):
@@ -62,7 +64,9 @@ let reporter = OpenTelemetryReporter::new(
         .expect("initialize otlp exporter"),
     Cow::Owned(
         Resource::builder()
-            .with_attributes([KeyValue::new("service.name", "my-service")])
+            .with_service_name("my-service")
+            .with_attributes([KeyValue::new("span.resource", "db")])
+            .with_attributes([KeyValue::new("span.type", "select")])
             .build(),
     ),
     InstrumentationScope::builder("my-crate")
