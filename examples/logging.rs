@@ -17,6 +17,8 @@ use fastrace::collector::ConsoleReporter;
 use fastrace::prelude::*;
 use log::info;
 use logforth::append;
+use logforth::diagnostic;
+use logforth::layout;
 
 /// An example of automatically logging function arguments and return values.
 #[logcall::logcall("debug")]
@@ -31,8 +33,11 @@ fn main() {
     // Set up a custom logger.
     //
     // Logforth (https://docs.rs/logforth/) is easy to start and integrated with Fastrace.
-    logforth::builder()
-        .dispatch(|d| d.append(append::Stderr::default()))
+    logforth::starter_log::builder()
+        .dispatch(|d| {
+            d.diagnostic(diagnostic::FastraceDiagnostic::default())
+                .append(append::Stderr::default().with_layout(layout::TextLayout::default()))
+        })
         .dispatch(|d| d.append(append::FastraceEvent::default()))
         .apply();
 

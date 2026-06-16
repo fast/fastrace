@@ -4,6 +4,8 @@ All significant changes to this project will be documented in this file.
 
 ## Unreleased
 
+## v0.18.1
+
 ### Notable Changes
 
 * Upgraded MSRV to 1.91.
