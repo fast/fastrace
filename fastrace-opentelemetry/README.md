@@ -34,7 +34,7 @@ Zipkin UI is available on [http://127.0.0.1:9411/](http://127.0.0.1:9411/)
 
 ## Report to OpenTelemetry Collector
 
-```rust, no_run
+```rust,no_run
 use std::borrow::Cow;
 
 use fastrace::collector::Config;
