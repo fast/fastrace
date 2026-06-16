@@ -6,6 +6,12 @@
 
 [Jaeger](https://www.jaegertracing.io/) reporter for [`fastrace`](https://crates.io/crates/fastrace).
 
+> [!WARNING]
+>
+> **`fastrace-jaeger` is deprecated** in favor of [`fastrace-opentelemetry`](https://crates.io/crates/fastrace-opentelemetry).
+>
+> It reports over Thrift/UDP to the (now deprecated) Jaeger agent. Jaeger has supported OTLP natively since v1.35 — the path Jaeger now recommends — and a dedicated Jaeger reporter only duplicates `fastrace-opentelemetry`. This crate will get one final release announcing the deprecation and will then be removed. See [Migrating to fastrace-opentelemetry](#migrating-to-fastrace-opentelemetry) below.
+
 ## Dependencies
 
 ```toml
@@ -27,6 +33,7 @@ Web UI is available on [http://127.0.0.1:16686/](http://127.0.0.1:16686/)
 ## Report to Jaeger Agent
 
 ```rust
+// deprecated
 use std::net::SocketAddr;
 
 use fastrace::collector::Config;
@@ -45,3 +52,7 @@ fastrace::set_reporter(reporter, Config::default());
 
 fastrace::flush();
 ```
+
+### Migrating to fastrace-opentelemetry
+
+`fastrace-opentelemetry` exports via OTLP, which Jaeger accepts natively (v1.35+). Your instrumentation (`Span::root`, `#[trace]`, ...) stays the same — only the reporter changes. See the [`fastrace-opentelemetry`](https://crates.io/crates/fastrace-opentelemetry) README for the full `OpenTelemetryReporter` setup and a ready-to-run Jaeger stack (`dev/docker-compose.yaml`, UI on `16686`); point the OTLP endpoint at Jaeger (`http://127.0.0.1:4317`).
