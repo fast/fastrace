@@ -4,6 +4,7 @@ members = [
   "crates/fastrace-macro",
   "crates/fastrace-opentelemetry",
   "crates/fastrace-futures",
+  "tests-build",
 ]
 resolver = "3"
 
@@ -24,6 +25,7 @@ fastrace-futures = { path = "crates/fastrace-futures" }
 fastrace-opentelemetry = { path = "crates/fastrace-opentelemetry" }
 
 # crates.io dependencies
+futures = { version = "0.3.32" }
 log = { version = "0.4.32" }
 opentelemetry = { version = "0.32.0", default-features = false, features = [
   "trace",
@@ -37,5 +39,10 @@ opentelemetry_sdk = { version = "0.32.1", default-features = false, features = [
 ] }
 serde = { version = "1.0.228", features = ["derive"] }
 
-# test dependencies
+# test-only dependencies
+async-stream = { version = "0.3.6" }
+# The `fastrace::trace` procedural macro only supports async-trait>=0.1.52
+async-trait = { version = "0.1.52" }
+logcall = { version = "0.2.0" }
 tokio = { version = "1.52.3", features = ["full"] }
+trybuild = { version = "1.0.116" }

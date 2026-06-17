@@ -1,0 +1,20 @@
+[package]
+name = "tests-build"
+publish = false
+
+edition = "2024"
+version = "0.0.0"
+rust-version = "1.91.0"
+
+[package.metadata.release]
+release = false
+
+[dev-dependencies]
+async-trait = { workspace = true }
+async-stream = { workspace = true }
+fastrace = { workspace = true, features = ["enable"] }
+futures = { workspace = true }
+log = { workspace = true }
+logcall = { workspace = true }
+tokio = { workspace = true }
+trybuild = { workspace = true }
