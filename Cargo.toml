@@ -1,34 +1,30 @@
 [workspace]
 members = [
-  "fastrace",
-  "fastrace-macro",
-  "fastrace-opentelemetry",
-  "fastrace-futures",
-
-  # non-publish crates
-  "examples",
-  "tests/macros",
-  "tests/statically-disable",
+  "crates/fastrace",
+  "crates/fastrace-macro",
+  "crates/fastrace-opentelemetry",
+  "crates/fastrace-futures",
 ]
-resolver = "2"
+resolver = "3"
 
 [workspace.package]
 edition = "2024"
 license = "Apache-2.0"
+readme = "README.md"
 repository = "https://github.com/fast/fastrace"
 rust-version = "1.91.0"
 
 [workspace.dependencies]
 # Workspace dependencies
-fastrace = { version = "0.7.18", path = "fastrace" }
-fastrace-macro = { version = "0.7.18", path = "fastrace-macro" }
+fastrace = { version = "0.7.18", path = "crates/fastrace" }
+fastrace-macro = { version = "0.7.18", path = "crates/fastrace-macro" }
 
 # Workspace leaves
-fastrace-futures = { path = "fastrace-futures" }
-fastrace-opentelemetry = { path = "fastrace-opentelemetry" }
+fastrace-futures = { path = "crates/fastrace-futures" }
+fastrace-opentelemetry = { path = "crates/fastrace-opentelemetry" }
 
 # crates.io dependencies
-log = { version = "0.4.27" }
+log = { version = "0.4.32" }
 opentelemetry = { version = "0.32.0", default-features = false, features = [
   "trace",
 ] }
@@ -36,22 +32,10 @@ opentelemetry-otlp = { version = "0.32.0", default-features = false, features = 
   "trace",
   "grpc-tonic",
 ] }
-opentelemetry_sdk = { version = "0.32.0", default-features = false, features = [
+opentelemetry_sdk = { version = "0.32.1", default-features = false, features = [
   "trace",
 ] }
-serde = { version = "1.0", features = ["derive"] }
+serde = { version = "1.0.228", features = ["derive"] }
 
 # test dependencies
-tokio = { version = "1.45.0", features = ["full"] }
-
-[profile.bench]
-lto = true
-opt-level = 3
-
-[patch.crates-io]
-# Patch fastrace in crates.io because we import logforth in the examples, which
-# itself depends on fastrace from crates.io. If we don't do this, example break
-# because logforth brings in a different version of fastrace and the appender
-# stops working.
-fastrace = { path = "fastrace" }
-fastrace-macro = { path = "fastrace-macro" }
+tokio = { version = "1.52.3", features = ["full"] }

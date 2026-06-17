@@ -4,7 +4,7 @@
 [![Documentation](https://img.shields.io/docsrs/fastrace?style=flat-square&logo=rust)](https://docs.rs/fastrace/)
 [![MSRV 1.91.0](https://img.shields.io/badge/MSRV-1.91.0-green?style=flat-square&logo=rust)](https://www.whatrustisit.com)
 [![CI Status](https://img.shields.io/github/actions/workflow/status/fast/fastrace/ci.yml?style=flat-square&logo=github)](https://github.com/fast/fastrace/actions)
-[![License](https://img.shields.io/crates/l/fastrace?style=flat-square)](https://github.com/fast/fastrace/blob/main/LICENSE)
+[![License](https://img.shields.io/crates/l/fastrace?style=flat-square)](https://www.apache.org/licenses/LICENSE-2.0.txt)
 [![libs.tech recommends](https://libs.tech/project/829370199/badge.svg)](https://libs.tech/project/829370199/fastrace)
 
 Fastrace is a tracing library [100x faster](#benchmarks) than others:

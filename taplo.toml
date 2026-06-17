@@ -1,3 +1,4 @@
+exclude = ["target/**"]
 include = ["Cargo.toml", "**/*.toml"]
 
 [formatting]

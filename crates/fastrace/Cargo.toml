@@ -6,10 +6,10 @@ categories = ["development-tools::debugging"]
 description = "A high-performance timeline tracing library for Rust"
 documentation = "https://docs.rs/fastrace"
 keywords = ["tracing", "span", "opentelemetry"]
-readme = "../README.md"
 
 edition.workspace = true
 license.workspace = true
+readme.workspace = true
 repository.workspace = true
 rust-version.workspace = true
 
@@ -29,7 +29,7 @@ serde = { workspace = true }
 async-trait = "0.1"
 crossbeam = "0.8"
 divan = "0.1"
-fastrace = { path = ".", features = ["enable"] }
+fastrace = { workspace = true, features = ["enable"] }
 fastrace-opentelemetry = { workspace = true }
 flume = "0.12.0"
 futures-timer = "3"
