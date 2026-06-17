@@ -14,9 +14,9 @@
 
 use std::time::Duration;
 
-use fastrace::collector::Config;
+use fastrace::collector::{Config, SpanContext};
 use fastrace::collector::ConsoleReporter;
-use fastrace::prelude::*;
+use fastrace::Span;
 
 fn main() {
     fastrace::set_reporter(ConsoleReporter, Config::default());
@@ -53,7 +53,7 @@ fn heavy_task() {
     }
 }
 
-#[trace]
+#[fastrace::trace]
 fn expensive_task(time: Duration) {
     std::thread::sleep(time);
 }

@@ -1,0 +1,13 @@
+[package]
+name = "console-reporter"
+
+edition.workspace = true
+publish.workspace = true
+version.workspace = true
+
+[dependencies]
+fastrace = { workspace = true, features = ["enable"] }
+
+[[bin]]
+name = "console-reporter"
+path = "main.rs"

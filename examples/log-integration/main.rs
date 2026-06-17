@@ -12,17 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use fastrace::collector::Config;
+use fastrace::collector::{Config, SpanContext};
 use fastrace::collector::ConsoleReporter;
-use fastrace::prelude::*;
-use log::info;
 use logforth::append;
 use logforth::diagnostic;
 use logforth::layout;
+use fastrace::local::LocalSpan;
+use fastrace::Span;
 
-/// An example of automatically logging function arguments and return values.
 #[logcall::logcall("debug")]
-#[trace]
+#[fastrace::trace]
 fn plus(a: u64, b: u64) -> Result<u64, std::io::Error> {
     Ok(a + b)
 }
@@ -51,11 +50,11 @@ fn do_main() {
     let root = Span::root("root", parent);
     let _span_guard = root.set_local_parent();
 
-    info!("event in root span");
+    log::info!("event in root span");
 
     let _local_span_guard = LocalSpan::enter_with_local_parent("child");
 
-    info!("event in child span");
+    log::info!("event in child span");
 
     plus(1, 2).unwrap();
 }

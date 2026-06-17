@@ -1,0 +1,13 @@
+[package]
+name = "sampling"
+
+edition.workspace = true
+publish.workspace = true
+version.workspace = true
+
+[dependencies]
+fastrace = { workspace = true, features = ["enable"] }
+
+[[bin]]
+name = "sampling"
+path = "main.rs"

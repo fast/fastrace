@@ -12,8 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! This example shows how to write a test harness to set up fastrace.
-
 #[test_harness::test(harness = test_util::setup_fastrace)]
 #[fastrace::trace]
 fn test_sync() -> anyhow::Result<()> {
@@ -30,9 +28,10 @@ async fn test_async() -> anyhow::Result<()> {
 
 #[cfg(test)]
 mod test_util {
-    use fastrace::collector::Config;
+    use fastrace::collector::{Config, SpanContext};
     use fastrace::collector::ConsoleReporter;
-    use fastrace::prelude::*;
+    use fastrace::future::FutureExt;
+    use fastrace::Span;
 
     pub fn setup_fastrace<F>(test: F)
     where F: FnOnce() -> anyhow::Result<()> + 'static {
@@ -48,7 +47,7 @@ mod test_util {
     pub fn setup_fastrace_async<F, Fut>(test: F)
     where
         F: FnOnce() -> Fut + 'static,
-        Fut: std::future::Future<Output = anyhow::Result<()>> + Send + 'static,
+        Fut: Future<Output = anyhow::Result<()>> + Send + 'static,
     {
         fastrace::set_reporter(ConsoleReporter, Config::default());
         let rt = tokio::runtime::Builder::new_multi_thread()

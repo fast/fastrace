@@ -28,6 +28,10 @@ tracing = { version = "0.1.44" }
 tracing-opentelemetry = { version = "0.33.0" }
 tracing-subscriber = { version = "0.3.23" }
 
+[profile.bench]
+lto = true
+opt-level = 3
+
 [[bench]]
 harness = false
 name = "trace"

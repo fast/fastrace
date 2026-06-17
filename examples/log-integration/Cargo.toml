@@ -1,0 +1,17 @@
+[package]
+name = "log-integration"
+
+edition.workspace = true
+publish.workspace = true
+version.workspace = true
+
+[dependencies]
+fastrace = { workspace = true, features = ["enable"] }
+log = { workspace = true }
+logcall = { workspace = true }
+logforth = { workspace = true }
+
+
+[[bin]]
+name = "log-integration"
+path = "main.rs"

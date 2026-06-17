@@ -1,53 +1,46 @@
-[package]
-name = "example"
+[workspace]
+members = [
+    "console-reporter", "fastrace-disabled", "log-integration",
+    "opentelemetry-reporter",
+    "sampling",
+    "test-harness-integration",
+]
+resolver = "3"
+
+[workspace.package]
+edition = "2024"
 publish = false
 version = "0.0.0"
 
-edition.workspace = true
-license.workspace = true
-repository.workspace = true
-rust-version.workspace = true
-
-[package.metadata.release]
-release = false
-
-[dev-dependencies]
-anyhow = { version = "1.0.98" }
-fastrace = { workspace = true, features = ["enable"] }
-fastrace-opentelemetry = { workspace = true }
-log = { workspace = true }
+[workspace.dependencies]
+anyhow = { version = "1.0.102" }
+fastrace = { path = "../crates/fastrace" }
+fastrace-opentelemetry = { path = "../crates/fastrace-opentelemetry" }
+log = { version = "0.4.32" }
 logcall = { version = "0.2.0" }
 logforth = { version = "0.30.1", features = [
-  "append-fastrace",
-  "diagnostic-fastrace",
-  "starter-log",
+    "append-fastrace",
+    "diagnostic-fastrace",
+    "starter-log",
 ] }
-opentelemetry = { workspace = true }
-opentelemetry-otlp = { workspace = true }
-opentelemetry_sdk = { workspace = true }
-test-harness = { version = "0.3.0" }
-tokio = { workspace = true }
+opentelemetry = { version = "0.32.0", default-features = false, features = [
+    "trace",
+] }
+opentelemetry-otlp = { version = "0.32.0", default-features = false, features = [
+    "trace",
+    "grpc-tonic",
+] }
+opentelemetry_sdk = { version = "0.32.1", default-features = false, features = [
+    "trace",
+] }
+test-harness = { version = "0.3.1" }
+tokio = { version = "1.52.3", features = ["full"] }
 
-[[example]]
-name = "asynchronous"
-path = "asynchronous.rs"
 
-[[example]]
-name = "basic"
-path = "basic.rs"
-
-[[example]]
-name = "harness"
-path = "harness.rs"
-
-[[example]]
-name = "logging"
-path = "logging.rs"
-
-[[example]]
-name = "synchronous"
-path = "synchronous.rs"
-
-[[example]]
-name = "sampling"
-path = "sampling.rs"
+[patch.crates-io]
+# Patch fastrace in crates.io because we import logforth in the examples, which
+# itself depends on fastrace from crates.io. If we don't do this, example break
+# because logforth brings in a different version of fastrace and the appender
+# stops working.
+fastrace = { path = "../crates/fastrace" }
+fastrace-macro = { path = "../crates/fastrace-macro" }

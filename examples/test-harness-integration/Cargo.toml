@@ -1,0 +1,16 @@
+[package]
+name = "test-harness-integration"
+
+edition.workspace = true
+publish.workspace = true
+version.workspace = true
+
+[dependencies]
+anyhow = { workspace = true }
+fastrace = { workspace = true, features = ["enable"] }
+test-harness = { workspace = true }
+tokio = { workspace = true }
+
+[[bin]]
+name = "test-harness-integration"
+path = "main.rs"

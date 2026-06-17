@@ -1,0 +1,13 @@
+[package]
+name = "fastrace-disabled"
+
+edition.workspace = true
+publish.workspace = true
+version.workspace = true
+
+[dependencies]
+fastrace = { workspace = true } # do not turn on the "enable" feature
+
+[[bin]]
+name = "fastrace-disabled"
+path = "main.rs"

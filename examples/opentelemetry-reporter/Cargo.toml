@@ -1,0 +1,18 @@
+[package]
+name = "opentelemetry-reporter"
+
+edition.workspace = true
+publish.workspace = true
+version.workspace = true
+
+[dependencies]
+fastrace = { workspace = true, features = ["enable"] }
+fastrace-opentelemetry = { workspace = true }
+opentelemetry = { workspace = true }
+opentelemetry-otlp = { workspace = true }
+opentelemetry_sdk = { workspace = true }
+tokio = { workspace = true }
+
+[[bin]]
+name = "opentelemetry-reporter"
+path = "main.rs"
