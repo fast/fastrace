@@ -5,6 +5,7 @@ members = [
   "crates/fastrace-opentelemetry",
   "crates/fastrace-futures",
   "tests-build",
+  "tests-integration",
 ]
 resolver = "3"
 
@@ -43,6 +44,11 @@ serde = { version = "1.0.228", features = ["derive"] }
 async-stream = { version = "0.3.6" }
 # The `fastrace::trace` procedural macro only supports async-trait>=0.1.52
 async-trait = { version = "0.1.52" }
+crossbeam = { version = "0.8.4" }
+futures-timer = { version = "3.0.4" }
+insta = { version = "1.48.0" }
 logcall = { version = "0.2.0" }
+pollster = { version = "0.4.0" }
+serial_test = { version = "3.5.0" }
 tokio = { version = "1.52.3", features = ["full"] }
 trybuild = { version = "1.0.116" }

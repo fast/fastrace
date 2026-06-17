@@ -18,9 +18,9 @@ fastrace-opentelemetry = { workspace = true }
 log = { workspace = true }
 logcall = { version = "0.2.0" }
 logforth = { version = "0.30.1", features = [
-    "append-fastrace",
-    "diagnostic-fastrace",
-    "starter-log",
+  "append-fastrace",
+  "diagnostic-fastrace",
+  "starter-log",
 ] }
 opentelemetry = { workspace = true }
 opentelemetry-otlp = { workspace = true }

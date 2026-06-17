@@ -206,7 +206,7 @@ fn multiple_threads_single_span() {
 
         handles.into_iter().for_each(|h| h.join().unwrap());
     })
-    .unwrap();
+        .unwrap();
 
     fastrace::flush();
 
@@ -359,10 +359,10 @@ fn test_macro() {
                     Bar.work2(&100).await;
                     work3(&100, &100).await;
                 }
-                .in_span(root),
+                    .in_span(root),
             ),
         )
-        .unwrap();
+            .unwrap();
     }
 
     fastrace::flush();
@@ -623,10 +623,10 @@ fn test_macro_properties() {
                     foo_async(1, &Bar, Bar).await;
                     bar_async().await;
                 }
-                .in_span(root),
+                    .in_span(root),
             ),
         )
-        .unwrap();
+            .unwrap();
     }
 
     fastrace::flush();
