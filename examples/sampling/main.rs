@@ -14,9 +14,10 @@
 
 use std::time::Duration;
 
-use fastrace::collector::{Config, SpanContext};
-use fastrace::collector::ConsoleReporter;
 use fastrace::Span;
+use fastrace::collector::Config;
+use fastrace::collector::ConsoleReporter;
+use fastrace::collector::SpanContext;
 
 fn main() {
     fastrace::set_reporter(ConsoleReporter, Config::default());

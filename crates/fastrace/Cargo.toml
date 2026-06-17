@@ -31,3 +31,4 @@ fastrace = { workspace = true, features = ["enable"] }
 futures-timer = { workspace = true }
 mockall = { workspace = true }
 pollster = { workspace = true }
+tokio = { workspace = true }

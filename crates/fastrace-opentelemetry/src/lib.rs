@@ -237,9 +237,11 @@ impl OpenTelemetryReporter {
     ///     .with_block_on(move |future| handle.block_on(future));
     /// ```
     pub fn with_block_on<F>(mut self, block_on: F) -> Self
-    where F: for<'a> FnMut(Pin<Box<dyn Future<Output = OTelSdkResult> + Send + 'a>>) -> OTelSdkResult
+    where
+        F: for<'a> FnMut(Pin<Box<dyn Future<Output = OTelSdkResult> + Send + 'a>>) -> OTelSdkResult
             + Send
-            + 'static {
+            + 'static,
+    {
         self.block_on = Box::new(block_on);
         self
     }

@@ -15,7 +15,9 @@
 use std::time::Duration;
 
 use fastrace::Span;
-use fastrace::collector::{Config, ConsoleReporter, SpanContext};
+use fastrace::collector::Config;
+use fastrace::collector::ConsoleReporter;
+use fastrace::collector::SpanContext;
 use fastrace::local::LocalSpan;
 
 fn func1(i: u64) {

@@ -12,8 +12,6 @@ env:
 jobs:
   check:
     runs-on: ubuntu-24.04
-    env:
-      FORCE_COLOR: 1
     steps:
       - uses: actions/checkout@v6
       - uses: crate-ci/typos@master
@@ -23,15 +21,25 @@ jobs:
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: nightly
-          components: rustfmt, clippy
+          components: rustfmt,clippy
       - name: Cargo version
         run: cargo --version
-      - name: Check format
-        run: cargo fmt --all -- --check
-      - name: Check clippy
-        run: cargo clippy --all-targets --all-features -- --deny warnings
+      - name: Check workspace
+        run: |
+          cargo fmt --all -- --check
+          cargo clippy --all-targets --all-features -- --deny warnings
+      - name: Check benches
+        working-directory: benches
+        run: |
+          cargo fmt --all -- --check
+          cargo clippy --all-targets --all-features -- --deny warnings
+      - name: Check examples
+        working-directory: examples
+        run: |
+          cargo fmt --all -- --check
+          cargo clippy --all-targets --all-features -- --deny warnings
 
-  test:
+  tests:
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -50,21 +58,47 @@ jobs:
       - uses: taiki-e/install-action@v2
         with:
           tool: nextest,cargo-nextest
-
       - name: Cargo version
         run: cargo --version
 
-      - name: Build
-        run: cargo build --workspace --all-targets
-
-      - name: Run tests
+      - name: Run workspace tests
         run: |
+          cargo build --workspace --all-features --all-targets
           cargo nextest run --workspace
           cargo test --doc
 
       - name: Run examples
+        working-directory: examples
+        shell: bash
         run: |
-          cargo run --example asynchronous
-          cargo run --example synchronous
-          cargo run --example basic
-          cargo run --package test-statically-disable
+          set -euo pipefail
+
+          targets=$(cargo metadata --no-deps --format-version 1 | node -e '
+          const fs = require("fs");
+          const metadata = JSON.parse(fs.readFileSync(0, "utf8"));
+
+          const targets = metadata.packages.flatMap((pkg) =>
+            pkg.targets
+              .filter((target) => target.kind.includes("bin"))
+              .map((target) => [pkg.name, target.name]),
+          );
+
+          if (targets.length === 0) {
+            console.error("no runnable example targets found");
+            process.exit(1);
+          }
+
+          for (const [pkg, target] of targets) {
+            console.log(`${pkg}\t${target}`);
+          }
+          ')
+
+          while IFS=$'\t' read -r package target; do
+            echo "::group::cargo run --package ${package} --bin ${target}"
+            cargo run --package "${package}" --bin "${target}"
+            echo "::endgroup::"
+          done <<< "${targets}"
+
+      - name: Run benches
+        working-directory: benches
+        run: cargo bench --workspace

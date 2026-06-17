@@ -206,7 +206,7 @@ fn multiple_threads_single_span() {
 
         handles.into_iter().for_each(|h| h.join().unwrap());
     })
-        .unwrap();
+    .unwrap();
 
     fastrace::flush();
 
@@ -359,10 +359,10 @@ fn test_macro() {
                     Bar.work2(&100).await;
                     work3(&100, &100).await;
                 }
-                    .in_span(root),
+                .in_span(root),
             ),
         )
-            .unwrap();
+        .unwrap();
     }
 
     fastrace::flush();
@@ -429,13 +429,14 @@ fn macro_example() {
     fastrace::flush();
 
     let graph = tree_str_from_span_records(collected_spans.lock().clone());
-    insta::assert_snapshot!(graph,@r###"
+    insta::assert_snapshot!(graph,@"
+
     root []
         do_something_async_short_name []
         do_something_short_name []
-        lib::macro_example::{{closure}}::do_something []
-        lib::macro_example::{{closure}}::do_something_async::{{closure}} []
-    "###);
+        tests::macro_example::{{closure}}::do_something []
+        tests::macro_example::{{closure}}::do_something_async::{{closure}} []
+    ");
 }
 
 #[test]
@@ -623,10 +624,10 @@ fn test_macro_properties() {
                     foo_async(1, &Bar, Bar).await;
                     bar_async().await;
                 }
-                    .in_span(root),
+                .in_span(root),
             ),
         )
-            .unwrap();
+        .unwrap();
     }
 
     fastrace::flush();

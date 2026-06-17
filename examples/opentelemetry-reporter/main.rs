@@ -14,11 +14,12 @@
 
 use std::borrow::Cow;
 
-use fastrace::collector::{Config, SpanContext};
-use opentelemetry_otlp::WithExportConfig;
+use fastrace::Span;
+use fastrace::collector::Config;
+use fastrace::collector::SpanContext;
 use fastrace::future::FutureExt;
 use fastrace::local::LocalSpan;
-use fastrace::Span;
+use opentelemetry_otlp::WithExportConfig;
 
 fn parallel_job() -> Vec<tokio::task::JoinHandle<()>> {
     let mut v = Vec::with_capacity(4);

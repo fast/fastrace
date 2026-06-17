@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+fn main() {}
+
 #[test_harness::test(harness = test_util::setup_fastrace)]
 #[fastrace::trace]
 fn test_sync() -> anyhow::Result<()> {
@@ -28,13 +30,16 @@ async fn test_async() -> anyhow::Result<()> {
 
 #[cfg(test)]
 mod test_util {
-    use fastrace::collector::{Config, SpanContext};
-    use fastrace::collector::ConsoleReporter;
-    use fastrace::future::FutureExt;
     use fastrace::Span;
+    use fastrace::collector::Config;
+    use fastrace::collector::ConsoleReporter;
+    use fastrace::collector::SpanContext;
+    use fastrace::future::FutureExt;
 
     pub fn setup_fastrace<F>(test: F)
-    where F: FnOnce() -> anyhow::Result<()> + 'static {
+    where
+        F: FnOnce() -> anyhow::Result<()> + 'static,
+    {
         fastrace::set_reporter(ConsoleReporter, Config::default());
         {
             let root = Span::root(closure_name::<F>(), SpanContext::random());
@@ -68,5 +73,3 @@ mod test_util {
             .unwrap()
     }
 }
-
-fn main() {}
