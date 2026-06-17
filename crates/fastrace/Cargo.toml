@@ -17,11 +17,11 @@ rust-version.workspace = true
 enable = ["fastrace-macro/enable"]
 
 [dependencies]
-fastant = "0.1"
+fastant = { workspace = true }
 fastrace-macro = { workspace = true }
-parking_lot = "0.12"
-pin-project = { version = "1.1.8" }
-rand = "0.10.0"
+parking_lot = { workspace = true }
+pin-project = { workspace = true }
+rand = { workspace = true }
 rtrb = { workspace = true }
 serde = { workspace = true }
 

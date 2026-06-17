@@ -40,7 +40,7 @@ tokio = { version = "1.52.3", features = ["full"] }
 
 [patch.crates-io]
 # Patch fastrace in crates.io because we import logforth in the examples, which
-# itself depends on fastrace from crates.io. If we don't do this, example break
+# itself depends on fastrace from crates.io. If we don't do this, examples break
 # because logforth brings in a different version of fastrace and the appender
 # stops working.
 fastrace = { path = "../crates/fastrace" }

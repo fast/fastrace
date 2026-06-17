@@ -1,13 +1,6 @@
 [workspace]
 exclude = ["benches", "examples"]
-members = [
-  "crates/fastrace",
-  "crates/fastrace-macro",
-  "crates/fastrace-opentelemetry",
-  "crates/fastrace-futures",
-  "tests-build",
-  "tests-integration",
-]
+members = ["crates/*", "tests-build", "tests-integration"]
 resolver = "3"
 
 [workspace.package]
@@ -25,7 +18,10 @@ fastrace-macro = { version = "0.7.18", path = "crates/fastrace-macro" }
 fastrace-opentelemetry = { path = "crates/fastrace-opentelemetry" }
 
 # crates.io dependencies
+fastant = { version = "0.1.11" }
 futures = { version = "0.3.32" }
+futures-core = { version = "0.3.32" }
+futures-sink = { version = "0.3.32" }
 log = { version = "0.4.32" }
 opentelemetry = { version = "0.32.0", default-features = false, features = [
   "trace",
@@ -37,6 +33,9 @@ opentelemetry-otlp = { version = "0.32.0", default-features = false, features = 
 opentelemetry_sdk = { version = "0.32.1", default-features = false, features = [
   "trace",
 ] }
+parking_lot = { version = "0.12.5" }
+pin-project = { version = "1.1.13" }
+rand = { version = "0.10.1" }
 rtrb = { version = "0.3.4" }
 serde = { version = "1.0.228", features = ["derive"] }
 
