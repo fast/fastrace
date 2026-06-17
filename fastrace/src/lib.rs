@@ -295,7 +295,7 @@
 //!
 //! [`Reporter`] is responsible for reporting the span records to a remote agent.
 //!
-//! Executables should initialize a reporter at the very begining of the program's lifetime.
+//! Executables should initialize a reporter at the very beginning of the program's lifetime.
 //! Span records generated before the reporter is initialized will be ignored.
 //!
 //! For an easy start, `fastrace` offers a [`ConsoleReporter`] that prints span records to stderr.
