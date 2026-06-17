@@ -20,8 +20,8 @@ rust-version = "1.91.0"
 [workspace.dependencies]
 # Workspace dependencies
 fastrace = { version = "0.7.18", path = "crates/fastrace" }
-fastrace-macro = { version = "0.7.18", path = "crates/fastrace-macro" }
 fastrace-futures = { path = "crates/fastrace-futures" }
+fastrace-macro = { version = "0.7.18", path = "crates/fastrace-macro" }
 fastrace-opentelemetry = { path = "crates/fastrace-opentelemetry" }
 
 # crates.io dependencies

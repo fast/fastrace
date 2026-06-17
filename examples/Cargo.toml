@@ -1,9 +1,11 @@
 [workspace]
 members = [
-    "console-reporter", "fastrace-disabled", "log-integration",
-    "opentelemetry-reporter",
-    "sampling",
-    "test-harness-integration",
+  "console-reporter",
+  "fastrace-disabled",
+  "log-integration",
+  "opentelemetry-reporter",
+  "sampling",
+  "test-harness-integration",
 ]
 resolver = "3"
 
@@ -19,23 +21,22 @@ fastrace-opentelemetry = { path = "../crates/fastrace-opentelemetry" }
 log = { version = "0.4.32" }
 logcall = { version = "0.2.0" }
 logforth = { version = "0.30.1", features = [
-    "append-fastrace",
-    "diagnostic-fastrace",
-    "starter-log",
+  "append-fastrace",
+  "diagnostic-fastrace",
+  "starter-log",
 ] }
 opentelemetry = { version = "0.32.0", default-features = false, features = [
-    "trace",
+  "trace",
 ] }
 opentelemetry-otlp = { version = "0.32.0", default-features = false, features = [
-    "trace",
-    "grpc-tonic",
+  "trace",
+  "grpc-tonic",
 ] }
 opentelemetry_sdk = { version = "0.32.1", default-features = false, features = [
-    "trace",
+  "trace",
 ] }
 test-harness = { version = "0.3.1" }
 tokio = { version = "1.52.3", features = ["full"] }
-
 
 [patch.crates-io]
 # Patch fastrace in crates.io because we import logforth in the examples, which

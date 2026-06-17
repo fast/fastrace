@@ -73,24 +73,15 @@ jobs:
         run: |
           set -euo pipefail
 
-          targets=$(cargo metadata --no-deps --format-version 1 | node -e '
-          const fs = require("fs");
-          const metadata = JSON.parse(fs.readFileSync(0, "utf8"));
-
-          const targets = metadata.packages.flatMap((pkg) =>
-            pkg.targets
-              .filter((target) => target.kind.includes("bin"))
-              .map((target) => [pkg.name, target.name]),
-          );
-
-          if (targets.length === 0) {
-            console.error("no runnable example targets found");
-            process.exit(1);
-          }
-
-          for (const [pkg, target] of targets) {
-            console.log(`${pkg}\t${target}`);
-          }
+          targets=$(cargo metadata --no-deps --format-version 1 | jq -er '
+            [
+              .packages[] as $package
+              | $package.targets[]
+              | select(.kind | index("bin"))
+              | [$package.name, .name]
+              | @tsv
+            ]
+            | if length == 0 then error("no runnable example targets found") else .[] end
           ')
 
           while IFS=$'\t' read -r package target; do
