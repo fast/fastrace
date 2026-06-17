@@ -73,7 +73,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          targets=$(cargo metadata --no-deps --format-version 1 | jq -er '
+          cargo metadata --no-deps --format-version 1 | jq -er '
             [
               .packages[] as $package
               | $package.targets[]
@@ -82,13 +82,11 @@ jobs:
               | @tsv
             ]
             | if length == 0 then error("no runnable example targets found") else .[] end
-          ')
-
-          while IFS=$'\t' read -r package target; do
+          ' | tr -d '\r' | while IFS=$'\t' read -r package target; do
             echo "::group::cargo run --package ${package} --bin ${target}"
             cargo run --package "${package}" --bin "${target}"
             echo "::endgroup::"
-          done <<< "${targets}"
+          done
 
       - name: Run benches
         working-directory: benches
