@@ -1,27 +1,32 @@
 [package]
 name = "benches"
-version = "0.1.0"
-edition.workspace = true
-license.workspace = true
-readme.workspace = true
-repository.workspace = true
-rust-version.workspace = true
+version = "0.0.0"
+
+edition = "2024"
+publish = false
 
 [dev-dependencies]
-crossbeam = { workspace = true }
-divan = { workspace = true }
-fastrace = { workspace = true, features = ["enable"] }
-fastrace-opentelemetry = { workspace = true }
-flume = { workspace = true }
-opentelemetry = { workspace = true }
-opentelemetry-otlp = { workspace = true }
-opentelemetry_sdk = { workspace = true }
-pollster = { workspace = true }
-rtrb = { workspace = true }
-tokio = { workspace = true }
-tracing = { workspace = true }
-tracing-opentelemetry = { workspace = true }
-tracing-subscriber = { workspace = true }
+crossbeam = { version = "0.8.4" }
+divan = { version = "0.1.21" }
+fastrace = { path = "../crates/fastrace", features = ["enable"] }
+fastrace-opentelemetry = { path = "../crates/fastrace-opentelemetry" }
+flume = { version = "0.12.0" }
+opentelemetry = { version = "0.32.0", default-features = false, features = [
+    "trace",
+] }
+opentelemetry-otlp = { version = "0.32.0", default-features = false, features = [
+    "trace",
+    "grpc-tonic",
+] }
+opentelemetry_sdk = { version = "0.32.1", default-features = false, features = [
+    "trace",
+] }
+pollster = { version = "0.4.0" }
+rtrb = { version = "0.3.4" }
+tokio = { version = "1.52.3", features = ["full"] }
+tracing = { version = "0.1.44" }
+tracing-opentelemetry = { version = "0.33.0" }
+tracing-subscriber = { version = "0.3.23" }
 
 [[bench]]
 harness = false

@@ -1,11 +1,12 @@
 [workspace]
+exclude = ["benches", "examples"]
 members = [
   "crates/fastrace",
   "crates/fastrace-macro",
   "crates/fastrace-opentelemetry",
   "crates/fastrace-futures",
   "tests-build",
-  "tests-integration", "benches",
+  "tests-integration",
 ]
 resolver = "3"
 
@@ -20,8 +21,6 @@ rust-version = "1.91.0"
 # Workspace dependencies
 fastrace = { version = "0.7.18", path = "crates/fastrace" }
 fastrace-macro = { version = "0.7.18", path = "crates/fastrace-macro" }
-
-# Workspace leaves
 fastrace-futures = { path = "crates/fastrace-futures" }
 fastrace-opentelemetry = { path = "crates/fastrace-opentelemetry" }
 
@@ -46,8 +45,6 @@ async-stream = { version = "0.3.6" }
 # The `fastrace::trace` procedural macro only supports async-trait>=0.1.52
 async-trait = { version = "0.1.52" }
 crossbeam = { version = "0.8.4" }
-divan = { version = "0.1.21" }
-flume = { version = "0.12.0" }
 futures-timer = { version = "3.0.4" }
 insta = { version = "1.48.0" }
 logcall = { version = "0.2.0" }
@@ -55,7 +52,4 @@ mockall = { version = "0.14.0" }
 pollster = { version = "0.4.0" }
 serial_test = { version = "3.5.0" }
 tokio = { version = "1.52.3", features = ["full"] }
-tracing = { version = "0.1.44" }
-tracing-opentelemetry = { version = "0.33.0" }
-tracing-subscriber = { version = "0.3.19" }
 trybuild = { version = "1.0.116" }
