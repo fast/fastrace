@@ -9,7 +9,7 @@ rust-version.workspace = true
 [package.metadata.release]
 release = false
 
-[dependencies]
+[dev-dependencies]
 async-trait = { workspace = true }
 crossbeam = { workspace = true }
 fastrace = { workspace = true, features = ["enable"] }

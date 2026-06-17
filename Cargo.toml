@@ -5,7 +5,7 @@ members = [
   "crates/fastrace-opentelemetry",
   "crates/fastrace-futures",
   "tests-build",
-  "tests-integration",
+  "tests-integration", "benches",
 ]
 resolver = "3"
 
@@ -38,6 +38,7 @@ opentelemetry-otlp = { version = "0.32.0", default-features = false, features = 
 opentelemetry_sdk = { version = "0.32.1", default-features = false, features = [
   "trace",
 ] }
+rtrb = { version = "0.3.4" }
 serde = { version = "1.0.228", features = ["derive"] }
 
 # test-only dependencies
@@ -45,10 +46,16 @@ async-stream = { version = "0.3.6" }
 # The `fastrace::trace` procedural macro only supports async-trait>=0.1.52
 async-trait = { version = "0.1.52" }
 crossbeam = { version = "0.8.4" }
+divan = { version = "0.1.21" }
+flume = { version = "0.12.0" }
 futures-timer = { version = "3.0.4" }
 insta = { version = "1.48.0" }
 logcall = { version = "0.2.0" }
+mockall = { version = "0.14.0" }
 pollster = { version = "0.4.0" }
 serial_test = { version = "3.5.0" }
 tokio = { version = "1.52.3", features = ["full"] }
+tracing = { version = "0.1.44" }
+tracing-opentelemetry = { version = "0.33.0" }
+tracing-subscriber = { version = "0.3.19" }
 trybuild = { version = "1.0.116" }

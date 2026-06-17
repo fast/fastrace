@@ -260,7 +260,6 @@
 //! use fastrace::collector::Config;
 //! use fastrace::collector::ConsoleReporter;
 //! use fastrace::prelude::*;
-//! use pollster::block_on;
 //!
 //! #[trace]
 //! fn do_something(i: u64) {
@@ -280,7 +279,7 @@
 //!
 //!     do_something(100);
 //!
-//!     block_on(
+//!     pollster::block_on(
 //!         async {
 //!             do_something_async(100).await;
 //!         }
