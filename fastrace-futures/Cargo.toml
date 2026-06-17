@@ -5,7 +5,7 @@ version = "0.7.18"
 categories = ["development-tools::debugging"]
 description = "Utilities for tracing `futures` with fastrace"
 documentation = "https://docs.rs/fastrace-futures"
-keywords = ["tracing", "span", "futures", "jaeger", "opentelemetry"]
+keywords = ["tracing", "span", "futures", "opentelemetry"]
 readme = "README.md"
 
 edition.workspace = true

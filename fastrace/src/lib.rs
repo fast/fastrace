@@ -293,15 +293,13 @@
 //!
 //! ## Reporter
 //!
-//! [`Reporter`] is responsible for reporting the span records to a remote agent,
-//! such as Jaeger.
+//! [`Reporter`] is responsible for reporting the span records to a remote agent.
 //!
-//! Executables should initialize a reporter implementation early in the program's
-//! runtime. Span records generated before the reporter is initialized will be ignored.
+//! Executables should initialize a reporter at the very begining of the program's lifetime.
+//! Span records generated before the reporter is initialized will be ignored.
 //!
-//! For an easy start, `fastrace` offers a [`ConsoleReporter`] that prints span
-//! records to stderr. For more advanced use, crates like `fastrace-jaeger`, `fastrace-datadog`,
-//! and `fastrace-opentelemetry` are available.
+//! For an easy start, `fastrace` offers a [`ConsoleReporter`] that prints span records to stderr.
+//! For more advanced use, crates like `fastrace-opentelemetry` are available.
 //!
 //! The reporter runs in a background collector thread. [`Config::report_interval()`] controls the
 //! *maximum* interval between report cycles, but the reporter may be invoked earlier. Do not rely

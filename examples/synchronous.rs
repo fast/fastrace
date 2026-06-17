@@ -56,25 +56,12 @@ async fn main() {
 }
 
 pub struct ReportAll {
-    jaeger: fastrace_jaeger::JaegerReporter,
-    datadog: fastrace_datadog::DatadogReporter,
     opentelemetry: fastrace_opentelemetry::OpenTelemetryReporter,
 }
 
 impl ReportAll {
     pub fn create() -> ReportAll {
         ReportAll {
-            jaeger: fastrace_jaeger::JaegerReporter::new(
-                "127.0.0.1:6831".parse().unwrap(),
-                "synchronous",
-            )
-            .unwrap(),
-            datadog: fastrace_datadog::DatadogReporter::new(
-                "127.0.0.1:8126".parse().unwrap(),
-                "synchronous",
-                "db",
-                "select",
-            ),
             opentelemetry: fastrace_opentelemetry::OpenTelemetryReporter::new(
                 opentelemetry_otlp::SpanExporter::builder()
                     .with_tonic()
@@ -101,8 +88,6 @@ impl ReportAll {
 
 impl Reporter for ReportAll {
     fn report(&mut self, spans: Vec<SpanRecord>) {
-        self.jaeger.report(spans.clone());
-        self.datadog.report(spans.clone());
         self.opentelemetry.report(spans);
     }
 }

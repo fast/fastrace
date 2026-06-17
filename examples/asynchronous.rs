@@ -16,8 +16,6 @@
 // Copyright 2020 TiKV Project Authors. Licensed under Apache-2.0.
 // [1]: https://github.com/tikv/minitrace-rust/blob/v0.6.4/minitrace/examples/asynchronous.rs
 
-#![allow(clippy::new_without_default)]
-
 use std::borrow::Cow;
 
 use fastrace::collector::Config;
@@ -36,7 +34,7 @@ fn parallel_job() -> Vec<tokio::task::JoinHandle<()>> {
 }
 
 async fn iter_job(iter: u64) {
-    std::thread::sleep(std::time::Duration::from_millis(iter * 10));
+    tokio::time::sleep(std::time::Duration::from_millis(iter * 10)).await;
     tokio::task::yield_now().await;
     other_job().await;
 }
@@ -47,7 +45,7 @@ async fn other_job() {
         if i == 10 {
             tokio::task::yield_now().await;
         }
-        std::thread::sleep(std::time::Duration::from_millis(1));
+        tokio::time::sleep(std::time::Duration::from_millis(1)).await;
     }
 }
 
@@ -81,25 +79,12 @@ async fn main() {
 }
 
 pub struct ReportAll {
-    jaeger: fastrace_jaeger::JaegerReporter,
-    datadog: fastrace_datadog::DatadogReporter,
     opentelemetry: fastrace_opentelemetry::OpenTelemetryReporter,
 }
 
 impl ReportAll {
     pub fn create() -> ReportAll {
         ReportAll {
-            jaeger: fastrace_jaeger::JaegerReporter::new(
-                "127.0.0.1:6831".parse().unwrap(),
-                "asynchronous",
-            )
-            .unwrap(),
-            datadog: fastrace_datadog::DatadogReporter::new(
-                "127.0.0.1:8126".parse().unwrap(),
-                "asynchronous",
-                "db",
-                "select",
-            ),
             opentelemetry: fastrace_opentelemetry::OpenTelemetryReporter::new(
                 opentelemetry_otlp::SpanExporter::builder()
                     .with_tonic()
@@ -126,8 +111,6 @@ impl ReportAll {
 
 impl Reporter for ReportAll {
     fn report(&mut self, spans: Vec<SpanRecord>) {
-        self.jaeger.report(spans.clone());
-        self.datadog.report(spans.clone());
         self.opentelemetry.report(spans);
     }
 }

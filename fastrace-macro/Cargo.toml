@@ -5,7 +5,7 @@ version = "0.7.18"
 categories = ["development-tools::debugging"]
 description = "Attribute procedural macro for fastrace"
 documentation = "https://docs.rs/fastrace-macro"
-keywords = ["tracing", "span", "datadog", "jaeger", "opentelemetry"]
+keywords = ["tracing", "span", "opentelemetry"]
 readme = "README.md"
 
 edition.workspace = true

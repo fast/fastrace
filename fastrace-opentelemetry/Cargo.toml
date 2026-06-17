@@ -5,7 +5,7 @@ version = "0.18.1"
 categories = ["development-tools::debugging"]
 description = "Opentelemetry reporter for fastrace"
 documentation = "https://docs.rs/fastrace-opentelemetry"
-keywords = ["tracing", "span", "datadog", "jaeger", "opentelemetry"]
+keywords = ["tracing", "span", "opentelemetry"]
 readme = "README.md"
 
 edition.workspace = true

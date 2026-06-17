@@ -15,7 +15,7 @@ Features:
 
 - [Extremely fast](#benchmarks)
 - [Rich features for logging](https://github.com/fast/fastrace/blob/main/examples/logging.rs)
-- Compatible with [Jaeger], [Datadog], and [OpenTelemetry]
+- Compatible with [OpenTelemetry]
 
 ## Resources
 
@@ -99,8 +99,6 @@ Fastrace is built against the latest stable release. The minimum supported versi
 
 Fastrace supports multiple out-of-box reporters to export spans:
 
-- [`fastrace-jaeger`](https://crates.io/crates/fastrace-jaeger): Export spans to [Jaeger](https://www.jaegertracing.io/)
-- [`fastrace-datadog`](https://crates.io/crates/fastrace-datadog): Export spans to [Datadog](https://www.datadoghq.com/)
 - [`fastrace-opentelemetry`](https://crates.io/crates/fastrace-opentelemetry): Export spans to [OpenTelemetry](https://opentelemetry.io/)
 
 ## Integrations
@@ -173,8 +171,6 @@ In this context, Fastrace offers a more efficient solution by filtering out enti
 [Docs]: https://docs.rs/fastrace/
 [Examples]: https://github.com/fast/fastrace/tree/main/examples
 [OpenTelemetry]: https://opentelemetry.io/
-[Jaeger]: https://crates.io/crates/fastrace-jaeger
-[Datadog]: https://crates.io/crates/fastrace-datadog
 
 ## Benchmarks
 
