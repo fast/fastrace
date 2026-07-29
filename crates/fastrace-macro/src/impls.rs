@@ -90,7 +90,7 @@ pub(crate) fn gen_trace(args: Args, input: ItemFn) -> Result<TokenStream> {
     let Signature {
         output: return_type,
         inputs: params,
-        unsafety,
+        safety,
         constness,
         abi,
         ident,
@@ -107,7 +107,7 @@ pub(crate) fn gen_trace(args: Args, input: ItemFn) -> Result<TokenStream> {
     let fn_span = ident.span();
     Ok(quote_spanned!(fn_span=>
         #(#attrs) *
-        #vis #constness #unsafety #asyncness #abi fn #ident<#gen_params>(#params) #return_type
+        #vis #constness #safety #asyncness #abi fn #ident<#gen_params>(#params) #return_type
         #where_clause
         {
             #func_body
@@ -195,6 +195,7 @@ fn gen_block(
             fn visit_type_mut(&mut self, ty: &mut Type) {
                 if let Type::ImplTrait(..) = ty {
                     *ty = Type::Infer(TypeInfer {
+                        attrs: Vec::new(),
                         underscore_token: Token![_](ty.span()),
                     });
                 } else {
