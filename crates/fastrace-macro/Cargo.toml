@@ -22,7 +22,7 @@ enable = []
 [dependencies]
 proc-macro2 = { version = "1.0.106" }
 quote = { version = "1.0.45" }
-syn = { version = "2.0.118", features = [
+syn = { version = "3.0.3", features = [
   "full",
   "parsing",
   "extra-traits",
