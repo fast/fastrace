@@ -4,6 +4,10 @@ All significant changes to this project will be documented in this file.
 
 ## Unreleased
 
+## v0.7.19
+
+* Upgrade `syn` to 3.
+
 ## v0.7.18
 
 ### Notable Changes
