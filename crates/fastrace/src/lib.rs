@@ -1,4 +1,20 @@
+// Copyright 2024 FastLabs Developers
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// This crate is derived from [1] under the original license header:
 // Copyright 2020 TiKV Project Authors. Licensed under Apache-2.0.
+// [1]: https://github.com/tikv/minitrace-rust/blob/v0.6.4/minitrace/src/lib.rs
 
 //! `fastrace` is a high-performance, ergonomic, library-level timeline tracing library for Rust.
 //!
@@ -26,6 +42,7 @@
 //! ```
 //! # struct HttpRequest;
 //! # struct Error;
+//!
 //! #[fastrace::trace]
 //! pub fn send_request(req: HttpRequest) -> Result<(), Error> {
 //!     // ...
@@ -42,9 +59,12 @@
 //! the name of the root span.
 //!
 //! ```
-//! use fastrace::prelude::*;
 //! # struct HttpRequest;
 //! # struct Error;
+//!
+//! use fastrace::Span;
+//! use fastrace::collector::SpanContext;
+//! use fastrace::func_path;
 //!
 //! pub fn send_request(req: HttpRequest) -> Result<(), Error> {
 //!     let root = Span::root(func_path!(), SpanContext::random());
@@ -70,9 +90,10 @@
 //! terminating, [`flush()`] should be called to ensure all collected span records are reported.
 //!
 //! ```
+//! use fastrace::Span;
 //! use fastrace::collector::Config;
 //! use fastrace::collector::ConsoleReporter;
-//! use fastrace::prelude::*;
+//! use fastrace::collector::SpanContext;
 //!
 //! fn main() {
 //!     fastrace::set_reporter(ConsoleReporter, Config::default());
@@ -114,9 +135,10 @@
 //!
 //! `Span` is thread-safe and can be sent across threads.
 //! ```
+//! use fastrace::Span;
 //! use fastrace::collector::Config;
 //! use fastrace::collector::ConsoleReporter;
-//! use fastrace::prelude::*;
+//! use fastrace::collector::SpanContext;
 //!
 //! fastrace::set_reporter(ConsoleReporter, Config::default());
 //!
@@ -147,7 +169,8 @@
 //! and creates a child `Span` with it.
 //!
 //! ```
-//! use fastrace::prelude::*;
+//! use fastrace::Span;
+//! use fastrace::collector::SpanContext;
 //!
 //! {
 //!     let root_span = Span::root("root", SpanContext::random());
@@ -191,10 +214,13 @@
 //! becomes the new local parent.
 //!
 //! If no local context is set, the [`LocalSpan::enter_with_local_parent()`] will do nothing.
+//!
 //! ```
+//! use fastrace::Span;
 //! use fastrace::collector::Config;
 //! use fastrace::collector::ConsoleReporter;
-//! use fastrace::prelude::*;
+//! use fastrace::collector::SpanContext;
+//! use fastrace::local::LocalSpan;
 //!
 //! fastrace::set_reporter(ConsoleReporter, Config::default());
 //!
@@ -224,10 +250,14 @@
 //! program.
 //!
 //! An `Event` can be seen as a log record attached to a span.
+//!
 //! ```
+//! use fastrace::Event;
+//! use fastrace::Span;
 //! use fastrace::collector::Config;
 //! use fastrace::collector::ConsoleReporter;
-//! use fastrace::prelude::*;
+//! use fastrace::collector::SpanContext;
+//! use fastrace::local::LocalSpan;
 //!
 //! fastrace::set_reporter(ConsoleReporter, Config::default());
 //!
@@ -257,16 +287,18 @@
 //! For more detailed usage instructions, please refer to [`trace`].
 //!
 //! ```
+//! use fastrace::Span;
 //! use fastrace::collector::Config;
 //! use fastrace::collector::ConsoleReporter;
-//! use fastrace::prelude::*;
+//! use fastrace::collector::SpanContext;
+//! use fastrace::future::FutureExt;
 //!
-//! #[trace]
+//! #[fastrace::trace]
 //! fn do_something(i: u64) {
 //!     std::thread::sleep(std::time::Duration::from_millis(i));
 //! }
 //!
-//! #[trace]
+//! #[fastrace::trace]
 //! async fn do_something_async(i: u64) {
 //!     futures_timer::Delay::new(std::time::Duration::from_millis(i)).await;
 //! }
@@ -376,6 +408,98 @@ mod span;
 #[doc(hidden)]
 pub mod util;
 
+/// An attribute macro designed to eliminate boilerplate code.
+///
+/// This macro automatically creates a span for the annotated function. The span name defaults
+/// to the function name but can be customized by passing a string literal as an argument using
+/// the `name` parameter.
+///
+/// The `#[fastrace::trace]` attribute requires a local parent context to function correctly.
+/// Ensure that the function annotated with `#[fastrace::trace]` is called within __a local
+/// context of a `Span`__, which is established by invoking the `Span::set_local_parent()`
+/// method.
+///
+/// ## Arguments
+///
+/// * `name` - The name of the span. Defaults to the full path of the function.
+/// * `short_name` - Whether to use the function name without path as the span name. Defaults
+///   to `false`.
+/// * `enter_on_poll` - Whether to enter the span on poll. If set to `false`, `in_span` will be
+///   used. Only available for `async fn`. Defaults to `false`.
+/// * `properties` - A list of key-value pairs to be added as properties to the span. The value
+///   can be a format string, where the function arguments are accessible. Defaults to `{}`.
+/// * `crate` - The path to the fastrace crate. Defaults to `::fastrace`.
+///
+/// # Examples
+///
+/// ```
+/// #[fastrace::trace]
+/// fn simple() {
+///     // ...
+/// }
+///
+/// #[fastrace::trace(short_name = true)]
+/// async fn simple_async() {
+///     // ...
+/// }
+///
+/// #[fastrace::trace(name = "qux", enter_on_poll = true)]
+/// async fn baz() {
+///     // ...
+/// }
+///
+/// #[fastrace::trace(properties = { "k1": "v1", "a": "argument `a` is {a:?}" })]
+/// async fn properties(a: u64) {
+///     // ...
+/// }
+/// ```
+///
+/// The code snippets above will be expanded to:
+///
+/// ```
+/// use fastrace::Span;
+/// use fastrace::future::FutureExt;
+/// use fastrace::local::LocalSpan;
+///
+/// fn simple() {
+///     let __guard__ = LocalSpan::enter_with_local_parent("example::simple");
+///     // ...
+/// }
+///
+/// async fn simple_async() {
+///     let __span__ = Span::enter_with_local_parent("simple_async");
+///     async {
+///         // ...
+///     }
+///     .in_span(__span__)
+///     .await
+/// }
+///
+/// async fn baz() {
+///     async {
+///         // ...
+///     }
+///     .enter_on_poll("qux")
+///     .await
+/// }
+///
+/// async fn properties(a: u64) {
+///     let __span__ = Span::enter_with_local_parent("example::properties").with_properties(|| {
+///         [
+///             (std::borrow::Cow::from("k1"), std::borrow::Cow::from("v1")),
+///             (
+///                 std::borrow::Cow::from("a"),
+///                 std::borrow::Cow::from(format!("argument `a` is {a:?}")),
+///             ),
+///         ]
+///     });
+///     async {
+///         // ...
+///     }
+///     .in_span(__span__)
+///     .await
+/// }
+/// ```
 pub use fastrace_macro::trace;
 
 pub use crate::collector::global_collector::flush;

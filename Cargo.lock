@@ -250,7 +250,6 @@ dependencies = [
 name = "fastrace-macro"
 version = "0.7.19"
 dependencies = [
- "fastrace",
  "proc-macro2",
  "quote",
  "syn 3.0.3",
