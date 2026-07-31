@@ -20,7 +20,7 @@ pub async fn f() -> Result<MyFuture, OuterError> {
     Ok(Box::pin(mapped))
 }
 
-#[tokio::main]
-async fn main() {
+#[tokio::test]
+async fn test() {
     let _ = f().await;
 }

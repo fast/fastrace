@@ -5,6 +5,7 @@ pub(crate) unsafe extern "C" fn f(value: u32) -> u32 {
     value
 }
 
-fn main() {
+#[test]
+fn test() {
     let _ = unsafe { f(7) };
 }

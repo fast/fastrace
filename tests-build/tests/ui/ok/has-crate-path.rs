@@ -1,5 +1,5 @@
-use fastrace as custom_fastrace;
 use custom_fastrace::trace;
+use fastrace as custom_fastrace;
 
 #[trace(crate = custom_fastrace)]
 async fn f(a: u32) -> u32 {
@@ -11,8 +11,8 @@ fn sync_func() -> i32 {
     42
 }
 
-#[tokio::main]
-async fn main() {
+#[tokio::test]
+async fn test() {
     f(1).await;
     sync_func();
 }

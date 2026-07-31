@@ -1,7 +1,7 @@
-use async_trait::async_trait;
 use std::future::Future;
 use std::pin::Pin;
 
+use async_trait::async_trait;
 use fastrace::trace;
 
 #[derive(Debug)]
@@ -31,7 +31,7 @@ impl MyTrait for MyStruct {
     }
 }
 
-#[tokio::main]
-async fn main() {
+#[tokio::test]
+async fn test() {
     let _ = MyStruct::f().await;
 }

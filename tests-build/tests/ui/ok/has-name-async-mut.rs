@@ -7,7 +7,7 @@ async fn f(mut a: u32) -> u32 {
     a
 }
 
-#[tokio::main]
-async fn main() {
+#[tokio::test]
+async fn test() {
     f(1).await;
 }

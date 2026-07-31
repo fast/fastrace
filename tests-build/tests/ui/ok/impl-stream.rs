@@ -10,7 +10,7 @@ async fn stream() -> impl Stream<Item = i64> {
     }
 }
 
-#[tokio::main]
-async fn main() {
+#[tokio::test]
+async fn test() {
     let _ = stream().await;
 }

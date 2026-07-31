@@ -14,8 +14,8 @@ async fn g(a: u32) -> u32 {
     a
 }
 
-#[tokio::main]
-async fn main() {
+#[tokio::test]
+async fn test() {
     f(1, &Bar, Bar).await;
     g(1).await;
 }

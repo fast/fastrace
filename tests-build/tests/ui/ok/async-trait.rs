@@ -14,4 +14,11 @@ impl MyTrait for MyStruct {
     }
 }
 
-fn main() {}
+#[test]
+fn test() {
+    fn assert_method<T: MyTrait>(value: &T) {
+        let _ = T::work(value);
+    }
+
+    assert_method(&MyStruct);
+}

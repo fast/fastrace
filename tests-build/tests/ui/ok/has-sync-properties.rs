@@ -10,6 +10,7 @@ fn f(input: &Input) -> u64 {
     input.value
 }
 
-fn main() {
+#[test]
+fn test() {
     let _ = f(&Input { value: 7 });
 }
