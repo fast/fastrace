@@ -15,6 +15,5 @@
 #[test]
 fn ui() {
     let t = trybuild::TestCases::new();
-    // Mixing pass cases here makes trybuild compile every case serially.
     t.compile_fail("tests/ui/err/*.rs");
 }
