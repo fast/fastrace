@@ -27,7 +27,7 @@ serde = { workspace = true }
 
 [dev-dependencies]
 crossbeam = { workspace = true }
-fastrace = { workspace = true, features = ["enable"] }
+fastrace = { path = ".", features = ["enable"] }
 futures-timer = { workspace = true }
 mockall = { workspace = true }
 pollster = { workspace = true }
