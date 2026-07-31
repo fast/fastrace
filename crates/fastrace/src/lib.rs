@@ -164,9 +164,9 @@
 //! In fastrace, [`Span::set_local_parent()`] and [`Span::enter_with_local_parent()`] serve this
 //! purpose.
 //!
-//! [`Span::set_local_parent()`] method sets __a local context of the `Span`__ for the current
-//! thread. [`Span::enter_with_local_parent()`] accesses the parent `Span` from the local context
-//! and creates a child `Span` with it.
+//! [`Span::set_local_parent()`] method sets a local context of the `Span` for the current thread.
+//! [`Span::enter_with_local_parent()`] accesses the parent `Span` from the local context and
+//! creates a child `Span` with it.
 //!
 //! ```
 //! use fastrace::Span;
@@ -202,14 +202,14 @@
 //! and greatly enhance performance.
 //!
 //! However, there is a precondition: The creation of `LocalSpan` must take place
-//! within __a local context of a `Span`__, which is established by invoking the
+//! within a local context of a `Span`, which is established by invoking the
 //! [`Span::set_local_parent()`] method.
 //!
 //! If the code spans multiple function calls, this isn't always straightforward to
 //! confirm if the precondition is met. As such, it's recommended to invoke
 //! [`Span::set_local_parent()`] immediately after the creation of `Span`.
 //!
-//! After __a local context of a `Span`__ is set using [`Span::set_local_parent()`],
+//! After a local context of a `Span` is set using [`Span::set_local_parent()`],
 //! use [`LocalSpan::enter_with_local_parent()`] to start a `LocalSpan`, which then
 //! becomes the new local parent.
 //!
@@ -282,7 +282,7 @@
 //! The attribute-macro [`trace`] helps to reduce boilerplate.
 //!
 //! Note: For successful tracing a function using the [`trace`] macro, the function call should
-//! occur within __a local context of a `Span`__.
+//! occur within a local context of a `Span`.
 //!
 //! For more detailed usage instructions, please refer to [`trace`].
 //!
@@ -371,25 +371,13 @@
 //! - **Full Tracing**: If `enable` is set in the application, and all traces are reported,
 //!   `fastrace` performs 10x to 100x faster than other tracing libraries in this case.
 //!
-//!
-//! [`Span`]: crate::Span
-//! [`LocalSpan`]: crate::local::LocalSpan
-//! [`SpanRecord`]: crate::collector::SpanRecord
-//! [`FutureExt`]: crate::future::FutureExt
-//! [`trace`]: crate::trace
-//! [`LocalCollector`]: crate::local::LocalCollector
-//! [`Span::root()`]: crate::Span::root
-//! [`Span::noop()`]: crate::Span::noop
-//! [`Span::cancel()`]: crate::Span::cancel
-//! [`Span::enter_with_parent()`]: crate::Span::enter_with_parent
-//! [`Span::set_local_parent()`]: crate::Span::set_local_parent
-//! [`LocalSpan::enter_with_local_parent()`]: crate::local::LocalSpan::enter_with_local_parent
-//! [`Event`]: crate::Event
-//! [`Reporter`]: crate::collector::Reporter
-//! [`ConsoleReporter`]: crate::collector::ConsoleReporter
-//! [`Config`]: crate::collector::Config
-//! [`Config::report_interval()`]: crate::collector::Config::report_interval
-//! [`Future`]: std::future::Future
+//! [`LocalSpan`]: local::LocalSpan
+//! [`SpanRecord`]: collector::SpanRecord
+//! [`FutureExt`]: future::FutureExt
+//! [`LocalSpan::enter_with_local_parent()`]: local::LocalSpan::enter_with_local_parent
+//! [`Reporter`]: collector::Reporter
+//! [`ConsoleReporter`]: collector::ConsoleReporter
+//! [`Config::report_interval()`]: collector::Config::report_interval
 
 // Suppress a false-positive lint from clippy
 #![allow(clippy::needless_doctest_main)]
@@ -411,24 +399,24 @@ pub mod util;
 /// An attribute macro designed to eliminate boilerplate code.
 ///
 /// This macro automatically creates a span for the annotated function. The span name defaults
-/// to the function name but can be customized by passing a string literal as an argument using
-/// the `name` parameter.
+/// to the full path of the function (use `short_name = true` to use only the function name),
+/// but can be customized by passing a string literal via the `name` parameter.
 ///
 /// The `#[fastrace::trace]` attribute requires a local parent context to function correctly.
-/// Ensure that the function annotated with `#[fastrace::trace]` is called within __a local
-/// context of a `Span`__, which is established by invoking the `Span::set_local_parent()`
+/// Ensure that the function annotated with `#[fastrace::trace]` is called within a local
+/// context of a `Span`, which is established by invoking the `Span::set_local_parent()`
 /// method.
 ///
 /// ## Arguments
 ///
-/// * `name` - The name of the span. Defaults to the full path of the function.
-/// * `short_name` - Whether to use the function name without path as the span name. Defaults
-///   to `false`.
-/// * `enter_on_poll` - Whether to enter the span on poll. If set to `false`, `in_span` will be
+/// * `name`: The name of the span. Defaults to the full path of the function.
+/// * `short_name`: Whether to use the function name without path as the span name. Defaults to
+///   `false`.
+/// * `enter_on_poll`: Whether to enter the span on poll. If set to `false`, `in_span` will be
 ///   used. Only available for `async fn`. Defaults to `false`.
-/// * `properties` - A list of key-value pairs to be added as properties to the span. The value
+/// * `properties`: A list of key-value pairs to be added as properties to the span. The value
 ///   can be a format string, where the function arguments are accessible. Defaults to `{}`.
-/// * `crate` - The path to the fastrace crate. Defaults to `::fastrace`.
+/// * `crate`: The path to the fastrace crate. Defaults to `::fastrace`.
 ///
 /// # Examples
 ///
@@ -462,16 +450,16 @@ pub mod util;
 /// use fastrace::local::LocalSpan;
 ///
 /// fn simple() {
-///     let __guard__ = LocalSpan::enter_with_local_parent("example::simple");
+///     let _g = LocalSpan::enter_with_local_parent("example::simple");
 ///     // ...
 /// }
 ///
 /// async fn simple_async() {
-///     let __span__ = Span::enter_with_local_parent("simple_async");
+///     let span = Span::enter_with_local_parent("simple_async");
 ///     async {
 ///         // ...
 ///     }
-///     .in_span(__span__)
+///     .in_span(span)
 ///     .await
 /// }
 ///
@@ -484,7 +472,7 @@ pub mod util;
 /// }
 ///
 /// async fn properties(a: u64) {
-///     let __span__ = Span::enter_with_local_parent("example::properties").with_properties(|| {
+///     let span = Span::enter_with_local_parent("example::properties").with_properties(|| {
 ///         [
 ///             (std::borrow::Cow::from("k1"), std::borrow::Cow::from("v1")),
 ///             (
@@ -496,7 +484,7 @@ pub mod util;
 ///     async {
 ///         // ...
 ///     }
-///     .in_span(__span__)
+///     .in_span(span)
 ///     .await
 /// }
 /// ```
