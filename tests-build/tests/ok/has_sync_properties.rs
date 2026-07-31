@@ -10,6 +10,7 @@ fn f(input: &Input) -> u64 {
     input.value
 }
 
-fn main() {
-    let _ = f(&Input { value: 7 });
+#[test]
+fn test() {
+    assert_eq!(f(&Input { value: 7 }), 7);
 }

@@ -12,10 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-mod ok;
-
-#[test]
-fn ui() {
-    let t = trybuild::TestCases::new();
-    t.compile_fail("tests/ui/err/*.rs");
-}
+mod async_in_trait;
+mod async_trait;
+mod async_trait_dyn_future;
+mod dyn_future;
+mod has_crate_path;
+mod has_enter_on_poll;
+mod has_generic_signatures;
+mod has_methods;
+mod has_name;
+mod has_name_and_short_name;
+mod has_name_async;
+mod has_name_async_mut;
+mod has_name_mut;
+mod has_no_arguments;
+mod has_properties;
+mod has_short_name;
+mod has_sync_properties;
+mod has_unsafe_extern;
+mod impl_stream;

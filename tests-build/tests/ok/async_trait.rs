@@ -10,8 +10,11 @@ impl MyTrait for MyStruct {
     #[logcall::logcall("info")]
     #[fastrace::trace]
     async fn work(&self) -> usize {
-        unimplemented!()
+        1
     }
 }
 
-fn main() {}
+#[tokio::test]
+async fn test() {
+    assert_eq!(MyStruct.work().await, 1);
+}

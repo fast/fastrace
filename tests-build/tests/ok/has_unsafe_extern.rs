@@ -5,6 +5,7 @@ pub(crate) unsafe extern "C" fn f(value: u32) -> u32 {
     value
 }
 
-fn main() {
-    let _ = unsafe { f(7) };
+#[test]
+fn test() {
+    assert_eq!(unsafe { f(7) }, 7);
 }

@@ -15,9 +15,9 @@ impl Worker {
     }
 }
 
-#[tokio::main]
-async fn main() {
+#[tokio::test]
+async fn test() {
     let mut worker = Worker(String::from("fast"));
-    let _ = worker.sync_method();
-    let _ = worker.async_method("race").await;
+    assert_eq!(worker.sync_method(), "fast");
+    assert_eq!(worker.async_method("race").await, "fastrace");
 }

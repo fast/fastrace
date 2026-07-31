@@ -16,8 +16,8 @@ where
     value.into()
 }
 
-#[tokio::main]
-async fn main() {
-    let _ = sync_generic::<_, ()>("value");
-    let _ = async_generic("value").await;
+#[tokio::test]
+async fn test() {
+    assert_eq!(sync_generic::<_, ()>("value"), Ok("value"));
+    assert_eq!(async_generic("value").await.as_ref(), "value");
 }

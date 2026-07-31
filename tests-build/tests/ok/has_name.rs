@@ -5,6 +5,7 @@ fn f(a: u32) -> u32 {
     a
 }
 
-fn main() {
-    f(1);
+#[test]
+fn test() {
+    assert_eq!(f(1), 1);
 }
