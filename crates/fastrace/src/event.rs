@@ -62,9 +62,7 @@ impl Event {
     /// ```
     /// use fastrace::prelude::*;
     ///
-    /// LocalSpan::add_event(
-    ///     Event::new("event").with_property_opt(|| Some(("key", "value"))),
-    /// );
+    /// LocalSpan::add_event(Event::new("event").with_property_opt(|| Some(("key", "value"))));
     /// ```
     #[inline]
     pub fn with_property_opt<K, V, F>(self, property: F) -> Self

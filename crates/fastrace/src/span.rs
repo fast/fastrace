@@ -291,8 +291,8 @@ impl Span {
     /// ```
     /// use fastrace::prelude::*;
     ///
-    /// let root = Span::root("root", SpanContext::random())
-    ///     .with_property_opt(|| Some(("key", "value")));
+    /// let root =
+    ///     Span::root("root", SpanContext::random()).with_property_opt(|| Some(("key", "value")));
     /// ```
     #[inline]
     pub fn with_property_opt<K, V, F>(self, property: F) -> Self
