@@ -85,6 +85,30 @@ impl LocalSpan {
         self.with_properties(|| [property()])
     }
 
+    /// Add a single optional property to the `LocalSpan` and return the modified `LocalSpan`.
+    ///
+    /// If the property is `None`, the `LocalSpan` is returned unchanged.
+    ///
+    /// A property is an arbitrary key-value pair associated with a span.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use fastrace::prelude::*;
+    ///
+    /// let span = LocalSpan::enter_with_local_parent("a child span")
+    ///     .with_property_opt(|| Some(("key", "value")));
+    /// ```
+    #[inline]
+    pub fn with_property_opt<K, V, F>(self, property: F) -> Self
+    where
+        K: Into<Cow<'static, str>>,
+        V: Into<Cow<'static, str>>,
+        F: FnOnce() -> Option<(K, V)>,
+    {
+        self.with_properties(|| property().into_iter())
+    }
+
     /// Add a link to the `LocalSpan` and return the modified `LocalSpan`.
     ///
     /// Links allow a span to reference additional related spans without establishing
@@ -160,6 +184,31 @@ impl LocalSpan {
         F: FnOnce() -> (K, V),
     {
         Self::add_properties(|| [property()])
+    }
+
+    /// Add a single optional property to the current local parent.
+    ///
+    /// If the property is `None`, nothing is added.
+    ///
+    /// A property is an arbitrary key-value pair associated with a span.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use fastrace::prelude::*;
+    ///
+    /// LocalSpan::add_property_opt(|| Some(("key", "value")));
+    /// ```
+    ///
+    /// [`Span`]: crate::Span
+    #[inline]
+    pub fn add_property_opt<K, V, F>(property: F)
+    where
+        K: Into<Cow<'static, str>>,
+        V: Into<Cow<'static, str>>,
+        F: FnOnce() -> Option<(K, V)>,
+    {
+        Self::add_properties(|| property().into_iter())
     }
 
     /// Add a link to the current local parent.
@@ -272,6 +321,9 @@ impl Drop for LocalSpan {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::atomic::AtomicUsize;
+    use std::sync::atomic::Ordering;
+
     use super::*;
     use crate::collector::CollectToken;
     use crate::collector::SpanId;
@@ -341,5 +393,74 @@ span1 []
         }
 
         let _ = collector.collect_spans_and_token();
+    }
+
+    #[test]
+    fn local_span_with_property_opt_some() {
+        let stack = Rc::new(RefCell::new(LocalSpanStack::with_capacity(16)));
+
+        let collector = LocalCollector::new(None, stack.clone());
+
+        {
+            let _g = LocalSpan::enter_with_stack("span1", stack.clone());
+            {
+                let _span = LocalSpan::enter_with_stack("span2", stack.clone())
+                    .with_property_opt(|| Some(("k1", "v1")));
+            }
+        }
+
+        let (spans, _) = collector.collect_spans_and_token();
+        assert_eq!(
+            tree_str_from_raw_spans(spans.spans),
+            r#"
+span1 []
+    span2 [("k1", "v1")]
+"#
+        );
+    }
+
+    #[test]
+    fn local_span_with_property_opt_none() {
+        let stack = Rc::new(RefCell::new(LocalSpanStack::with_capacity(16)));
+
+        let collector = LocalCollector::new(None, stack.clone());
+
+        {
+            let _g = LocalSpan::enter_with_stack("span1", stack.clone());
+            {
+                let _span = LocalSpan::enter_with_stack("span2", stack.clone())
+                    .with_property_opt(|| None::<(&str, &str)>);
+            }
+        }
+
+        let (spans, _) = collector.collect_spans_and_token();
+        assert_eq!(
+            tree_str_from_raw_spans(spans.spans),
+            r#"
+span1 []
+    span2 []
+"#
+        );
+    }
+
+    #[test]
+    fn local_span_with_property_opt_lazy_noop() {
+        let calls = AtomicUsize::new(0);
+        let _span = LocalSpan::enter_with_local_parent("span1").with_property_opt(|| {
+            calls.fetch_add(1, Ordering::SeqCst);
+            Some(("k1", "v1"))
+        });
+        assert_eq!(calls.load(Ordering::SeqCst), 0);
+    }
+
+    #[test]
+    fn local_span_add_property_opt_lazy_noop() {
+        // Without an active local parent in TLS the closure is not invoked.
+        let calls = AtomicUsize::new(0);
+        LocalSpan::add_property_opt(|| {
+            calls.fetch_add(1, Ordering::SeqCst);
+            Some(("k1", "v1"))
+        });
+        assert_eq!(calls.load(Ordering::SeqCst), 0);
     }
 }

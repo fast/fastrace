@@ -4,6 +4,12 @@ All significant changes to this project will be documented in this file.
 
 ## Unreleased
 
+### New Features
+
+* Added `Span::with_property_opt()` and `Span::add_property_opt()`.
+* Added `LocalSpan::with_property_opt()` and `LocalSpan::add_property_opt()`.
+* Added `Event::with_property_opt()`.
+
 ## v0.7.19
 
 * Upgrade `syn` to 3.

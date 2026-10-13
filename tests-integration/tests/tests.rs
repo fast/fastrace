@@ -523,9 +523,13 @@ fn test_property() {
             .with_property(|| ("k1", "v1"))
             .with_properties(|| [("k2", "v2"), ("k3", "v3")]);
         root.add_property(|| ("k4", "v4"));
+        root.add_property_opt(|| Some(("k4_opt", "v4_opt")));
+        root.add_property_opt(|| None::<(&str, &str)>);
         root.add_properties(|| [("k5", "v5"), ("k6", "v6")]);
         let _g = root.set_local_parent();
         LocalSpan::add_property(|| ("k7", "v7"));
+        LocalSpan::add_property_opt(|| Some(("k7_opt", "v7_opt")));
+        LocalSpan::add_property_opt(|| None::<(&str, &str)>);
         LocalSpan::add_properties(|| [("k8", "v8"), ("k9", "v9")]);
         let _span = LocalSpan::enter_with_local_parent("span")
             .with_property(|| ("k10", "v10"))
@@ -538,7 +542,7 @@ fn test_property() {
 
     let graph = tree_str_from_span_records(collected_spans.lock().clone());
     insta::assert_snapshot!(graph, @r###"
-    root [("k1", "v1"), ("k2", "v2"), ("k3", "v3"), ("k4", "v4"), ("k5", "v5"), ("k6", "v6"), ("k7", "v7"), ("k8", "v8"), ("k9", "v9")]
+    root [("k1", "v1"), ("k2", "v2"), ("k3", "v3"), ("k4", "v4"), ("k4_opt", "v4_opt"), ("k5", "v5"), ("k6", "v6"), ("k7", "v7"), ("k7_opt", "v7_opt"), ("k8", "v8"), ("k9", "v9")]
         span [("k10", "v10"), ("k11", "v11"), ("k12", "v12"), ("k13", "v13"), ("k14", "v14"), ("k15", "v15")]
     "###);
 }
