@@ -11,7 +11,7 @@
 ```toml
 [dependencies]
 fastrace = { version = "0.7", features = ["enable"] }
-fastrace-opentelemetry = "0.18"
+fastrace-opentelemetry = "0.19"
 ```
 
 ## Setup OpenTelemetry Collector
