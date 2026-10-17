@@ -25,14 +25,14 @@ logforth = { version = "0.30.1", features = [
   "diagnostic-fastrace",
   "starter-log",
 ] }
-opentelemetry = { version = "0.32.0", default-features = false, features = [
+opentelemetry = { version = "0.33.1", default-features = false, features = [
   "trace",
 ] }
-opentelemetry-otlp = { version = "0.32.0", default-features = false, features = [
+opentelemetry-otlp = { version = "0.33.1", default-features = false, features = [
   "trace",
   "grpc-tonic",
 ] }
-opentelemetry_sdk = { version = "0.32.1", default-features = false, features = [
+opentelemetry_sdk = { version = "0.33.1", default-features = false, features = [
   "trace",
 ] }
 test-harness = { version = "0.3.1" }

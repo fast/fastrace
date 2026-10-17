@@ -23,14 +23,14 @@ futures = { version = "0.3.32" }
 futures-core = { version = "0.3.32" }
 futures-sink = { version = "0.3.32" }
 log = { version = "0.4.32" }
-opentelemetry = { version = "0.32.0", default-features = false, features = [
+opentelemetry = { version = "0.33.1", default-features = false, features = [
   "trace",
 ] }
-opentelemetry-otlp = { version = "0.32.0", default-features = false, features = [
+opentelemetry-otlp = { version = "0.33.1", default-features = false, features = [
   "trace",
   "grpc-tonic",
 ] }
-opentelemetry_sdk = { version = "0.32.1", default-features = false, features = [
+opentelemetry_sdk = { version = "0.33.1", default-features = false, features = [
   "trace",
 ] }
 parking_lot = { version = "0.12.5" }
