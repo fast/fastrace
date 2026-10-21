@@ -51,6 +51,29 @@ impl Event {
         self.with_properties(|| [property()])
     }
 
+    /// Add a single optional property to the `Event` and return the modified `Event`.
+    ///
+    /// If the property is `None`, the `Event` is returned unchanged.
+    ///
+    /// A property is an arbitrary key-value pair associated with an event.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use fastrace::prelude::*;
+    ///
+    /// LocalSpan::add_event(Event::new("event").with_property_opt(|| Some(("key", "value"))));
+    /// ```
+    #[inline]
+    pub fn with_property_opt<K, V, F>(self, property: F) -> Self
+    where
+        K: Into<Cow<'static, str>>,
+        V: Into<Cow<'static, str>>,
+        F: FnOnce() -> Option<(K, V)>,
+    {
+        self.with_properties(|| property().into_iter())
+    }
+
     /// Add multiple properties to the `Event` and return the modified `Event`.
     ///
     /// # Examples
@@ -117,5 +140,25 @@ impl Event {
     {
         let event = Event::new(name).with_properties(properties);
         LocalSpan::add_event(event);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn event_with_property_opt_some() {
+        let event = Event::new("event").with_property_opt(|| Some(("k", "v")));
+        assert_eq!(
+            event.properties,
+            vec![(Cow::Borrowed("k"), Cow::Borrowed("v"))]
+        );
+    }
+
+    #[test]
+    fn event_with_property_opt_none() {
+        let event = Event::new("event").with_property_opt(|| None::<(&str, &str)>);
+        assert!(event.properties.is_empty());
     }
 }

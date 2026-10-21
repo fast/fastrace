@@ -280,6 +280,30 @@ impl Span {
         self.with_properties(|| [property()])
     }
 
+    /// Add a single optional property to the `Span` and return the modified `Span`.
+    ///
+    /// If the property is `None`, the `Span` is returned unchanged.
+    ///
+    /// A property is an arbitrary key-value pair associated with a span.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use fastrace::prelude::*;
+    ///
+    /// let root =
+    ///     Span::root("root", SpanContext::random()).with_property_opt(|| Some(("key", "value")));
+    /// ```
+    #[inline]
+    pub fn with_property_opt<K, V, F>(self, property: F) -> Self
+    where
+        K: Into<Cow<'static, str>>,
+        V: Into<Cow<'static, str>>,
+        F: FnOnce() -> Option<(K, V)>,
+    {
+        self.with_properties(|| property().into_iter())
+    }
+
     /// Add multiple properties to the `Span` and return the modified `Span`.
     ///
     /// # Examples
@@ -326,6 +350,32 @@ impl Span {
         F: FnOnce() -> (K, V),
     {
         self.add_properties(move || [property()])
+    }
+
+    /// Add a single optional property to the `Span`.
+    ///
+    /// If the property is `None`, nothing is added.
+    ///
+    /// A property is an arbitrary key-value pair associated with a span.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use fastrace::prelude::*;
+    ///
+    /// let root = Span::root("root", SpanContext::random());
+    ///
+    /// root.add_property_opt(|| Some(("key", "value")));
+    /// root.add_property_opt(|| None::<(&str, &str)>);
+    /// ```
+    #[inline]
+    pub fn add_property_opt<K, V, F>(&self, property: F)
+    where
+        K: Into<Cow<'static, str>>,
+        V: Into<Cow<'static, str>>,
+        F: FnOnce() -> Option<(K, V)>,
+    {
+        self.add_properties(move || property().into_iter())
     }
 
     /// Add multiple properties to the `Span`.
@@ -1054,6 +1104,146 @@ root []
         grandchild []
     local []
 "#
+        );
+    }
+
+    #[test]
+    fn span_with_property_opt_some() {
+        crate::set_reporter(ConsoleReporter, crate::collector::Config::default());
+
+        let routine = || {
+            let _root =
+                Span::root("root", SpanContext::random()).with_property_opt(|| Some(("k", "v")));
+            fastrace::flush();
+        };
+
+        let mut mock = MockGlobalCollect::new();
+        let mut seq = Sequence::new();
+        let span_sets = Arc::new(Mutex::new(Vec::new()));
+        mock.expect_start_collect()
+            .times(1)
+            .in_sequence(&mut seq)
+            .return_const(42_usize);
+        mock.expect_submit_spans().in_sequence(&mut seq).returning({
+            let span_sets = span_sets.clone();
+            move |span_set, token| span_sets.lock().unwrap().push((span_set, token))
+        });
+        mock.expect_drop_collect()
+            .times(1)
+            .in_sequence(&mut seq)
+            .with(predicate::eq(42_usize))
+            .return_const(());
+
+        let mock = Arc::new(mock);
+        set_mock_collect(mock);
+
+        routine();
+
+        let span_sets = std::mem::take(&mut *span_sets.lock().unwrap());
+        assert_eq!(
+            tree_str_from_span_sets(span_sets.as_slice()),
+            r#"
+#42
+root [("k", "v")]
+"#
+        );
+    }
+
+    #[test]
+    fn span_with_property_opt_none() {
+        crate::set_reporter(ConsoleReporter, crate::collector::Config::default());
+
+        let routine = || {
+            let _root = Span::root("root", SpanContext::random())
+                .with_property_opt(|| None::<(&str, &str)>);
+            fastrace::flush();
+        };
+
+        let mut mock = MockGlobalCollect::new();
+        let mut seq = Sequence::new();
+        let span_sets = Arc::new(Mutex::new(Vec::new()));
+        mock.expect_start_collect()
+            .times(1)
+            .in_sequence(&mut seq)
+            .return_const(42_usize);
+        mock.expect_submit_spans().in_sequence(&mut seq).returning({
+            let span_sets = span_sets.clone();
+            move |span_set, token| span_sets.lock().unwrap().push((span_set, token))
+        });
+        mock.expect_drop_collect()
+            .times(1)
+            .in_sequence(&mut seq)
+            .with(predicate::eq(42_usize))
+            .return_const(());
+
+        let mock = Arc::new(mock);
+        set_mock_collect(mock);
+
+        routine();
+
+        let span_sets = std::mem::take(&mut *span_sets.lock().unwrap());
+        assert_eq!(
+            tree_str_from_span_sets(span_sets.as_slice()),
+            r#"
+#42
+root []
+"#
+        );
+    }
+
+    #[test]
+    fn span_with_property_opt_lazy_noop() {
+        let calls = AtomicUsize::new(0);
+        let _span = Span::noop().with_property_opt(|| {
+            calls.fetch_add(1, Ordering::SeqCst);
+            Some(("k", "v"))
+        });
+        assert_eq!(calls.load(Ordering::SeqCst), 0);
+    }
+
+    #[test]
+    fn span_add_property_opt_some() {
+        crate::set_reporter(ConsoleReporter, crate::collector::Config::default());
+
+        let routine = || {
+            let root = Span::root("root", SpanContext::random());
+            root.add_property_opt(|| Some(("k", "v")));
+            fastrace::flush();
+        };
+
+        let mut mock = MockGlobalCollect::new();
+        let mut seq = Sequence::new();
+        let span_sets = Arc::new(Mutex::new(Vec::new()));
+        mock.expect_start_collect()
+            .times(1)
+            .in_sequence(&mut seq)
+            .return_const(42_usize);
+        mock.expect_submit_spans().in_sequence(&mut seq).returning({
+            let span_sets = span_sets.clone();
+            move |span_set, token| span_sets.lock().unwrap().push((span_set, token))
+        });
+        mock.expect_drop_collect()
+            .times(1)
+            .in_sequence(&mut seq)
+            .with(predicate::eq(42_usize))
+            .return_const(());
+
+        let mock = Arc::new(mock);
+        set_mock_collect(mock);
+
+        routine();
+
+        let span_sets = std::mem::take(&mut *span_sets.lock().unwrap());
+        let props_spans: Vec<_> = span_sets
+            .iter()
+            .filter_map(|(span_set, _)| match span_set {
+                SpanSet::Span(s) if s.raw_kind == RawKind::Properties => Some(s.properties.clone()),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(
+            props_spans,
+            vec![vec![(Cow::Borrowed("k"), Cow::Borrowed("v"))]]
         );
     }
 }
